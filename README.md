@@ -1,5 +1,7 @@
 # Videofy
 
+![Videofy app preview](images/app.png)
+
 Videofy is a cross-platform desktop application for batch video compression with quality control.
 
 Videofy does not implement or distribute its own codecs. All video processing is performed by FFmpeg.
@@ -19,7 +21,7 @@ The application itself is a graphical frontend and does not contain any video co
 
 - The Windows release ships as a standalone `.exe` and invokes FFmpeg as an external process.
 - Linux releases include a separate FFmpeg binary for convenience.
-- FFmpeg remains a distinct component and is not statically linked to Vidofy.
+- FFmpeg remains a distinct component and is not statically linked to Vidoefy.
 
 FFmpeg is licensed under the LGPL/GPL depending on how it is built.  
 Users are responsible for ensuring that their use of FFmpeg complies with all applicable licenses and local regulations.
