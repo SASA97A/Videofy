@@ -79,12 +79,20 @@ Videofy re-encodes videos using FFmpeg with **CRF (Constant Rate Factor)** setti
 
 This approach provides consistent visual results across different source videos.
 
+### Pro Tips
+
+- Videos will not upscale if the source resolution is lower than selected.
+- CPU (x265): Recommended CRF is 28.
+- NVIDIA (NVENC): Aim for 2-5 digits LOWER than CPU (e.g., 23-25).
+- AMD (AMF): Aim for 5-8 digits LOWER than CPU (e.g., 20-23).
+- Intel (QSV): Similar to CPU, try 24-26 for best results.
 ---
 
 ## Requirements
 
-- Windows or Linux
+- Windows or Linux (ARM untested)
 - User-provided FFmpeg & FFprobe binaries (GPL build)
+- Use full GPL builds only. LGPL, Shared, and Master builds are not supported.
 - .NET runtime compatible with **.NET 9.0**
 
 ---
