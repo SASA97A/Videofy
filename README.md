@@ -59,6 +59,7 @@ Videofy includes a **startup dependency guard** that:
 - Detects missing binaries
 - Guides you directly to the correct destination folder
 
+#### Recommended FFmpeg Version to download
 ![FFmpeg Version Guide](images/ffmpeg.png)
 ---
 
