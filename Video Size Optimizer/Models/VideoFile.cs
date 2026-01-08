@@ -8,7 +8,8 @@ public partial class VideoFile : ObservableObject
     public string FilePath { get; }
     public string FileName => Path.GetFileName(FilePath);
     public bool ShowIndeterminate => IsProcessing && Progress <= 0;
-    public bool IsReady => !IsProcessing && !IsCompleted;
+    public bool IsInvalid => FileName.Contains("-CRF", StringComparison.OrdinalIgnoreCase);
+    public bool IsReady => !IsProcessing && !IsCompleted && !IsInvalid;
     public long RawSizeBytes { get; private set; }
     partial void OnProgressChanged(double value) => OnPropertyChanged(nameof(ShowIndeterminate));
     partial void OnIsProcessingChanged(bool value)

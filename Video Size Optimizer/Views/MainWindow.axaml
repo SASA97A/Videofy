@@ -266,6 +266,14 @@
 														   Foreground="Gray"
 														   Opacity="{Binding IsReady}"
 														   VerticalAlignment="Center"/>
+
+												<TextBlock Text="Optimized"
+															Foreground="#d1b608"
+															FontStyle="Italic"
+															FontSize="11"
+															Opacity="{Binding IsInvalid}"
+															IsHitTestVisible="False"
+															VerticalAlignment="Center"/>
 											</Grid>
 										</DataTemplate>
 									</DataGridTemplateColumn.CellTemplate>
