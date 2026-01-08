@@ -1,0 +1,119 @@
+﻿using System;
+using System.Diagnostics;
+using System.IO;
+using System.Runtime.InteropServices;
+using System.Threading.Tasks;
+
+namespace Video_Size_Optimizer.Services
+{
+    public class FfprobeService
+    {
+        private readonly string _ffprobePath;
+        private Process? _currentProcess;
+        private static bool _initialized = false;
+        private static readonly object _lock = new();
+
+        public FfprobeService()
+        {
+            var baseDir = AppContext.BaseDirectory;
+            string subDir = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "win-x64" :
+                            RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? "osx-x64" : "linux-x64";
+            string exeName = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "ffprobe.exe" : "ffprobe";
+
+            _ffprobePath = Path.Combine(baseDir, "ffmpeg", subDir, exeName);
+        }
+
+        public string? InitializePermissions()
+        {
+            if (_initialized || RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                return null;
+
+            lock (_lock)
+            {
+                if (_initialized) return null;
+
+                try
+                {
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                    {
+                        using var process = Process.Start("chmod", $"+x \"{_ffprobePath}\"");
+                        process?.WaitForExit();
+                    }
+
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                    {
+                        var xattrArgs = $"-dr com.apple.quarantine \"{_ffprobePath}\"";
+                        using var xattrProcess = Process.Start("xattr", xattrArgs);
+                        xattrProcess?.WaitForExit();
+                    }
+
+                    _initialized = true;
+                    return null;
+                }
+                catch (Exception)
+                {
+                    return "Videofy doesn't have permission to analyze your videos.\n\n" +
+                           "The FFprobe binary needs execution rights to work.\n\n" +
+                           "How to fix:\n" +
+                           "1. Open your Terminal\n" +
+                           $"2. Run: chmod +x \"{_ffprobePath}\"\n\n" +
+                           "Then try clicking Start again.";
+                }
+            }
+        }
+
+
+
+        public async Task<int> GetVideoWidthAsync(string inputPath)
+        {
+            if (!File.Exists(_ffprobePath)) return 0;
+
+            _currentProcess = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = _ffprobePath,
+                    // Arguments to get only the width of the first video stream in a clean format
+                    Arguments = $"-v error -select_streams v:0 -show_entries stream=width -of csv=p=0 \"{inputPath}\"",
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    RedirectStandardOutput = true
+                }
+            };
+
+            try
+            {
+                _currentProcess.Start();
+                string output = await _currentProcess.StandardOutput.ReadToEndAsync();
+                await _currentProcess.WaitForExitAsync();
+
+                if (int.TryParse(output.Trim(), out int width))
+                {
+                    return width;
+                }
+            }
+            catch
+            {
+                return 0; // Return 0 if probe fails
+            }
+            finally
+            {
+                _currentProcess = null;
+            }
+
+            return 0;
+        }
+
+        public void KillProcess()
+        {
+            try
+            {
+                if (_currentProcess != null && !_currentProcess.HasExited)
+                {
+                    _currentProcess.Kill(true);
+                }
+            }
+            catch { }
+        }
+    }
+}

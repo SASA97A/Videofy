@@ -59,6 +59,7 @@ Videofy includes a **startup dependency guard** that:
 - Detects missing binaries
 - Guides you directly to the correct destination folder
 
+![FFmpeg Version Guide](images/ffmpeg.png)
 ---
 
 ## Licensing Clarification
@@ -79,6 +80,13 @@ Videofy re-encodes videos using FFmpeg with **CRF (Constant Rate Factor)** setti
 
 This approach provides consistent visual results across different source videos.
 
+## Pro Tips
+
+- Videos will not upscale if the source resolution is lower than selected.
+- CPU (x265): Recommended CRF is 28.
+- NVIDIA (NVENC): Aim for 2-5 digits LOWER than CPU (e.g., 23-25).
+- AMD (AMF): Aim for 5-8 digits LOWER than CPU (e.g., 20-23).
+- Intel (QSV): Similar to CPU, try 24-26 for best results.
 ---
 
 ## Requirements

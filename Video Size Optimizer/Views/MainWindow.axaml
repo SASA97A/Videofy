@@ -1,0 +1,417 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Video_Size_Optimizer.ViewModels"
+        xmlns:model="using:Video_Size_Optimizer.Models"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"        
+		MinWidth="1100" MinHeight="600"
+        x:Class="Video_Size_Optimizer.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+		xmlns:conv="using:Video_Size_Optimizer.Converters"
+        Icon="/Assets/app.ico"
+        Title="Videofy - Video Size Optimizer"
+		Background="#1e1e1e">
+		<Window.Styles>
+			<Style Selector="Separator.vertical">
+				<Setter Property="Width" Value="1"/>
+				<Setter Property="Height" Value="24"/>
+				<Setter Property="Margin" Value="5,0"/>
+				<Setter Property="Background" Value="#444444"/>
+			</Style>
+			<Style Selector="DataGridColumnHeader">
+				<Setter Property="Background" Value="#2b2b2b"/>
+				<Setter Property="Foreground" Value="#00d26a"/>
+				<Setter Property="FontWeight" Value="SemiBold"/>
+				<Setter Property="FontSize" Value="12"/>
+				<Setter Property="Padding" Value="10,5"/>
+				<Setter Property="SeparatorBrush" Value="#444444"/>
+			</Style>
+			<Style Selector="CheckBox:checked /template/ Border#NormalRectangle">
+				<Setter Property="Background" Value="#00d26a" />
+				<Setter Property="BorderBrush" Value="#00d26a" />
+			</Style>
+
+			<Style Selector="CheckBox:pointerover /template/ Border#NormalRectangle">
+				<Setter Property="BorderBrush" Value="#00d26a" />
+			</Style>
+
+			<Style Selector="CheckBox /template/ Path#CheckGlyph">
+				<Setter Property="Fill" Value="White" />
+			</Style>
+			<!-- Slider thumb hover -->
+			<Style Selector="Slider:pointerover /template/ Thumb">
+				<Setter Property="Background" Value="#00d26a"/>
+			</Style>
+
+			<!-- Slider thumb pressed -->
+			<Style Selector="Slider:pressed /template/ Thumb">
+				<Setter Property="Background" Value="#00d26a"/>
+			</Style>
+
+			<!-- Slider track (left side / decrease button) -->
+			<Style Selector="Slider /template/ RepeatButton#PART_DecreaseButton">
+				<Setter Property="Background" Value="#00d26a"/>
+			</Style>
+
+			<Style Selector="Slider:pointerover /template/ RepeatButton#PART_DecreaseButton">
+				<Setter Property="Background" Value="#00d26a"/>
+			</Style>
+
+			<!-- Slider track (right side / increase button) -->
+			<Style Selector="Slider /template/ RepeatButton#PART_IncreaseButton">
+				<Setter Property="Background" Value="#444444"/>
+			</Style>
+
+			<Style Selector="Slider:pointerover /template/ RepeatButton#PART_IncreaseButton">
+				<Setter Property="Background" Value="#444444"/>
+			</Style>
+
+		</Window.Styles>
+	
+
+    <Design.DataContext>
+        <!-- This only sets the DataContext for the previewer in an IDE,
+             to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
+        <vm:MainWindowViewModel/>
+    </Design.DataContext>
+
+	<Grid RowDefinitions="Auto, *, Auto" Margin="20">
+
+		<StackPanel Grid.Row="0" Margin="-20,-20,-20,20">
+			<Menu Background="#2b2b2b">
+				<MenuItem Header="_File">
+					<MenuItem Header="_Add Folder..."
+							  Command="{Binding BrowseFolderCommand}"
+							  CommandParameter="{Binding $parent[Window]}" />
+					<Separator />
+					<MenuItem Header="_Exit" Click="OnExitClick"/>
+				</MenuItem>
+				<MenuItem Header="_Selection">
+					<MenuItem Header="_Select All" Command="{Binding SelectAllCommand}" HotKey="Ctrl+A" />
+					<MenuItem Header="_Deselect All" Command="{Binding DeselectAllCommand}" />
+				</MenuItem>
+				<MenuItem Header="_Help">
+					<MenuItem Header="_Check for Updates" Command="{Binding CheckForUpdatesCommand}" />
+					<Separator />
+					<MenuItem Header="_About" Command="{Binding ShowAboutCommand}" />
+				</MenuItem>
+			</Menu>
+
+			<Border Background="#333333" Height="50" BorderBrush="#111111" BorderThickness="0,0,0,1">
+				<StackPanel Orientation="Horizontal" Margin="20,0" Spacing="10">
+					<Button Command="{Binding BrowseFolderCommand}"
+							CommandParameter="{Binding $parent[Window]}"
+							Background="Transparent" BorderThickness="0" Padding="10,5" Cursor="Hand">
+						<StackPanel Orientation="Horizontal" Spacing="8">
+							<Image Width="18" Height="18">
+								<Image.Source>
+									<SvgImage Source="/Assets/folder.svg"/>
+								</Image.Source>
+							</Image>
+							<TextBlock Text="Open Folder" VerticalAlignment="Center" Foreground="White" />
+						</StackPanel>
+					</Button>
+
+					<Separator Classes="vertical" />
+
+					<Button Command="{Binding ToggleSelectAllCommand}"
+							Background="Transparent" BorderThickness="0" Padding="10,5" Cursor="Hand">
+						<StackPanel Orientation="Horizontal" Spacing="8">
+							<Image Width="18" Height="18" VerticalAlignment="Center">
+								<Image.Source>
+									<SvgImage Source="avares://Videofy/Assets/checked.svg"/>
+								</Image.Source>
+							</Image>
+
+							<TextBlock Text="Toggle All"
+									   VerticalAlignment="Center"
+									   Foreground="White"
+									   />
+						</StackPanel>
+					</Button>
+
+					<Separator Classes="vertical" />
+
+					<Button Command="{Binding RefreshFolderCommand}"
+							IsEnabled="{Binding !IsBusy}"
+							Background="Transparent" BorderThickness="0" Padding="10,5" Cursor="Hand">
+						<StackPanel Orientation="Horizontal" Spacing="8">
+							<Image Width="16" Height="16" VerticalAlignment="Center">
+								<Image.Source>
+									<SvgImage Source="avares://Videofy/Assets/refresh.svg"/>
+								</Image.Source>
+							</Image>
+							<TextBlock Text="Refresh List" VerticalAlignment="Center" Foreground="White" />
+						</StackPanel>
+					</Button>
+
+				</StackPanel>
+			</Border>
+		</StackPanel>
+
+		<Border Grid.Row="1" Background="#2d2d2d" CornerRadius="8" Padding="5">
+			<DockPanel>
+
+				<Border DockPanel.Dock="Top"
+						Background="#44ff4444"
+						IsVisible="{Binding ShowDependencyWarning}"
+						Padding="15"
+						CornerRadius="5"
+						Margin="10">
+					<StackPanel>
+						<TextBlock Text="FFmpeg Binaries Missing!" FontWeight="Bold" Foreground="White"/>
+						<TextBlock TextWrapping="Wrap" FontSize="12" Margin="0,5" Foreground="#EEEEEE">
+							To use Videofy, please download the "GPL" build from BtbN GitHub,
+							extract 'ffmpeg' and 'ffprobe' from the bin folder, and place them in:
+						</TextBlock>
+						<TextBox Text="{Binding ExpectedPath}" IsReadOnly="True" FontSize="10" Background="#22000000"/>
+						<StackPanel Orientation="Horizontal" Spacing="10" Margin="0,10,0,0">
+							<Button Content="1. Open Download Page"
+									Command="{Binding OpenBtbNCommand}"
+									Background="#3d3d3d"
+									Foreground="White"
+									Padding="12,6"
+									CornerRadius="4"
+									Cursor="Hand"/>
+
+							<Button Content="2. Open Destination Folder"
+									Command="{Binding OpenExpectedFolderCommand}"
+									Background="#3d3d3d"
+									Foreground="White"
+									Padding="12,6"
+									CornerRadius="4"
+									Cursor="Hand"/>
+
+							<Button Content="3. Check Again"
+									Command="{Binding RefreshDependencyCheckCommand}"
+									Background="#3d3d3d"
+									Foreground="White"
+									Padding="12,6"
+									CornerRadius="4"
+									Cursor="Hand"/>
+						</StackPanel>
+					</StackPanel>
+				</Border>
+
+				<Panel>
+					<DockPanel IsVisible="{Binding HasVideos}">
+						<TextBox DockPanel.Dock="Top"
+								 Text="{Binding SearchText}"
+								 Watermark="🔍 Search by file or folder name..."
+								 Margin="5"
+								 Background="#333333"
+								 Foreground="White"
+								 BorderBrush="#444444"
+								 VerticalContentAlignment="Center"/>
+
+						<DataGrid ItemsSource="{Binding DisplayedVideos}"
+								  IsReadOnly="{Binding IsBusy}"
+								  AutoGenerateColumns="False"
+								  CanUserSortColumns="True"
+								  CanUserResizeColumns="True"
+								  ColumnHeaderHeight="40"
+								  GridLinesVisibility="None"
+								  Background="Transparent"
+								  BorderThickness="0">
+							<DataGrid.Columns>
+								<DataGridTemplateColumn Width="120" CanUserResize="False">
+									<DataGridTemplateColumn.Header>
+										<TextBlock Text="Selected" HorizontalAlignment="Center" />
+									</DataGridTemplateColumn.Header>
+									<DataGridTemplateColumn.CellTemplate>
+										<DataTemplate>
+											<CheckBox IsChecked="{Binding IsSelected}"
+													  IsEnabled="{Binding !$parent[DataGrid].DataContext.IsBusy}"
+													  HorizontalAlignment="Center"
+													  VerticalAlignment="Center"
+													  Cursor="Hand"/>
+										</DataTemplate>
+									</DataGridTemplateColumn.CellTemplate>
+								</DataGridTemplateColumn>
+
+								<DataGridTextColumn Header="File Name" Binding="{Binding FileName}" Width="*" IsReadOnly="True" />
+								<DataGridTextColumn Header="Folder" Binding="{Binding FolderName}" Width="0.6*" IsReadOnly="True" />
+
+								<DataGridTemplateColumn Header="Size" Width="Auto" SortMemberPath="RawSizeBytes" CanUserResize="False">
+									<DataGridTemplateColumn.CellTemplate>
+										<DataTemplate x:DataType="model:VideoFile">
+											<TextBlock Text="{Binding FileSizeDisplay}" VerticalAlignment="Center" Margin="10,0" Foreground="White" FontSize="12"/>
+										</DataTemplate>
+									</DataGridTemplateColumn.CellTemplate>
+								</DataGridTemplateColumn>
+
+								<DataGridTemplateColumn Header="Status" Width="150" CanUserResize="False">
+									<DataGridTemplateColumn.CellTemplate>
+										<DataTemplate>
+											<Grid Margin="10,0">
+
+												<ProgressBar Height="6"
+															 Value="{Binding Progress}"
+															 IsIndeterminate="{Binding ShowIndeterminate}"
+															 Opacity="{Binding IsProcessing}"
+															 IsHitTestVisible="False"
+															 Foreground="#00d26a"
+															 Background="#444444"
+															 CornerRadius="3"
+															 VerticalAlignment="Center"/>
+
+												<TextBlock Text="Completed"
+														   Foreground="LimeGreen"
+														   FontWeight="Medium"
+														   Opacity="{Binding IsCompleted}"
+														   IsHitTestVisible="False"
+														   VerticalAlignment="Center"/>
+
+												<TextBlock Text="Ready"
+														   Foreground="Gray"
+														   Opacity="{Binding IsReady}"
+														   VerticalAlignment="Center"/>
+											</Grid>
+										</DataTemplate>
+									</DataGridTemplateColumn.CellTemplate>
+								</DataGridTemplateColumn>
+
+
+								<DataGridTemplateColumn Width="50" CanUserResize="False">
+									<DataGridTemplateColumn.CellTemplate>
+										<DataTemplate>
+											<Button Command="{Binding $parent[DataGrid].DataContext.RemoveVideoCommand}" CommandParameter="{Binding}" Content="✕" Background="Transparent" BorderThickness="0" Foreground="#666666" FontSize="12" VerticalAlignment="Center" HorizontalAlignment="Center" Cursor="Hand">
+												<Button.Styles>
+													<Style Selector="Button:hover /template/ ContentPresenter">
+														<Setter Property="Background" Value="Transparent"/>
+														<Setter Property="TextBlock.Foreground" Value="#ff4444"/>
+													</Style>
+												</Button.Styles>
+											</Button>
+										</DataTemplate>
+									</DataGridTemplateColumn.CellTemplate>
+								</DataGridTemplateColumn>
+							</DataGrid.Columns>
+						</DataGrid>
+					</DockPanel>
+
+					<StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="15" IsVisible="{Binding !HasVideos}">
+						<Image Width="64" Height="64" HorizontalAlignment="Center" Opacity="0.3">
+							<Image.Source>
+								<SvgImage Source="avares://Videofy/Assets/folder.svg"/>
+							</Image.Source>
+						</Image>
+						<TextBlock Text="No videos loaded yet" FontSize="18" FontWeight="SemiBold" Foreground="Gray" HorizontalAlignment="Center"/>
+						<Button Command="{Binding BrowseFolderCommand}"
+								CommandParameter="{Binding $parent[Window]}"
+								Background="#3d3d3d" CornerRadius="20" Cursor="Hand" HorizontalAlignment="Center">
+							<TextBlock Text="+ Add Files" Foreground="#00d26a" Margin="10,5"/>
+						</Button>
+					</StackPanel>
+				</Panel>
+			</DockPanel>
+		</Border>
+
+		<Border Grid.Row="2" Background="#2b2b2b" Margin="-20,20,-20,-20" Padding="20" BorderBrush="#111111" BorderThickness="0,1,0,0">
+    <Grid ColumnDefinitions="Auto, *, Auto, Auto">
+
+        <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="2" Margin="0,0,20,0">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="Selection:" Foreground="Gray" FontSize="11"/>
+                <TextBlock Text="{Binding SelectionStatus}" Foreground="#00d26a" FontSize="11" FontWeight="SemiBold"/>
+            </StackPanel>
+            <Border Background="#443300" CornerRadius="4" Padding="6,2" IsVisible="{Binding IsBusy}">
+                <TextBlock Text="{Binding StatusMessage}" Foreground="Yellow" FontSize="10" FontWeight="Medium"/>
+            </Border>
+        </StackPanel>
+
+        <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="2">
+            <TextBlock Text="{Binding SelectedFolderPath}"
+                       Foreground="White" FontSize="11" Opacity="0.5"
+                       TextTrimming="CharacterEllipsis"
+                       MaxWidth="350"
+                       HorizontalAlignment="Center"/>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="5">
+                <TextBlock Text="Total Size:" Foreground="Gray" FontSize="11"/>
+                <TextBlock Text="{Binding TotalFolderSizeDisplay}" Foreground="#00d26a" FontSize="11" FontWeight="Bold"/>
+            </StackPanel>
+        </StackPanel>
+
+		<StackPanel Grid.Column="2" Orientation="Vertical" Spacing="4" VerticalAlignment="Center" Margin="20,0">
+			<StackPanel Orientation="Horizontal" Spacing="8">
+				<TextBlock Text="Encoder:"
+						   VerticalAlignment="Center"
+						   Foreground="Gray"
+						   FontSize="11"
+						   Width="65"/>
+				<ComboBox ItemsSource="{Binding AvailableEncoders}"
+						  SelectedItem="{Binding SelectedEncoder}"
+						  IsEnabled="{Binding !IsBusy}"
+						  FontSize="12"
+						  Width="200"/>
+			</StackPanel>
+
+			<StackPanel Orientation="Horizontal" Spacing="8">
+				<TextBlock Text="Target Res:"
+						   VerticalAlignment="Center"
+						   Foreground="Gray"
+						   FontSize="11"
+						   Width="65"/>
+				<ComboBox ItemsSource="{Binding ResolutionOptions}"
+						  SelectedItem="{Binding SelectedResolution}"
+						  IsEnabled="{Binding !IsBusy}"
+						  FontSize="12"
+						  Width="200"/>
+			</StackPanel>
+		</StackPanel>
+
+        <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="20" HorizontalAlignment="Right">
+            
+            <StackPanel Spacing="3" VerticalAlignment="Center" Width="180">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                    <TextBlock Text="Quality:" FontSize="11" Foreground="Gray"/>
+                    <TextBlock Text="{Binding CrfDescription}" FontSize="11" FontWeight="SemiBold" Foreground="#00d26a" />
+                </StackPanel>
+
+                <Grid ColumnDefinitions="*, Auto">
+                    <StackPanel Grid.Column="0">
+                        <Slider Value="{Binding CrfValue}" Minimum="1" Maximum="35"
+                                IsSnapToTickEnabled="True" TickFrequency="1"
+                                VerticalAlignment="Center" Cursor="Hand"/>
+                        <Grid Margin="0,-12,0,0">
+                            <StackPanel HorizontalAlignment="Right" Margin="0,0,15,0" IsHitTestVisible="False">
+                                <TextBlock Text="▲" Foreground="#00d26a" FontSize="8" HorizontalAlignment="Center" Opacity="0.5"/>
+                                <TextBlock Text="REC (28)" Foreground="Gray" FontSize="9" HorizontalAlignment="Center" Opacity="0.7"/>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                    <Border Grid.Column="1" Background="#3d3d3d" CornerRadius="4" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding CrfValue}" Foreground="White" FontSize="11" FontWeight="Bold" MinWidth="18" TextAlignment="Center"/>
+                    </Border>
+                </Grid>
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <Button Command="{Binding TogglePauseCommand}"
+                        IsVisible="{Binding IsBusy}"
+                        Width="45" Height="40"
+                        Background="#3d3d3d"
+                        CornerRadius="4">
+                    <Panel>
+                        <Image Width="14" Height="14" IsVisible="{Binding !IsPaused}">
+                            <Image.Source><SvgImage Source="avares://Videofy/Assets/pause.svg"/></Image.Source>
+                        </Image>
+                        <Image Width="14" Height="14" IsVisible="{Binding IsPaused}">
+                            <Image.Source><SvgImage Source="avares://Videofy/Assets/play.svg"/></Image.Source>
+                        </Image>
+                    </Panel>
+                </Button>
+                
+                <Button Command="{Binding HandleActionCommand}"
+                        Content="{Binding ActionButtonText}"
+                        Padding="20,0" Height="40"
+                        VerticalContentAlignment="Center"
+                        Background="{Binding ActionButtonColor}" 
+                        Foreground="Black" FontWeight="Black" FontSize="12"
+                        CornerRadius="4"/>
+            </StackPanel>
+        </StackPanel>
+    </Grid>
+</Border>
+	</Grid>
+</Window>
