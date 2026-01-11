@@ -47,7 +47,7 @@ To ensure full compatibility (including **HEVC** and **hardware acceleration**),
 
 #### Download Instructions
 
-1. Visit the **BtbN FFmpeg-Builds** repository.
+1. Visit the **BtbN FFmpeg-Builds** repository [here](https://github.com/btbn/ffmpeg-builds/releases).
 2. Download the latest GPL release for your OS:
    - **Windows:** `ffmpeg-n8.x -win64-gpl-8.0.zip`
    - **Linux:** `ffmpeg-n8.x -linux64-gpl-8.0.tar.xz`
