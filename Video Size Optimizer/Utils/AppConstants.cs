@@ -8,7 +8,7 @@ namespace Video_Size_Optimizer
 {
     public static class AppConstants
     {
-        public const string AppVersion = "v1.3.4";
+        public const string AppVersion = "v1.3.5";
 
         // Encoders
         public static readonly Dictionary<string, string> EncoderMap = new()
@@ -44,6 +44,9 @@ namespace Video_Size_Optimizer
             <= 32 => "Small (Space Saver)",
             _ => "Tiny (Maximum Compression)"
         };
+
+        // Framerate label
+        public static List<string> FpsOptions { get; } = new() { "Original", "60", "30", "24" };
 
         public const string AboutMessage =
                $"Videofy {AppVersion}\n\n" +

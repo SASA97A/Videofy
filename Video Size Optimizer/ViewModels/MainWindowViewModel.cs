@@ -31,6 +31,7 @@ public partial class MainWindowViewModel : ViewModelBase
     public ObservableCollection<VideoFile> DisplayedVideos { get; } = new();
 
     public string CrfDescription => AppConstants.GetCrfLabel(CrfValue);
+    public List<string> FpsOptions => AppConstants.FpsOptions;
     partial void OnCrfValueChanged(int value) => OnPropertyChanged(nameof(CrfDescription));
 
     [ObservableProperty] private int crfValue = 28;
@@ -40,8 +41,12 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty] private string _searchText = string.Empty;
     [ObservableProperty] private string _selectedEncoder = "Standard (Slow, Best Quality)";
     [ObservableProperty] private string _selectedResolution = "Original Resolution";
+    [ObservableProperty] private string _selectedFps = "Original";
     [ObservableProperty] private bool _showDependencyWarning;
     [ObservableProperty] private string _expectedPath = "";
+    [ObservableProperty] private bool _stripMetadata = true;
+    [ObservableProperty] private bool _isCrfMode = true;
+    [ObservableProperty] private int _targetSizeMb = 25;
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(PauseActionIconPath))]
     private bool _isPaused;
     [ObservableProperty] 
@@ -251,7 +256,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
                     //Run Compression
                     var p = new Progress<double>(val => video.Progress = val);
-                    await _ffmpegService.CompressAsync(video.FilePath, finalOutputPath, CrfValue, encoderValue, resolutionToUse, p);
+                    await _ffmpegService.CompressAsync(video.FilePath, finalOutputPath, SelectedFps, StripMetadata, CrfValue, encoderValue, resolutionToUse, p);
 
                     // Update UI with the actual new file size
                     if (File.Exists(finalOutputPath))
@@ -473,4 +478,5 @@ public partial class MainWindowViewModel : ViewModelBase
             StatusMessage = "Files still missing. Please check the folder again.";
         }
     }
+
 }

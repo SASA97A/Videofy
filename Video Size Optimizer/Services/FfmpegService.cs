@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -89,21 +90,29 @@ public class FfmpegService
         }
     }
 
-    public async Task CompressAsync(string input, string output, int crf, string encoder, string selectedResolution, IProgress<double>? progress = null)
+    public async Task CompressAsync(string input, string output, string targetFps, bool stripMetadata, int crf, string encoder, string selectedResolution, IProgress<double>? progress = null)
     {
         if (!File.Exists(_ffmpegPath))
             throw new FileNotFoundException("FFmpeg not found", _ffmpegPath);
 
-        string scaleFilter = "";
+        var filters = new List<string>();
+
         if (!string.IsNullOrEmpty(selectedResolution) && selectedResolution != "Original")
         {
             // Extract the width (e.g., from "1920 (1080p)")
             string width = selectedResolution.Split(' ')[0];
-            scaleFilter = $"-vf scale={width}:-2";
+            filters.Add($"scale={width}:-2");
         }
 
+        
         string codecArgs;
-
+        string metadataFlag = stripMetadata ? "-map_metadata -1 -map_chapters -1" : "";
+        
+        if (targetFps != "Original" && int.TryParse(targetFps, out int fpsValue))
+        {
+            // -fps_max caps the framerate without forcing a specific number if it's lower
+            filters.Add($"fps={fpsValue}");
+        }
         if (encoder.Contains("nvenc"))
         {
             codecArgs = $"-vcodec {encoder} -preset p5 -rc vbr -cq {crf}";
@@ -121,7 +130,9 @@ public class FfmpegService
             // Standard CPU (x265)
             codecArgs = $"-vcodec libx265 -crf {crf}";
         }
-        var args = $"-y -i \"{input}\" {scaleFilter} {codecArgs} \"{output}\"";
+
+        string filterArgs = filters.Count > 0 ? $"-vf \"{string.Join(",", filters)}\"" : "";
+        var args = $"-y -i \"{input}\" {filterArgs} {codecArgs} {metadataFlag} \"{output}\"";
 
 
         _currentProcess = new Process

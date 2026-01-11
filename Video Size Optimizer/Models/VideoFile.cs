@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using System;
 using System.IO;
 
 namespace Video_Size_Optimizer.Models;
@@ -11,6 +12,7 @@ public partial class VideoFile : ObservableObject
     public bool IsInvalid => FileName.Contains("-CRF", StringComparison.OrdinalIgnoreCase);
     public bool IsReady => !IsProcessing && !IsCompleted && !IsInvalid;
     public long RawSizeBytes { get; private set; }
+    public double DurationSeconds { get; set; }
     partial void OnProgressChanged(double value) => OnPropertyChanged(nameof(ShowIndeterminate));
     partial void OnIsProcessingChanged(bool value)
     {
