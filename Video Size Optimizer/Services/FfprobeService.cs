@@ -62,7 +62,32 @@ namespace Video_Size_Optimizer.Services
             }
         }
 
+        public async Task<double> GetVideoDurationAsync(string filePath)
+        {
+            // ffprobe command to get duration in seconds
+            var args = $"-v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 \"{filePath}\"";
 
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = _ffprobePath, 
+                Arguments = args,
+                RedirectStandardOutput = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+
+            try
+            {
+                using var process = Process.Start(startInfo);
+                if (process == null) return 0;
+
+                string output = await process.StandardOutput.ReadToEndAsync();
+                await process.WaitForExitAsync();
+
+                return double.TryParse(output, out double seconds) ? seconds : 0;
+            }
+            catch { return 0; }
+        }
 
         public async Task<int> GetVideoWidthAsync(string inputPath)
         {

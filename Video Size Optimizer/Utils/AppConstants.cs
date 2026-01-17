@@ -1,14 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+
 
 namespace Video_Size_Optimizer
 {
     public static class AppConstants
     {
-        public const string AppVersion = "v1.3.5";
+        public const string AppVersion = "v1.3.6";
 
         // Encoders
         public static readonly Dictionary<string, string> EncoderMap = new()
@@ -27,6 +25,7 @@ namespace Video_Size_Optimizer
         public static readonly Dictionary<string, string> ResolutionMap = new()
         {
             { "Original Resolution", "Original" },
+            { "4K (3840p)", "3840" },
             { "2K (1440p)", "2560" },
             { "Full HD (1080p)", "1920" },
             { "HD (720p)", "1280" },
@@ -66,7 +65,7 @@ namespace Video_Size_Optimizer
         public const string NoSelectionMessage =
             "No valid files were found in your selection.\n\n" +
             "Note: Videos already marked as 'Completed' or files previously compressed by Videofy" +
-            " (containing '-CRF') are skipped to prevent accidental double-compression.\n\n" +
+            " (containing '-CRF' or '-Target') are skipped to prevent accidental double-compression.\n\n" +
             "Tip: Use the 'Refresh' button to reset the completion status of the list.";
 
         public const string NoFolderAccess =

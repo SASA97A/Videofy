@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Video_Size_Optimizer.Models;
 using Video_Size_Optimizer.Services;
@@ -47,6 +48,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty] private bool _stripMetadata = true;
     [ObservableProperty] private bool _isCrfMode = true;
     [ObservableProperty] private int _targetSizeMb = 25;
+    [ObservableProperty] private bool _isDownloading;
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(PauseActionIconPath))]
     private bool _isPaused;
     [ObservableProperty] 
@@ -233,16 +235,12 @@ public partial class MainWindowViewModel : ViewModelBase
                     int originalWidth = await _ffprobeService.GetVideoWidthAsync(video.FilePath);
 
                     string resolutionToUse = "Original";
-                    if (AppConstants.ResolutionMap.TryGetValue(SelectedResolution, out string? targetValue))
+                    if (SelectedResolution != "Original Resolution" &&
+                        AppConstants.ResolutionMap.TryGetValue(SelectedResolution, out string? targetValue))
                     {
-                        if (targetValue == "Original")
+                        if (int.TryParse(targetValue, out int targetWidth))
                         {
-                            resolutionToUse = "Original";
-                        }
-                        else if (int.TryParse(targetValue, out int targetWidth))
-                        {
-                            // Only downscale; if source is smaller than target, keep Original
-                            resolutionToUse = targetWidth < originalWidth ? targetValue : "Original";
+                            resolutionToUse = targetWidth < originalWidth ? targetWidth.ToString() : "Original";
                         }
                     }
 
@@ -251,12 +249,35 @@ public partial class MainWindowViewModel : ViewModelBase
                     {
                         encoderValue = "libx265";
                     }
-                    // Ensure we don't overwrite
-                    string finalOutputPath = _fileService.GenerateOutputPath(video.FilePath, CrfValue);
-
+                    //Ensure we don't override files
+                    string finalOutputPath = video.HasCustomSize
+                                            ? _fileService.GenerateTargetSizePath(video.FilePath, (int)video.CustomTargetSizeMb!)
+                                            : _fileService.GenerateOutputPath(video.FilePath, CrfValue);
+                    
                     //Run Compression
                     var p = new Progress<double>(val => video.Progress = val);
-                    await _ffmpegService.CompressAsync(video.FilePath, finalOutputPath, SelectedFps, StripMetadata, CrfValue, encoderValue, resolutionToUse, p);
+
+                    if (video.HasCustomSize)
+                    {
+                        // Bypasses CRF - Uses 2-Pass Target Size
+                        // 1. Get duration for bitrate calculation
+                        double duration = await _ffprobeService.GetVideoDurationAsync(video.FilePath);
+
+                        if (duration > 0)
+                        {
+                            // 2. Run target size compression 
+                            await _ffmpegService.CompressTargetSizeAsync( video.FilePath,
+                                finalOutputPath, SelectedFps, StripMetadata,
+                                (int)video.CustomTargetSizeMb!, encoderValue,
+                                resolutionToUse, duration, p);
+                        }
+                    }
+                    else
+                    {
+                        // Standard Batch Process - Uses Global CRF
+                        await _ffmpegService.CompressAsync( video.FilePath, finalOutputPath,
+                            SelectedFps, StripMetadata, CrfValue, encoderValue, resolutionToUse, p);
+                    }
 
                     // Update UI with the actual new file size
                     if (File.Exists(finalOutputPath))
@@ -476,6 +497,56 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             ExpectedPath = path;
             StatusMessage = "Files still missing. Please check the folder again.";
+        }
+    }
+
+    [RelayCommand]
+    public void ClearCustomSize(VideoFile? video)
+    {
+        if (video != null)
+        {
+            video.CustomTargetSizeMb = null;
+        }
+    }
+
+    [RelayCommand]
+    public async Task AutoDownloadBinaries()
+    {
+        if (!DependencyChecker.CheckBinaries(out string targetFolder))
+        {
+            // TargetFolder is returned by your DependencyChecker (e.g., app/ffmpeg/win-x64)
+            // If it returns "Unknown Path" because base dirs are missing, we might need to construct it manually.
+            // Let's ensure we have a valid path.
+            if (targetFolder == "Unknown Path" || string.IsNullOrEmpty(targetFolder))
+            {
+                var baseDir = AppContext.BaseDirectory;
+                string subDir = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "win-x64" : "linux-x64";
+                targetFolder = Path.Combine(baseDir, "ffmpeg", subDir);
+            }
+
+            try
+            {
+                IsBusy = true;
+                IsDownloading = true; // Use this to toggle UI visibility of the button vs progress
+
+                var progress = new Progress<string>(status => StatusMessage = status);
+
+                await _systemService.InstallFfmpegAsync(targetFolder, progress);
+
+                // Success! Refresh the check
+                RefreshDependencyCheck();
+                await _messageService.ShowSuccessAsync("Setup Complete", "FFmpeg has been downloaded and installed successfully!");
+            }
+            catch (Exception ex)
+            {
+                await _messageService.ShowErrorAsync("Download Failed", $"Could not auto-download FFmpeg.\n\nError: {ex.Message}\n\nPlease try the manual method.");
+                StatusMessage = "Download failed.";
+            }
+            finally
+            {
+                IsBusy = false;
+                IsDownloading = false;
+            }
         }
     }
 

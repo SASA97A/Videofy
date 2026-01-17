@@ -92,8 +92,8 @@ public class FfmpegService
 
     public async Task CompressAsync(string input, string output, string targetFps, bool stripMetadata, int crf, string encoder, string selectedResolution, IProgress<double>? progress = null)
     {
-        if (!File.Exists(_ffmpegPath))
-            throw new FileNotFoundException("FFmpeg not found", _ffmpegPath);
+        //if (!File.Exists(_ffmpegPath))
+        //    throw new FileNotFoundException("FFmpeg not found", _ffmpegPath);
 
         var filters = new List<string>();
 
@@ -103,16 +103,15 @@ public class FfmpegService
             string width = selectedResolution.Split(' ')[0];
             filters.Add($"scale={width}:-2");
         }
-
-        
-        string codecArgs;
-        string metadataFlag = stripMetadata ? "-map_metadata -1 -map_chapters -1" : "";
-        
         if (targetFps != "Original" && int.TryParse(targetFps, out int fpsValue))
         {
             // -fps_max caps the framerate without forcing a specific number if it's lower
             filters.Add($"fps={fpsValue}");
         }
+
+        string codecArgs;
+        string metadataFlag = stripMetadata ? "-map_metadata -1 -map_chapters -1" : "";
+
         if (encoder.Contains("nvenc"))
         {
             codecArgs = $"-vcodec {encoder} -preset p5 -rc vbr -cq {crf}";
@@ -133,7 +132,107 @@ public class FfmpegService
 
         string filterArgs = filters.Count > 0 ? $"-vf \"{string.Join(",", filters)}\"" : "";
         var args = $"-y -i \"{input}\" {filterArgs} {codecArgs} {metadataFlag} \"{output}\"";
+        await RunFfmpegProcessAsync(args, progress);
 
+        //_currentProcess = new Process
+        //{
+        //    StartInfo = new ProcessStartInfo
+        //    {
+        //        FileName = _ffmpegPath,
+        //        Arguments = args,
+        //        UseShellExecute = false,
+        //        CreateNoWindow = true,
+        //        RedirectStandardError = true
+        //    }
+        //};
+
+        //var errorBuilder = new System.Text.StringBuilder();
+        //double totalDurationSeconds = 0;
+
+        //_currentProcess.Start();
+
+        //// Read the stream
+        //using (var reader = _currentProcess.StandardError)
+        //{
+        //    while (await reader.ReadLineAsync() is string line)
+        //    {
+                
+        //        errorBuilder.AppendLine(line);
+
+        //        // 1. Get total duration
+        //        if (totalDurationSeconds == 0)
+        //        {
+        //            var match = Regex.Match(line, @"Duration:\s(\d+):(\d+):(\d+\.\d+)");
+        //            if (match.Success)
+        //            {
+        //                totalDurationSeconds = (double.Parse(match.Groups[1].Value) * 3600) +
+        //                                       (double.Parse(match.Groups[2].Value) * 60) +
+        //                                        double.Parse(match.Groups[3].Value);
+        //            }
+        //        }
+
+        //        // 2. Get current time
+        //        var timeMatch = Regex.Match(line, @"time=(\d+):(\d+):(\d+\.\d+)");
+        //        if (timeMatch.Success && totalDurationSeconds > 0)
+        //        {
+        //            double currentSeconds = (double.Parse(timeMatch.Groups[1].Value) * 3600) +
+        //                                    (double.Parse(timeMatch.Groups[2].Value) * 60) +
+        //                                     double.Parse(timeMatch.Groups[3].Value);
+
+        //            double percentage = (currentSeconds / totalDurationSeconds) * 100;
+        //            progress?.Report(Math.Clamp(percentage, 0, 100));
+        //        }
+        //    }
+        //}
+
+        //await _currentProcess.WaitForExitAsync();
+
+        //// 3. CHECK FOR FAILURE
+        //int exitCode = _currentProcess.ExitCode;
+        //_currentProcess = null; 
+
+        //if (exitCode != 0)
+        //{
+        //    throw new Exception($"FFmpeg failed with exit code {exitCode}.");
+        //}
+    }
+
+    // Smart target size  
+    public async Task CompressTargetSizeAsync(string input, string output, string targetFps, bool stripMetadata, int targetMb, string encoder, string selectedResolution, double duration, IProgress<double>? progress = null)
+    {
+        // Bitrate = (Size in MB * 8192) / Duration
+        // Subtracting 128kbps as a buffer for the audio stream
+        double totalBitrate = (targetMb * 8192.0) / duration;
+        int videoBitrate = (int)(totalBitrate - 128);
+        if (videoBitrate < 100) videoBitrate = 100; // Safety floor
+
+        var filters = new List<string>();
+        if (!string.IsNullOrEmpty(selectedResolution) && selectedResolution != "Original")
+            filters.Add($"scale={selectedResolution.Split(' ')[0]}:-2");
+        if (targetFps != "Original" && int.TryParse(targetFps, out int fpsValue))
+            filters.Add($"fps={fpsValue}");
+
+        string filterArgs = filters.Count > 0 ? $"-vf \"{string.Join(",", filters)}\"" : "";
+        string metadataFlag = stripMetadata ? "-map_metadata -1 -map_chapters -1" : "";
+        string logName = Path.Combine(Path.GetTempPath(), $"ffmpeg2pass_{Guid.NewGuid()}");
+        string nullDev = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "NUL" : "/dev/null";
+
+
+        // PASS 1
+        var pass1 = $"-y -i \"{input}\" {filterArgs} -c:v {encoder} -b:v {videoBitrate}k -pass 1 -passlogfile \"{logName}\" -an -f null {nullDev}";
+        // PASS 2
+        var pass2 = $"-y -i \"{input}\" {filterArgs} -c:v {encoder} -b:v {videoBitrate}k -pass 2 -passlogfile \"{logName}\" -c:a aac -b:a 128k \"{output}\"";
+
+        await RunFfmpegProcessAsync(pass1, null);
+        await RunFfmpegProcessAsync(pass2, progress);
+
+        if (File.Exists($"{logName}-0.log")) File.Delete($"{logName}-0.log");
+        if (File.Exists($"{logName}-0.log.mbtree")) File.Delete($"{logName}-0.log.mbtree");
+    }
+
+    private async Task RunFfmpegProcessAsync(string args, IProgress<double>? progress)
+    {
+        if (!File.Exists(_ffmpegPath)) throw new FileNotFoundException("FFmpeg not found", _ffmpegPath);
 
         _currentProcess = new Process
         {
@@ -147,55 +246,34 @@ public class FfmpegService
             }
         };
 
-        var errorBuilder = new System.Text.StringBuilder();
-        double totalDurationSeconds = 0;
-
+        double totalDuration = 0;
         _currentProcess.Start();
 
-        // Read the stream
         using (var reader = _currentProcess.StandardError)
         {
             while (await reader.ReadLineAsync() is string line)
             {
-                
-                errorBuilder.AppendLine(line);
-
-                // 1. Get total duration
-                if (totalDurationSeconds == 0)
+                if (totalDuration == 0)
                 {
                     var match = Regex.Match(line, @"Duration:\s(\d+):(\d+):(\d+\.\d+)");
                     if (match.Success)
-                    {
-                        totalDurationSeconds = (double.Parse(match.Groups[1].Value) * 3600) +
-                                               (double.Parse(match.Groups[2].Value) * 60) +
-                                                double.Parse(match.Groups[3].Value);
-                    }
+                        totalDuration = (double.Parse(match.Groups[1].Value) * 3600) + (double.Parse(match.Groups[2].Value) * 60) + double.Parse(match.Groups[3].Value);
                 }
 
-                // 2. Get current time
                 var timeMatch = Regex.Match(line, @"time=(\d+):(\d+):(\d+\.\d+)");
-                if (timeMatch.Success && totalDurationSeconds > 0)
+                if (timeMatch.Success && totalDuration > 0 && progress != null)
                 {
-                    double currentSeconds = (double.Parse(timeMatch.Groups[1].Value) * 3600) +
-                                            (double.Parse(timeMatch.Groups[2].Value) * 60) +
-                                             double.Parse(timeMatch.Groups[3].Value);
-
-                    double percentage = (currentSeconds / totalDurationSeconds) * 100;
-                    progress?.Report(Math.Clamp(percentage, 0, 100));
+                    double currentSeconds = (double.Parse(timeMatch.Groups[1].Value) * 3600) + (double.Parse(timeMatch.Groups[2].Value) * 60) + double.Parse(timeMatch.Groups[3].Value);
+                    progress.Report(Math.Clamp((currentSeconds / totalDuration) * 100, 0, 100));
                 }
             }
         }
 
         await _currentProcess.WaitForExitAsync();
+        if (_currentProcess.ExitCode != 0 && _currentProcess.ExitCode != -1) 
+            throw new Exception($"FFmpeg failed with exit code {_currentProcess.ExitCode}");
 
-        // 3. CHECK FOR FAILURE
-        int exitCode = _currentProcess.ExitCode;
-        _currentProcess = null; 
-
-        if (exitCode != 0)
-        {
-            throw new Exception($"FFmpeg failed with exit code {exitCode}.");
-        }
+        _currentProcess = null;
     }
 
     public void KillProcess()
