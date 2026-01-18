@@ -6,7 +6,7 @@ namespace Video_Size_Optimizer
 {
     public static class AppConstants
     {
-        public const string AppVersion = "v1.3.6";
+        public const string AppVersion = "v1.3.6.1";
 
         // Encoders
         public static readonly Dictionary<string, string> EncoderMap = new()
