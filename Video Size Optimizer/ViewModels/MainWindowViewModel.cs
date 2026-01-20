@@ -22,11 +22,13 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly FileService _fileService = new();
     private readonly SystemUtilityService _systemService = new();
     private readonly MessageService _messageService = new();
-
+    private readonly SettingsService _settingsService = new();
+    [ObservableProperty] private AppSettings _globalSettings = new();
+    [ObservableProperty] private string _conversionTargetFormat = ".mp4";
 
     public bool HasVideos => Videos.Count > 0;
     public string SelectionStatus => $"{Videos.Count(v => v.IsSelected)} of {Videos.Count} files selected";
-    public string ActionButtonText => IsBusy ? "STOP COMPRESSION" : "START COMPRESSION";
+    public string ActionButtonText => IsBusy ? "STOP PROCESSING" : "START PROCESSING";
     public string ActionButtonColor => IsBusy ? "#ff4444" : "#00d26a";
     public ObservableCollection<VideoFile> Videos { get; } = new();
     public ObservableCollection<VideoFile> DisplayedVideos { get; } = new();
@@ -49,6 +51,8 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty] private bool _isCrfMode = true;
     [ObservableProperty] private int _targetSizeMb = 25;
     [ObservableProperty] private bool _isDownloading;
+    [ObservableProperty] private string _currentSpeed = "0x";
+    [ObservableProperty] private int _selectedTabIndex;
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(PauseActionIconPath))]
     private bool _isPaused;
     [ObservableProperty] 
@@ -62,6 +66,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public List<string> AvailableEncoders => AppConstants.AvailableEncoderNames;
     public List<string> ResolutionOptions => AppConstants.AvailableResolutionNames;
+    public List<string> OutputFormats => AppConstants.AvailableFormats;
 
     public IRelayCommand<Window> BrowseFolderCommand { get; }
     public IRelayCommand SelectAllCommand { get; }
@@ -93,6 +98,8 @@ public partial class MainWindowViewModel : ViewModelBase
             ExpectedPath = path;
             StatusMessage = "Setup Required: Missing FFmpeg files.";
         }
+
+        GlobalSettings = _settingsService.LoadSettings();
     }
 
     // Check for updates
@@ -210,7 +217,6 @@ public partial class MainWindowViewModel : ViewModelBase
         int completedCount = 0;
         long totalBytesSaved = 0;
 
-
         IsBusy = true;
         StatusMessage = "Processing...";
 
@@ -225,10 +231,14 @@ public partial class MainWindowViewModel : ViewModelBase
                 video.IsProcessing = true;
 
                 await Task.Delay(50);
-                
 
                 try
                 {
+                    if (video.DurationSeconds <= 0)
+                    {
+                        video.DurationSeconds = await _ffprobeService.GetVideoDurationAsync(video.FilePath);
+                    }
+
                     long originalSizeBytes = new FileInfo(video.FilePath).Length;
 
                     // Get original width
@@ -250,49 +260,81 @@ public partial class MainWindowViewModel : ViewModelBase
                         encoderValue = "libx265";
                     }
                     //Ensure we don't override files
-                    string finalOutputPath = video.HasCustomSize
-                                            ? _fileService.GenerateTargetSizePath(video.FilePath, (int)video.CustomTargetSizeMb!)
-                                            : _fileService.GenerateOutputPath(video.FilePath, CrfValue);
-                    
+                    string finalOutputPath;
+
                     //Run Compression
-                    var p = new Progress<double>(val => video.Progress = val);
-
-                    if (video.HasCustomSize)
+                    var p = new Progress<ConversionProgress>(cp =>
                     {
-                        // Bypasses CRF - Uses 2-Pass Target Size
-                        // 1. Get duration for bitrate calculation
-                        double duration = await _ffprobeService.GetVideoDurationAsync(video.FilePath);
+                        video.UpdateProgress(cp.Percentage, cp.Speed, cp.Fps);
+                        CurrentSpeed = cp.Speed;
+                    });
 
-                        if (duration > 0)
-                        {
-                            // 2. Run target size compression 
-                            await _ffmpegService.CompressTargetSizeAsync( video.FilePath,
-                                finalOutputPath, SelectedFps, StripMetadata,
-                                (int)video.CustomTargetSizeMb!, encoderValue,
-                                resolutionToUse, duration, p);
-                        }
+                    if (SelectedTabIndex == 1)
+                    {
+                        finalOutputPath = _fileService.GenerateOutputPath(video.FilePath, 0, ConversionTargetFormat);
+                        await _ffmpegService.CompressAsync(video.FilePath, finalOutputPath,
+                            "Original", false, 0, "copy", "Original", p);
                     }
                     else
                     {
-                        // Standard Batch Process - Uses Global CRF
-                        await _ffmpegService.CompressAsync( video.FilePath, finalOutputPath,
-                            SelectedFps, StripMetadata, CrfValue, encoderValue, resolutionToUse, p);
+                        finalOutputPath = video.HasCustomSize
+                                            ? _fileService.GenerateTargetSizePath(video.FilePath, (int)video.CustomTargetSizeMb!, GlobalSettings.DefaultOutputFormat)
+                                            : _fileService.GenerateOutputPath(video.FilePath, CrfValue, GlobalSettings.DefaultOutputFormat);
+
+                        if (video.HasCustomSize)
+                        {
+                            if (video.DurationSeconds > 0)
+                            {
+                                // 2. Run target size compression 
+                                await _ffmpegService.CompressTargetSizeAsync(video.FilePath,
+                                    finalOutputPath, SelectedFps, StripMetadata,
+                                    (int)video.CustomTargetSizeMb!, encoderValue,
+                                    resolutionToUse, video.DurationSeconds, p);
+                            }
+                        }
+                        else
+                        {
+                            // Standard Batch Process - Uses Global CRF
+                            await _ffmpegService.CompressAsync(video.FilePath, finalOutputPath,
+                                SelectedFps, StripMetadata, CrfValue, encoderValue, resolutionToUse, p);
+                        }
+                    }
+                 
+                    // Important to avoid deleteing files if user Stops compression!
+                    if (!IsBusy)
+                    {                      
+                        if (File.Exists(finalOutputPath)) File.Delete(finalOutputPath);
+                        break;
                     }
 
-                    // Update UI with the actual new file size
                     if (File.Exists(finalOutputPath))
                     {
                         var newInfo = new FileInfo(finalOutputPath);
-                        totalBytesSaved += (originalSizeBytes - newInfo.Length);
-                        completedCount++;
 
-                        double newSize = newInfo.Length / 1024.0 / 1024.0;
-                        // Using actual filename in case it was renamed to "File (1).mp4"
-                        video.FileSizeDisplay += $" -> {newSize:F2} MB ({Path.GetFileName(finalOutputPath)})";
-                    }
+                        if (newInfo.Length != 0)
+                        {
+                            totalBytesSaved += (originalSizeBytes - newInfo.Length);
+                            completedCount++;
 
-                    video.Progress = 100;
-                    video.IsCompleted = true;
+                            double newSize = newInfo.Length / 1024.0 / 1024.0;
+                            video.FileSizeDisplay += $" -> {newSize:F2} MB";
+
+                            video.Progress = 100;
+                            video.IsCompleted = true;
+
+                            if (SelectedTabIndex != 1 && GlobalSettings.DeleteOriginalAfterCompression && File.Exists(finalOutputPath))
+                            {
+                                try
+                                {
+                                    File.Delete(video.FilePath);
+                                }
+                                catch (Exception)
+                                {
+                                    // Log later
+                                }
+                            }
+                        }                                                   
+                    }                                     
                 }
                 catch (Exception)
                 {
@@ -317,8 +359,10 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             IsBusy = false;
             StatusMessage = "Ready";
+            CurrentSpeed = "0x";
         }
     }
+
     // Show videos on the grid
     private void ApplyFilter()
     {
@@ -479,15 +523,22 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    public void OpenExpectedFolder()
+    public async Task OpenExpectedFolder()
     {
-        _systemService.OpenLocalFolder(ExpectedPath);
+        try
+        {
+            string path = _fileService.EnsureFfmpegDirectoryExists(ExpectedPath);
+            _systemService.OpenLocalFolder(path);
+        }
+        catch (Exception ex)
+        {
+           await  _messageService.ShowErrorAsync("Folder Error", $"Could not prepare or open the folder: {ex.Message}");
+        }
     }
 
     [RelayCommand]
     public void RefreshDependencyCheck()
     {
-        // Re-run the binary check
         if (DependencyChecker.CheckBinaries(out string path))
         {
             ShowDependencyWarning = false;
@@ -549,5 +600,30 @@ public partial class MainWindowViewModel : ViewModelBase
             }
         }
     }
+
+
+    [RelayCommand]
+    public async Task OpenSettings(Window owner)
+    {
+        var settingsVM = new SettingsViewModel(GlobalSettings);
+        var settingsWin = new Views.SettingsWindow { DataContext = settingsVM };
+
+        await settingsWin.ShowDialog(owner);
+
+        var newSettings = settingsVM.GetUpdatedSettings();
+        GlobalSettings = newSettings;
+
+        if (settingsVM.SaveToDisk)
+        {
+            await _settingsService.SaveSettingsAsync(newSettings);
+        }
+    }
+
+
+
+
+
+
+
 
 }

@@ -10,18 +10,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Models\" />
     <AvaloniaResource Include="Assets\**" />
   </ItemGroup>
-
-  <ItemGroup>
-		<Content Include="ffmpeg\**\*">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<Content Update="ffmpeg\linux-x64\ffmpeg;ffmpeg\osx-x64\ffmpeg">
-			<Attributes>Executable</Attributes>
-		</Content>
-	</ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="11.3.10" />

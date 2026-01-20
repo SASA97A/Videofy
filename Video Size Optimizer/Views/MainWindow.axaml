@@ -7,10 +7,12 @@
 		MinWidth="1100" MinHeight="600"
         x:Class="Video_Size_Optimizer.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
+		xmlns:Views="using:Video_Size_Optimizer.Views"
 		xmlns:conv="using:Video_Size_Optimizer.Converters"
         Icon="/Assets/app.ico"
         Title="Videofy - Video Size Optimizer"
 		Background="#1e1e1e">
+	
 	<Window.Styles>
 		<Style Selector="Separator.vertical">
 			<Setter Property="Width" Value="1"/>
@@ -80,17 +82,23 @@
 		<StackPanel Grid.Row="0" Margin="-20,-20,-20,20">
 			<Menu Background="#2b2b2b">
 				<MenuItem Header="_File">
-					<MenuItem Header="_Add Folder..."
+					<MenuItem Header="_Open Folder..."
+							  IsEnabled="{Binding !IsBusy}"
 							  Command="{Binding BrowseFolderCommand}"
 							  CommandParameter="{Binding $parent[Window]}" />
 					<Separator />
 					<MenuItem Header="_Exit" Click="OnExitClick"/>
 				</MenuItem>
 				<MenuItem Header="_Selection">
-					<MenuItem Header="_Select All" Command="{Binding SelectAllCommand}" HotKey="Ctrl+A" />
-					<MenuItem Header="_Deselect All" Command="{Binding DeselectAllCommand}" />
+					<MenuItem Header="_Select All" Command="{Binding SelectAllCommand}" IsEnabled="{Binding !IsBusy}" />
+					<MenuItem Header="_Deselect All" Command="{Binding DeselectAllCommand}" IsEnabled="{Binding !IsBusy}"/>
 				</MenuItem>
 				<MenuItem Header="_Help">
+					<MenuItem Header="_Global Settings"
+							  IsEnabled="{Binding !IsBusy}"
+							  Command="{Binding OpenSettingsCommand}"
+							  CommandParameter="{Binding $parent[Window]}"/>
+					<Separator />
 					<MenuItem Header="_Check for Updates" Command="{Binding CheckForUpdatesCommand}" />
 					<Separator />
 					<MenuItem Header="_About" Command="{Binding ShowAboutCommand}" />
@@ -100,6 +108,7 @@
 			<Border Background="#333333" Height="50" BorderBrush="#111111" BorderThickness="0,0,0,1">
 				<StackPanel Orientation="Horizontal" Margin="20,0" Spacing="10">
 					<Button Command="{Binding BrowseFolderCommand}"
+							IsEnabled="{Binding !IsBusy}"
 							CommandParameter="{Binding $parent[Window]}"
 							Background="Transparent" BorderThickness="0" Padding="10,5" Cursor="Hand">
 						<StackPanel Orientation="Horizontal" Spacing="8">
@@ -115,6 +124,7 @@
 					<Separator Classes="vertical" />
 
 					<Button Command="{Binding ToggleSelectAllCommand}"
+							IsEnabled="{Binding !IsBusy}"
 							Background="Transparent" BorderThickness="0" Padding="10,5" Cursor="Hand">
 						<StackPanel Orientation="Horizontal" Spacing="8">
 							<Image Width="18" Height="18" VerticalAlignment="Center">
@@ -211,6 +221,7 @@
 					<DockPanel IsVisible="{Binding HasVideos}">
 						<TextBox DockPanel.Dock="Top"
 								 Text="{Binding SearchText}"
+								 IsEnabled="{Binding !IsBusy}"
 								 Watermark="🔍 Search by file or folder name..."
 								 Margin="5"
 								 Background="#333333"
@@ -243,11 +254,15 @@
 									</DataGridTemplateColumn.CellTemplate>
 								</DataGridTemplateColumn>
 
-								<DataGridTemplateColumn Header="File Name" Width="*">
+								<DataGridTemplateColumn Header="File Name" Width="0.8*">
 									<DataGridTemplateColumn.CellTemplate>
 										<DataTemplate>
 											<StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="10,0">
-												<TextBlock Text="{Binding FileName}" VerticalAlignment="Center" Foreground="White"/>
+												<TextBlock Text="{Binding FileName}" 
+														   VerticalAlignment="Center" 
+														   Foreground="White"
+														   TextTrimming="CharacterEllipsis"
+														   ToolTip.Tip="{Binding FileName}"/>
 
 												<Border Background="#1a3d2b"
 														BorderBrush="#d1b608"
@@ -270,8 +285,19 @@
 										</DataTemplate>
 									</DataGridTemplateColumn.CellTemplate>
 								</DataGridTemplateColumn>
-								
-								<DataGridTextColumn Header="Folder" Binding="{Binding FolderName}" Width="0.6*" IsReadOnly="True"/>
+
+								<DataGridTemplateColumn Header="Folder" Width="0.6*">
+									<DataGridTemplateColumn.CellTemplate>
+										<DataTemplate>
+											<TextBlock Text="{Binding FolderName}"
+													   VerticalAlignment="Center"
+													   Margin="10,0"
+													   Foreground="White"
+													   TextTrimming="CharacterEllipsis"
+													   ToolTip.Tip="{Binding FolderName}"/>
+										</DataTemplate>
+									</DataGridTemplateColumn.CellTemplate>
+								</DataGridTemplateColumn>
 
 								<DataGridTemplateColumn Header="Size" Width="Auto" SortMemberPath="RawSizeBytes" CanUserResize="False">
 									<DataGridTemplateColumn.CellTemplate>
@@ -286,6 +312,8 @@
 										<DataTemplate>
 											<Grid Margin="10,0">
 
+												<StackPanel VerticalAlignment="Center" Margin="10,0">
+													<Grid>
 												<ProgressBar Height="6"
 															 Value="{Binding Progress}"
 															 IsIndeterminate="{Binding ShowIndeterminate}"
@@ -295,7 +323,15 @@
 															 Background="#444444"
 															 CornerRadius="3"
 															 VerticalAlignment="Center"/>
-
+													</Grid>
+													<TextBlock Text="{Binding Eta}"
+															   IsVisible="{Binding IsProcessing}"
+															   FontSize="10"
+															   Foreground="#CCCCCC"
+															   HorizontalAlignment="Right"
+															   Margin="0,2,0,0"/>
+												</StackPanel>
+												
 												<TextBlock Text="Completed"
 														   Foreground="LimeGreen"
 														   FontWeight="Medium"
@@ -441,144 +477,34 @@
 			</DockPanel>
 		</Border>
 
-		<Border Grid.Row="2" Background="#2b2b2b" Margin="-20,20,-20,-20" Padding="20" BorderBrush="#111111" BorderThickness="0,1,0,0">
-			<Grid ColumnDefinitions="Auto, *, Auto, Auto">
+		<Border Grid.Row="2" Margin="-20,20,-20,-20" BorderBrush="#111111" BorderThickness="0,1,0,0" Height="230">
+			<TabControl SelectedIndex="{Binding SelectedTabIndex, Mode=TwoWay}" Padding="0" Margin="0">
+				<TabControl.Styles>
+					<Style Selector="TabItem">
+						<Setter Property="FontSize" Value="12"/>
+						<Setter Property="FontWeight" Value="SemiBold"/>
+						<Setter Property="MinHeight" Value="30"/>
+						<Setter Property="Background" Value="#2b2b2b"/>
+						<Setter Property="Foreground" Value="#888888"/>
+					</Style>
+					<Style Selector="TabItem:selected">
+						<Setter Property="Foreground" Value="#00d26a"/>
+						<Setter Property="Background" Value="#333333"/>
+					</Style>
+					<Style Selector="TabControl /template/ ContentPresenter#PART_SelectedContentHost">
+						<Setter Property="Padding" Value="0"/>
+					</Style>
+				</TabControl.Styles>
 
-				<StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="2" Margin="0,0,20,0">
-					<StackPanel Orientation="Horizontal" Spacing="8">
-						<TextBlock Text="Selection:" Foreground="#CCCCCC" FontSize="11"/>
-						<TextBlock Text="{Binding SelectionStatus}" Foreground="#00d26a" FontSize="11" FontWeight="SemiBold"/>
-					</StackPanel>
-					<Border Background="#443300" CornerRadius="4" Padding="6,2" IsVisible="{Binding IsBusy}">
-						<TextBlock Text="{Binding StatusMessage}" Foreground="Yellow" FontSize="10" FontWeight="Medium"/>
-					</Border>
-				</StackPanel>
+				<TabItem Header="OPTIMIZE (COMPRESS)" IsEnabled="{Binding !IsBusy}">
+					<Views:CompressionView/>
+				</TabItem>
 
-				<StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="2">
-					<TextBlock Text="{Binding SelectedFolderPath}"
-							   Foreground="White" FontSize="11" Opacity="0.5"
-							   TextTrimming="CharacterEllipsis"
-							   MaxWidth="350"
-							   HorizontalAlignment="Center"/>
-					<StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="5">
-						<TextBlock Text="Total Size:" Foreground="#CCCCCC" FontSize="11"/>
-						<TextBlock Text="{Binding TotalFolderSizeDisplay}" Foreground="#00d26a" FontSize="11" FontWeight="Bold"/>
-					</StackPanel>
-				</StackPanel>
-
-				<StackPanel Grid.Column="2" Orientation="Vertical" Spacing="4" VerticalAlignment="Center" Margin="20,0">
-
-					<CheckBox IsChecked="{Binding StripMetadata}"
-							  IsEnabled="{Binding !IsBusy}"
-							  Margin="80,5,0,0">
-						<StackPanel Orientation="Horizontal" Spacing="5">
-							<TextBlock Text="Remove video trackers" Foreground="#F5F5F5" FontSize="11"/>
-							<Border Background="#3d3d3d" CornerRadius="10" Width="14" Height="14"
-									ToolTip.Tip="Removes hidden metadata like GPS location, camera serials, and timestamps.">
-								<TextBlock Text="?" Foreground="#00d26a" FontSize="10" FontWeight="Bold"
-										   HorizontalAlignment="Center" VerticalAlignment="Center"/>
-							</Border>
-						</StackPanel>
-					</CheckBox>
-					
-					<StackPanel Orientation="Horizontal" Spacing="8">
-						<TextBlock Text="Encoder:"
-								   VerticalAlignment="Center"
-								   Foreground="#CCCCCC"
-								   FontSize="11"
-								   Width="65"/>
-						<ComboBox ItemsSource="{Binding AvailableEncoders}"
-								  SelectedItem="{Binding SelectedEncoder}"
-								  IsEnabled="{Binding !IsBusy}"
-								  FontSize="12"
-								  Width="200"/>
-					</StackPanel>
-
-					<StackPanel Orientation="Horizontal" Spacing="8">
-						<TextBlock Text="Target Res:"
-								   VerticalAlignment="Center"
-								   Foreground="#CCCCCC"
-								   FontSize="11"
-								   Width="65"/>
-						<ComboBox ItemsSource="{Binding ResolutionOptions}"
-								  SelectedItem="{Binding SelectedResolution}"
-								  IsEnabled="{Binding !IsBusy}"
-								  FontSize="12"
-								  Width="200"/>
-					</StackPanel>
-
-					<StackPanel Orientation="Horizontal" Spacing="8">
-						<TextBlock Text="Max FPS:" 
-								   VerticalAlignment="Center" 
-								   Foreground="#CCCCCC" 
-								   FontSize="11" 
-								   Width="65"/>
-						
-						<ComboBox ItemsSource="{Binding FpsOptions}"
-								  SelectedItem="{Binding SelectedFps}"
-								  IsEnabled="{Binding !IsBusy}"
-								  FontSize="12"
-								  Width="200"/>
-					</StackPanel>
-
-				</StackPanel>
-
-				<StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="20" HorizontalAlignment="Right">
-
-					<StackPanel Spacing="3" VerticalAlignment="Center" Width="180">
-						<StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
-							<TextBlock Text="Quality:" FontSize="11" Foreground="#CCCCCC"/>
-							<TextBlock Text="{Binding CrfDescription}" FontSize="11" FontWeight="SemiBold" Foreground="#00d26a" />
-						</StackPanel>
-
-						<Grid ColumnDefinitions="*, Auto">
-							<StackPanel Grid.Column="0">
-								<Slider Value="{Binding CrfValue}" Minimum="1" Maximum="35"
-										IsSnapToTickEnabled="True" TickFrequency="1"
-										VerticalAlignment="Center" Cursor="Hand"/>
-								<Grid Margin="0,-12,0,0">
-									<StackPanel HorizontalAlignment="Right" Margin="0,0,16,0" IsHitTestVisible="False">
-										<TextBlock Text="▲" Foreground="#00d26a" FontSize="8" HorizontalAlignment="Center" Opacity="0.5"/>
-										<TextBlock Text="REC (28)" Foreground="#F5F5F5" FontSize="9" HorizontalAlignment="Center" Opacity="0.7"/>
-									</StackPanel>
-								</Grid>
-							</StackPanel>
-							<Border Grid.Column="1" Background="#3d3d3d" CornerRadius="4" Padding="5,1" Margin="8,-6,0,0" VerticalAlignment="Center">
-								<TextBlock Text="{Binding CrfValue}" Foreground="White" FontSize="11" FontWeight="Bold" MinWidth="18" TextAlignment="Center"/>
-							</Border>
-						</Grid>
-					</StackPanel>
-
-					<StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-						<Button Command="{Binding TogglePauseCommand}"
-								IsVisible="{Binding IsBusy}"
-								Width="45" Height="40"
-								Background="#3d3d3d"
-								CornerRadius="4">
-							<Panel>
-								<Image Width="14" Height="14" IsVisible="{Binding !IsPaused}">
-									<Image.Source>
-										<SvgImage Source="avares://Videofy/Assets/pause.svg"/>
-									</Image.Source>
-								</Image>
-								<Image Width="14" Height="14" IsVisible="{Binding IsPaused}">
-									<Image.Source>
-										<SvgImage Source="avares://Videofy/Assets/play.svg"/>
-									</Image.Source>
-								</Image>
-							</Panel>
-						</Button>
-
-						<Button Command="{Binding HandleActionCommand}"
-								Content="{Binding ActionButtonText}"
-								Padding="20,0" Height="40"
-								VerticalContentAlignment="Center"
-								Background="{Binding ActionButtonColor}"
-								Foreground="Black" FontWeight="Black" FontSize="12"
-								CornerRadius="4"/>
-					</StackPanel>
-				</StackPanel>
-			</Grid>
-		</Border>
+				<TabItem Header="CONVERT (INSTANT)" IsEnabled="{Binding !IsBusy}">
+					<Views:ConversionView/>
+				</TabItem>
+			</TabControl>
+		</Border>	
+		
 	</Grid>
 </Window>

@@ -31,6 +31,7 @@ public partial class VideoFile : ObservableObject
     [ObservableProperty] private bool isProcessing;
     [ObservableProperty] private bool isCompleted;
     [ObservableProperty] private int? customTargetSizeMb;
+    [ObservableProperty] private string _eta = "";
 
     public double CustomTargetSizeMbSlider
     {
@@ -54,8 +55,31 @@ public partial class VideoFile : ObservableObject
         RawSizeBytes = info.Length;
         FileSizeDisplay = $"{(info.Length / 1024.0 / 1024.0):F2} MB";
 
+        string rootFolderName = Path.GetFileName(rootFolder.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
         string relativePath = Path.GetRelativePath(rootFolder, Path.GetDirectoryName(filePath) ?? "");
-        FolderName = relativePath == "." ? "Root" : relativePath;
+        FolderName = relativePath == "." ? rootFolderName + (" (Root Folder)") : Path.Combine(rootFolderName, relativePath);
+    }
+
+    public void UpdateProgress(double percentage, string speed, string fps)
+    {
+        Progress = percentage;
+
+        if (percentage >= 100) { Eta = "Done"; return; }
+
+        if (double.TryParse(speed.Replace("x", ""), out double speedVal) && speedVal > 0)
+        {
+            double remainingVideoSeconds = DurationSeconds * (1 - (percentage / 100));
+            double realTimeSecondsLeft = remainingVideoSeconds / speedVal;
+            var t = TimeSpan.FromSeconds(realTimeSecondsLeft);
+
+            Eta = t.TotalHours >= 1
+                ? $@"{(int)t.TotalHours}h {t.Minutes}m remaining"
+                : $@"{t.Minutes}m {t.Seconds}s remaining";
+        }
+        else
+        {
+            Eta = "Calculating...";
+        }
     }
 
     private void FormatFileSize(string path)

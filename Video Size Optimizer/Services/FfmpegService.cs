@@ -6,6 +6,14 @@ using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
+
+public struct ConversionProgress
+{
+    public double Percentage;
+    public string Speed; // e.g., "1.2x"
+    public string Fps;   // e.g., "45"
+}
+
 public class FfmpegService
 {
     private readonly string _ffmpegPath;
@@ -90,10 +98,15 @@ public class FfmpegService
         }
     }
 
-    public async Task CompressAsync(string input, string output, string targetFps, bool stripMetadata, int crf, string encoder, string selectedResolution, IProgress<double>? progress = null)
+    public async Task CompressAsync(string input, string output, string targetFps, bool stripMetadata, int crf, string encoder, string selectedResolution, IProgress<ConversionProgress>? progress = null)
     {
-        //if (!File.Exists(_ffmpegPath))
-        //    throw new FileNotFoundException("FFmpeg not found", _ffmpegPath);
+
+        if (encoder == "copy")
+        {          
+            var copyArgs = $"-y -i \"{input}\" -c copy -map 0 \"{output}\"";
+            await RunFfmpegProcessAsync(copyArgs, progress);
+            return;
+        }
 
         var filters = new List<string>();
 
@@ -136,7 +149,7 @@ public class FfmpegService
     }
 
     // Smart target size  
-    public async Task CompressTargetSizeAsync(string input, string output, string targetFps, bool stripMetadata, int targetMb, string encoder, string selectedResolution, double duration, IProgress<double>? progress = null)
+    public async Task CompressTargetSizeAsync(string input, string output, string targetFps, bool stripMetadata, int targetMb, string encoder, string selectedResolution, double duration, IProgress<ConversionProgress>? progress = null)
     {
         // Bitrate = (Size in MB * 8192) / Duration
         // Subtracting 128kbps as a buffer for the audio stream
@@ -156,9 +169,19 @@ public class FfmpegService
         string nullDev = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "NUL" : "/dev/null";
 
         // Pass 1: 0% -> 50%
-        var p1 = new Progress<double>(val => progress?.Report(val * 0.5));
+        var p1 = new Progress<ConversionProgress>(cp => progress?.Report(new ConversionProgress
+        {
+            Percentage = cp.Percentage * 0.5,
+            Speed = cp.Speed,
+            Fps = cp.Fps
+        }));
         // Pass 2: 50% -> 100%
-        var p2 = new Progress<double>(val => progress?.Report(50 + (val * 0.5)));
+        var p2 = new Progress<ConversionProgress>(cp => progress?.Report(new ConversionProgress
+        {
+            Percentage = 50 + (cp.Percentage * 0.5),
+            Speed = cp.Speed,
+            Fps = cp.Fps
+        }));
 
         // PASS 1
         var pass1 = $"-y -i \"{input}\" {filterArgs} -c:v {encoder} -b:v {videoBitrate}k -pass 1 -passlogfile \"{logName}\" -an -f null {nullDev}";
@@ -173,7 +196,7 @@ public class FfmpegService
         if (File.Exists($"{logName}.log")) File.Delete($"{logName}.log");
     }
 
-    private async Task RunFfmpegProcessAsync(string args, IProgress<double>? progress)
+    private async Task RunFfmpegProcessAsync(string args, IProgress<ConversionProgress>? progress)
     {
         if (!File.Exists(_ffmpegPath)) throw new FileNotFoundException("FFmpeg not found", _ffmpegPath);
 
@@ -204,10 +227,18 @@ public class FfmpegService
                 }
 
                 var timeMatch = Regex.Match(line, @"time=(\d+):(\d+):(\d+\.\d+)");
+                var speedMatch = Regex.Match(line, @"speed=\s*(\d+\.\d+x)");
+                var fpsMatch = Regex.Match(line, @"fps=\s*(\d+)");
+
                 if (timeMatch.Success && totalDuration > 0 && progress != null)
                 {
                     double currentSeconds = (double.Parse(timeMatch.Groups[1].Value) * 3600) + (double.Parse(timeMatch.Groups[2].Value) * 60) + double.Parse(timeMatch.Groups[3].Value);
-                    progress.Report(Math.Clamp((currentSeconds / totalDuration) * 100, 0, 100));
+                    progress.Report( new ConversionProgress
+                    {
+                        Percentage = Math.Clamp((currentSeconds / totalDuration) * 100, 0, 100),
+                        Speed = speedMatch.Success ? speedMatch.Groups[1].Value : "0x",
+                        Fps = fpsMatch.Success ? fpsMatch.Groups[1].Value : "0"
+                    });
                 }
             }
         }

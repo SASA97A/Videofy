@@ -1,0 +1,51 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+		xmlns:vm="using:Video_Size_Optimizer.ViewModels"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="Video_Size_Optimizer.Views.SettingsWindow"
+		x:DataType="vm:SettingsViewModel"
+        Title="Global Settings" Width="400" Height="300"
+        WindowStartupLocation="CenterOwner"
+        Background="#1e1e1e" Foreground="White">
+	
+	<StackPanel Margin="20" Spacing="20">
+		<!--<TextBlock Text="General Settings" FontSize="18" FontWeight="Bold" Foreground="#00d26a"/>-->
+
+		<StackPanel Spacing="5">
+			<CheckBox IsChecked="{Binding DeleteOriginal}" Content="Delete original file after successful compression"/>
+			<StackPanel Orientation="Horizontal" Spacing="6" Margin="32,0,0,0">
+				<Image Width="12" Height="12" VerticalAlignment="Center">
+					<Image.Source>
+						<SvgImage Source="/Assets/warning.svg"/>
+					</Image.Source>
+				</Image>
+				<TextBlock Text="Warning: This action cannot be undone."
+						   FontSize="12"
+						   Foreground="#CCCCCC"
+						   VerticalAlignment="Center"
+						   />
+			</StackPanel>
+		</StackPanel>
+
+		<StackPanel Spacing="5">
+			<TextBlock Text="Default Output Format:" FontSize="12"/>
+			<ComboBox ItemsSource="{Binding OutputFormats}"
+                      SelectedItem="{Binding SelectedFormat}"
+                      Width="150"/>
+		</StackPanel>
+
+		<Separator Background="#333333"/>
+
+		<CheckBox IsChecked="{Binding SaveToDisk}"
+				  Content="Remember these settings for next time"
+				  FontSize="12"
+				  Margin="0,10,0,0"/>
+		
+		<Button Content="Save &amp; Close"
+                Click="OnSaveClick"
+                HorizontalAlignment="Right"
+                Background="#00d26a" Foreground="Black" FontWeight="Bold"/>
+	</StackPanel>
+</Window>

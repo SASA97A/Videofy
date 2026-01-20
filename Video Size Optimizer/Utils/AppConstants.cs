@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 
 
@@ -6,7 +7,7 @@ namespace Video_Size_Optimizer
 {
     public static class AppConstants
     {
-        public const string AppVersion = "v1.3.6.1";
+        public const string AppVersion = "v1.3.7";
 
         // Encoders
         public static readonly Dictionary<string, string> EncoderMap = new()
@@ -42,6 +43,20 @@ namespace Video_Size_Optimizer
             <= 28 => "Balanced (Recommended)",
             <= 32 => "Small (Space Saver)",
             _ => "Tiny (Maximum Compression)"
+        };
+
+        //Extensions to convert to (Global Settings)
+        public static readonly List<string> AvailableFormats = new()
+        {
+            ".mp4", ".mkv", ".mov", ".webm", ".avi", ".ts", ".m4v"
+        };
+
+        // Extensions that are readable into app (Video list (datagrid))
+        public static readonly HashSet<string> SupportedInputExtensions = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ".mp4", ".mkv", ".mov", ".avi", ".webm", ".m4v",
+            ".flv", ".wmv", ".mpg", ".mpeg", ".ts", ".mts",
+            ".m2ts", ".3gp", ".3g2", ".ogv", ".vob", ".asf", ".f4v"
         };
 
         // Framerate label

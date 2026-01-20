@@ -1,0 +1,113 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+			 xmlns:vm="using:Video_Size_Optimizer.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="Video_Size_Optimizer.Views.CompressionView"
+			 x:DataType="vm:MainWindowViewModel">
+
+
+	<Border Background="#2b2b2b" Padding="20">
+		<Grid ColumnDefinitions="Auto, *, Auto, Auto">
+
+			<StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="8" Margin="0,0,20,0">
+				<StackPanel Orientation="Horizontal" Spacing="15">
+					<StackPanel Orientation="Horizontal" Spacing="8">
+						<TextBlock Text="Selection:" Foreground="#888888" FontSize="11"/>
+						<TextBlock Text="{Binding SelectionStatus}" Foreground="#00d26a" FontSize="11" FontWeight="SemiBold"/>
+					</StackPanel>
+				</StackPanel>
+
+				<StackPanel Orientation="Horizontal" Spacing="10" IsVisible="{Binding IsBusy}">
+					<Border Background="#443300" CornerRadius="4" Padding="8,2">
+						<TextBlock Text="{Binding StatusMessage}" Foreground="Yellow" FontSize="10" FontWeight="Bold"/>
+					</Border>
+					<Rectangle Width="1" Height="12" Fill="#444444" VerticalAlignment="Center"/>
+					<StackPanel Orientation="Horizontal" Spacing="5">
+						<TextBlock Text="Speed:" Foreground="#888888" FontSize="10" VerticalAlignment="Center"/>
+						<Border Width="50" Height="18" VerticalAlignment="Center">
+							<TextBlock Text="{Binding CurrentSpeed}" Foreground="#00d26a" FontSize="11" FontWeight="Bold" HorizontalAlignment="Left" VerticalAlignment="Center" />
+						</Border>
+					</StackPanel>
+				</StackPanel>
+			</StackPanel>
+
+			<StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="2">
+				<TextBlock Text="{Binding SelectedFolderPath}" Foreground="White" FontSize="11" Opacity="0.5" TextTrimming="CharacterEllipsis" MaxWidth="350" HorizontalAlignment="Center"/>
+				<StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="5">
+					<TextBlock Text="Total Size:" Foreground="#CCCCCC" FontSize="11"/>
+					<TextBlock Text="{Binding TotalFolderSizeDisplay}" Foreground="#00d26a" FontSize="11" FontWeight="Bold"/>
+				</StackPanel>
+			</StackPanel>
+
+			<StackPanel Grid.Column="2" Orientation="Vertical" Spacing="4" VerticalAlignment="Center" Margin="20,0">
+				<CheckBox IsChecked="{Binding StripMetadata}" IsEnabled="{Binding !IsBusy}" Margin="80,5,0,0">
+					<StackPanel Orientation="Horizontal" Spacing="5">
+						<TextBlock Text="Remove video trackers" Foreground="#F5F5F5" FontSize="11"/>
+						<Border Background="#3d3d3d" CornerRadius="10" Width="14" Height="14" ToolTip.Tip="Removes hidden metadata.">
+							<TextBlock Text="?" Foreground="#00d26a" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+						</Border>
+					</StackPanel>
+				</CheckBox>
+
+				<StackPanel Orientation="Horizontal" Spacing="8">
+					<TextBlock Text="Encoder:" VerticalAlignment="Center" Foreground="#CCCCCC" FontSize="11" Width="65"/>
+					<ComboBox ItemsSource="{Binding AvailableEncoders}" SelectedItem="{Binding SelectedEncoder}" IsEnabled="{Binding !IsBusy}" FontSize="12" Width="200"/>
+				</StackPanel>
+
+				<StackPanel Orientation="Horizontal" Spacing="8">
+					<TextBlock Text="Target Res:" VerticalAlignment="Center" Foreground="#CCCCCC" FontSize="11" Width="65"/>
+					<ComboBox ItemsSource="{Binding ResolutionOptions}" SelectedItem="{Binding SelectedResolution}" IsEnabled="{Binding !IsBusy}" FontSize="12" Width="200"/>
+				</StackPanel>
+
+				<StackPanel Orientation="Horizontal" Spacing="8">
+					<TextBlock Text="Max FPS:" VerticalAlignment="Center" Foreground="#CCCCCC" FontSize="11" Width="65"/>
+					<ComboBox ItemsSource="{Binding FpsOptions}" SelectedItem="{Binding SelectedFps}" IsEnabled="{Binding !IsBusy}" FontSize="12" Width="200"/>
+				</StackPanel>
+			</StackPanel>
+
+			<StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="20" HorizontalAlignment="Right">
+				<StackPanel Spacing="3" VerticalAlignment="Center" Width="180">
+					<StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+						<TextBlock Text="Quality:" FontSize="11" Foreground="#CCCCCC"/>
+						<TextBlock Text="{Binding CrfDescription}" FontSize="11" FontWeight="SemiBold" Foreground="#00d26a" />
+					</StackPanel>
+					<Grid ColumnDefinitions="*, Auto">
+						<StackPanel Grid.Column="0">
+							<Slider Value="{Binding CrfValue}" Minimum="1" Maximum="35" IsEnabled="{Binding !IsBusy}" IsSnapToTickEnabled="True" TickFrequency="1" VerticalAlignment="Center" Cursor="Hand"/>
+							<Grid Margin="0,-12,0,0">
+								<StackPanel HorizontalAlignment="Right" Margin="0,0,16,0" IsHitTestVisible="False">
+									<TextBlock Text="▲" Foreground="#00d26a" FontSize="8" HorizontalAlignment="Center" Opacity="0.5"/>
+									<TextBlock Text="REC (28)" Foreground="#F5F5F5" FontSize="9" HorizontalAlignment="Center" Opacity="0.7"/>
+								</StackPanel>
+							</Grid>
+						</StackPanel>
+						<Border Grid.Column="1" Background="#3d3d3d" CornerRadius="4" Padding="5,1" Margin="8,-6,0,0" VerticalAlignment="Center">
+							<TextBlock Text="{Binding CrfValue}" Foreground="White" FontSize="11" FontWeight="Bold" MinWidth="18" TextAlignment="Center"/>
+						</Border>
+					</Grid>
+				</StackPanel>
+
+				<StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+					<Button Command="{Binding TogglePauseCommand}" IsVisible="{Binding IsBusy}" Width="45" Height="40" Background="#3d3d3d" CornerRadius="4">
+						<Panel>
+							<Image Width="14" Height="14" IsVisible="{Binding !IsPaused}">
+								<Image.Source>
+									<SvgImage Source="avares://Videofy/Assets/pause.svg"/>
+								</Image.Source>
+							</Image>
+							<Image Width="14" Height="14" IsVisible="{Binding IsPaused}">
+								<Image.Source>
+									<SvgImage Source="avares://Videofy/Assets/play.svg"/>
+								</Image.Source>
+							</Image>
+						</Panel>
+					</Button>
+					<Button Command="{Binding HandleActionCommand}" Content="{Binding ActionButtonText}" Padding="20,0" Height="40" VerticalContentAlignment="Center" Background="{Binding ActionButtonColor}" Foreground="Black" FontWeight="Black" FontSize="12" CornerRadius="4"/>
+				</StackPanel>
+			</StackPanel>
+		</Grid>
+	</Border>
+	
+</UserControl>

@@ -1,7 +1,9 @@
 ﻿using ExCSS;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 
 namespace Video_Size_Optimizer.Services;
 
@@ -11,14 +13,6 @@ public class FileService
 {
     public (long totalSize, List<string> videoPaths) GetFolderData(string folder)
     {
-        var extensions = new[] {
-                                    ".mp4", ".mkv", ".mov", ".avi", ".webm", ".m4v",
-                                    ".flv", ".wmv",
-                                    ".mpg", ".mpeg",
-                                    ".ts", ".mts", ".m2ts",
-                                    ".3gp", ".3g2",
-                                    ".ogv", ".vob", ".asf", ".f4v"
-                                };
         long totalSize = 0;
         var videoPaths = new List<string>();
 
@@ -29,7 +23,7 @@ public class FileService
             var info = new FileInfo(file);
             totalSize += info.Length;
 
-            if (extensions.Contains(info.Extension.ToLower()))
+            if (AppConstants.SupportedInputExtensions.Contains(info.Extension.ToLower()))
             {
                 videoPaths.Add(file);
             }
@@ -38,23 +32,21 @@ public class FileService
         return (totalSize, videoPaths);
     } 
 
-    public string GenerateOutputPath(string inputPath, int crfValue)
+    public string GenerateOutputPath(string inputPath, int crfValue, string extension)
     {
-        return BuildFinalPath(inputPath, $"-CRF{crfValue}");
+        return BuildFinalPath(inputPath, $"-CRF{crfValue}", extension);
     }
 
-    public string GenerateTargetSizePath(string inputPath, int targetMb)
+    public string GenerateTargetSizePath(string inputPath, int targetMb, string extension)
     {
-        return BuildFinalPath(inputPath, $"-Target{targetMb}MB");
+        return BuildFinalPath(inputPath, $"-Target{targetMb}MB", extension);
     }
 
-    private string BuildFinalPath(string inputPath, string suffix)
+    private string BuildFinalPath(string inputPath, string suffix, string extension = ".mp4")
     {
         string directory = Path.GetDirectoryName(inputPath) ?? "";
         string fileNameOnly = Path.GetFileNameWithoutExtension(inputPath);
-        // .mp4 Alt: Path.GetExtension(inputPath) to keep original format
-        string extension = ".mp4";
-
+        
         string candidatePath = Path.Combine(directory, $"{fileNameOnly}{suffix}{extension}");
 
         return GetUniqueFilePath(candidatePath);
@@ -78,5 +70,25 @@ public class FileService
         }
 
         return candidate;
+    }
+
+    public string EnsureFfmpegDirectoryExists(string? expectedPath)
+    {
+        string targetPath = expectedPath ?? "";
+
+        if (string.IsNullOrWhiteSpace(targetPath) || targetPath.Contains("Unknown", StringComparison.OrdinalIgnoreCase))
+        {
+            var baseDir = AppContext.BaseDirectory;
+            string subDir = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "win-x64" :
+                            RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? "osx-x64" : "linux-x64";
+            targetPath = Path.Combine(baseDir, "ffmpeg", subDir);
+        }
+
+        if (!Directory.Exists(targetPath))
+        {
+            Directory.CreateDirectory(targetPath);
+        }
+
+        return targetPath;
     }
 }
