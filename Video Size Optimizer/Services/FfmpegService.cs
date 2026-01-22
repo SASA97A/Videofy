@@ -5,6 +5,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Video_Size_Optimizer.Services;
 
 
 public struct ConversionProgress
@@ -27,20 +28,7 @@ public class FfmpegService
 
     public FfmpegService()
     {
-        var baseDir = AppContext.BaseDirectory;
-
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-        {
-            _ffmpegPath = Path.Combine(baseDir, "ffmpeg", "win-x64", "ffmpeg.exe");
-        }
-        else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-        {
-            _ffmpegPath = Path.Combine(baseDir, "ffmpeg", "osx-x64", "ffmpeg");
-        }
-        else
-        {
-            _ffmpegPath = Path.Combine(baseDir, "ffmpeg", "linux-x64", "ffmpeg");
-        }
+        _ffmpegPath = AppPathService.FfmpegExecutable;
     }
 
     public void TogglePause(bool isPaused)

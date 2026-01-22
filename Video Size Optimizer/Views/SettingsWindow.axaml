@@ -6,15 +6,15 @@
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="Video_Size_Optimizer.Views.SettingsWindow"
 		x:DataType="vm:SettingsViewModel"
-        Title="Global Settings" Width="400" Height="300"
+        Title="Global Settings" Width="400" Height="520"
         WindowStartupLocation="CenterOwner"
         Background="#1e1e1e" Foreground="White">
 	
 	<StackPanel Margin="20" Spacing="20">
-		<!--<TextBlock Text="General Settings" FontSize="18" FontWeight="Bold" Foreground="#00d26a"/>-->
+		<TextBlock Text="Encoder Settings" FontSize="18" FontWeight="Bold" Foreground="#00d26a"/>
 
 		<StackPanel Spacing="5">
-			<CheckBox IsChecked="{Binding DeleteOriginal}" Content="Delete original file after successful compression"/>
+			<CheckBox IsChecked="{Binding DeleteOriginal}" Cursor="Hand" Content="Delete original file after successful compression"/>
 			<StackPanel Orientation="Horizontal" Spacing="6" Margin="32,0,0,0">
 				<Image Width="12" Height="12" VerticalAlignment="Center">
 					<Image.Source>
@@ -27,25 +27,37 @@
 						   VerticalAlignment="Center"
 						   />
 			</StackPanel>
+		</StackPanel>	
+
+		<CheckBox IsChecked="{Binding PreventSleep}" Cursor="Hand" Content="Prevent system sleep during processing"/>
+		
+		<StackPanel Spacing="5">
+			<StackPanel Orientation="Horizontal" Spacing="10">
+				<TextBlock Text="Pause if disk space is below:" FontSize="12"/>
+				<TextBlock Text="{Binding LowDiskBufferGb, StringFormat='{}{0} GB'}"
+						   Foreground="#00d26a" FontWeight="Bold" FontSize="12"/>
+			</StackPanel>
+			<Slider Value="{Binding LowDiskBufferGb}" Minimum="2" Maximum="80"
+					TickFrequency="1" IsSnapToTickEnabled="True" Cursor="Hand"/>
 		</StackPanel>
 
 		<StackPanel Spacing="5">
 			<TextBlock Text="Default Output Format:" FontSize="12"/>
 			<ComboBox ItemsSource="{Binding OutputFormats}"
                       SelectedItem="{Binding SelectedFormat}"
-                      Width="150"/>
+                      Width="150" Cursor="Hand"/>
 		</StackPanel>
-
+		
 		<Separator Background="#333333"/>
 
 		<CheckBox IsChecked="{Binding SaveToDisk}"
 				  Content="Remember these settings for next time"
 				  FontSize="12"
-				  Margin="0,10,0,0"/>
+				  Margin="0,10,0,0" Cursor="Hand"/>
 		
 		<Button Content="Save &amp; Close"
                 Click="OnSaveClick"
                 HorizontalAlignment="Right"
-                Background="#00d26a" Foreground="Black" FontWeight="Bold"/>
+                Background="#00d26a" Foreground="Black" FontWeight="Bold" Cursor="Hand"/>
 	</StackPanel>
 </Window>

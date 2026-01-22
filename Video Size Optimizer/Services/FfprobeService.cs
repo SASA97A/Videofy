@@ -14,13 +14,8 @@ namespace Video_Size_Optimizer.Services
         private static readonly object _lock = new();
 
         public FfprobeService()
-        {
-            var baseDir = AppContext.BaseDirectory;
-            string subDir = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "win-x64" :
-                            RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? "osx-x64" : "linux-x64";
-            string exeName = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "ffprobe.exe" : "ffprobe";
-
-            _ffprobePath = Path.Combine(baseDir, "ffmpeg", subDir, exeName);
+        {     
+            _ffprobePath = AppPathService.FfprobeExecutable;
         }
 
         public string? InitializePermissions()

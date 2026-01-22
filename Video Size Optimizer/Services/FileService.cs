@@ -1,9 +1,9 @@
-﻿using ExCSS;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using Video_Size_Optimizer.Utils;
 
 namespace Video_Size_Optimizer.Services;
 
@@ -30,7 +30,20 @@ public class FileService
         }
 
         return (totalSize, videoPaths);
-    } 
+    }
+
+    //public string SanitizeFileName(string input)
+    //{
+    //    if (string.IsNullOrEmpty(input)) return input;
+    //    var invalidChars = Path.GetInvalidFileNameChars();
+    //    return new string(input.Where(c => !invalidChars.Contains(c)).ToArray());
+    //}
+
+    public bool IsPathLengthValid(string directory, string fileName, string extension)
+    {
+        // Safety buffer for Windows (Max 260)
+        return (directory.Length + fileName.Length + extension.Length) < 250;
+    }
 
     public string GenerateOutputPath(string inputPath, int crfValue, string extension)
     {
@@ -91,4 +104,5 @@ public class FileService
 
         return targetPath;
     }
+
 }

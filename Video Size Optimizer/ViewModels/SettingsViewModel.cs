@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using System.Collections.Generic;
+using Video_Size_Optimizer.Utils;
 
 
 namespace Video_Size_Optimizer.ViewModels
@@ -9,6 +10,8 @@ namespace Video_Size_Optimizer.ViewModels
         [ObservableProperty] private bool _deleteOriginal;
         [ObservableProperty] private string _selectedFormat;
         [ObservableProperty] private bool _saveToDisk = false;
+        [ObservableProperty] private bool _preventSleep;
+        [ObservableProperty] private int _lowDiskBufferGb;
 
         public List<string> OutputFormats => AppConstants.AvailableFormats;
 
@@ -16,6 +19,8 @@ namespace Video_Size_Optimizer.ViewModels
         {
             DeleteOriginal = currentSettings.DeleteOriginalAfterCompression;
             SelectedFormat = currentSettings.DefaultOutputFormat;
+            PreventSleep = currentSettings.PreventSleep;
+            LowDiskBufferGb = currentSettings.LowDiskBufferGb;
         }
 
         public Models.AppSettings GetUpdatedSettings()
@@ -23,7 +28,9 @@ namespace Video_Size_Optimizer.ViewModels
             return new Models.AppSettings
             {
                 DeleteOriginalAfterCompression = DeleteOriginal,
-                DefaultOutputFormat = SelectedFormat
+                DefaultOutputFormat = SelectedFormat,
+                PreventSleep = PreventSleep,
+                LowDiskBufferGb = LowDiskBufferGb
             };
         }
 

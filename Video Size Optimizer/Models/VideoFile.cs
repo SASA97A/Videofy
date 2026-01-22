@@ -1,13 +1,18 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using System;
+using System.Collections.Generic;
 using System.IO;
 
 namespace Video_Size_Optimizer.Models;
 
 public partial class VideoFile : ObservableObject
 {
-    public string FilePath { get; }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(FileName))] 
+    private string _filePath;
     public string FileName => Path.GetFileName(FilePath);
+
+    //Standard Process
     public bool ShowIndeterminate => IsProcessing && Progress <= 0;
     public bool IsInvalid => FileName.Contains("-CRF", StringComparison.OrdinalIgnoreCase) || 
                              FileName.Contains("-Target", StringComparison.OrdinalIgnoreCase);
@@ -16,6 +21,8 @@ public partial class VideoFile : ObservableObject
     public double DurationSeconds { get; set; }
     public double MaxTargetMb => Math.Ceiling(RawSizeBytes / (1024.0 * 1024.0));
     public bool IsAlreadySmall => MaxTargetMb <= 10;
+
+
     partial void OnProgressChanged(double value) => OnPropertyChanged(nameof(ShowIndeterminate));
     partial void OnIsProcessingChanged(bool value)
     {
@@ -30,27 +37,63 @@ public partial class VideoFile : ObservableObject
     [ObservableProperty] private double progress = 0;
     [ObservableProperty] private bool isProcessing;
     [ObservableProperty] private bool isCompleted;
-    [ObservableProperty] private int? customTargetSizeMb;
     [ObservableProperty] private string _eta = "";
+
+    // Per-File Custom settings
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasCustomSize))]
+    [NotifyPropertyChangedFor(nameof(HasCustomSettings))]
+    [NotifyPropertyChangedFor(nameof(CustomSettingsBadge))]
+    [NotifyPropertyChangedFor(nameof(CustomTargetSizeMbSlider))]
+    private int? _customTargetSizeMb;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasCustomSettings))]
+    [NotifyPropertyChangedFor(nameof(CustomSettingsBadge))]
+    private string? _customResolution;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasCustomSettings))]
+    [NotifyPropertyChangedFor(nameof(CustomSettingsBadge))]
+    private string? _customFps;
 
     public double CustomTargetSizeMbSlider
     {
         get => CustomTargetSizeMb ?? 5;
         set => CustomTargetSizeMb = value <= 5 ? null : (int)value;
     }
-
     public bool HasCustomSize => CustomTargetSizeMb.HasValue;
-    public string CustomSizeDisplay => HasCustomSize ? $"{CustomTargetSizeMb}MB" : "";
 
-    partial void OnCustomTargetSizeMbChanged(int? value)
+    public bool HasCustomSettings => HasCustomSize || !string.IsNullOrEmpty(CustomResolution)
+                                     || !string.IsNullOrEmpty(CustomFps);
+
+
+    public string CustomSettingsBadge
     {
-        OnPropertyChanged(nameof(HasCustomSize));
-        OnPropertyChanged(nameof(CustomSizeDisplay));
-        OnPropertyChanged(nameof(CustomTargetSizeMbSlider));
+        get
+        {
+            if (!HasCustomSettings) return string.Empty;
+
+            var parts = new List<string>();
+            if (HasCustomSize) parts.Add($"{CustomTargetSizeMb}MB");
+            if (!string.IsNullOrEmpty(CustomResolution)) parts.Add(CustomResolution);
+            if (!string.IsNullOrEmpty(CustomFps)) parts.Add(CustomFps);
+
+            return $" {string.Join(" | ", parts)} ";
+        }
     }
+
+
+    public void ResetCustomSettings()
+    {
+        CustomTargetSizeMb = null;
+        CustomResolution = null;
+        CustomFps = null;
+    }
+
     public VideoFile(string filePath, string rootFolder)
     {
-        FilePath = filePath;
+        _filePath = filePath;
         var info = new FileInfo(filePath);
         RawSizeBytes = info.Length;
         FileSizeDisplay = $"{(info.Length / 1024.0 / 1024.0):F2} MB";
@@ -59,6 +102,7 @@ public partial class VideoFile : ObservableObject
         string relativePath = Path.GetRelativePath(rootFolder, Path.GetDirectoryName(filePath) ?? "");
         FolderName = relativePath == "." ? rootFolderName + (" (Root Folder)") : Path.Combine(rootFolderName, relativePath);
     }
+    
 
     public void UpdateProgress(double percentage, string speed, string fps)
     {
@@ -82,11 +126,5 @@ public partial class VideoFile : ObservableObject
         }
     }
 
-    private void FormatFileSize(string path)
-    {
-        var info = new FileInfo(path);
-        double sizeInMb = info.Length / 1024.0 / 1024.0;
-        FileSizeDisplay = $"{sizeInMb:F2} MB";
-    }
 }
 

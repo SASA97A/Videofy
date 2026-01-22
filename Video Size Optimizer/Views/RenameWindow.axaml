@@ -1,0 +1,64 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+		xmlns:vm="using:Video_Size_Optimizer.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+		xmlns:conv="using:Video_Size_Optimizer.Converters"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="Video_Size_Optimizer.Views.RenameWindow"
+        x:DataType="vm:RenameViewModel"
+        Title="Batch Rename" Width="400" SizeToContent="Height"
+        WindowStartupLocation="CenterOwner" Background="#1e1e1e" Foreground="White">
+
+	<StackPanel Margin="20" Spacing="15">
+		<TextBlock Text="Rename Mode:" FontSize="12" Foreground="#888888"/>
+		<ComboBox ItemsSource="{Binding RenameModes}"
+                  SelectedIndex="{Binding RenameMode}"
+                  HorizontalAlignment="Stretch" Cursor="Hand"/>
+
+		<Separator Background="#333333"/>
+
+		<StackPanel Spacing="10" IsVisible="{Binding IsReplaceMode}">
+			<TextBox Text="{Binding FindText}" Watermark="Text to find..." />
+			<TextBox Text="{Binding ReplaceText}" Watermark="Replace with..." />
+		</StackPanel>
+
+		<StackPanel Spacing="10" IsVisible="{Binding IsAddMode}">
+			<TextBox Text="{Binding AddText}" Watermark="Text to add..." />
+			<ComboBox ItemsSource="{Binding PositionModes}"
+					  SelectedIndex="{Binding PositionMode}" Cursor="Hand"/>
+		</StackPanel>
+
+		<StackPanel Spacing="10" IsVisible="{Binding IsEnumerateMode}">
+			<TextBlock Text="Pattern (use # for number):" FontSize="11" Foreground="#888888"/>
+			<TextBox Text="{Binding EnumeratePattern}" Watermark="e.g. Episode_#" />
+
+			<TextBlock Text="Start Number:" FontSize="11" Foreground="#888888" Margin="0,5,0,0"/>
+			<NumericUpDown Value="{Binding StartNumber}" Minimum="0" Maximum="9999" FormatString="0" Cursor="Hand"/>
+		</StackPanel>
+
+		<StackPanel Spacing="10" IsVisible="{Binding IsTrimMode}">
+			<TextBlock Text="Direction:" FontSize="11" Foreground="#888888"/>
+			<ComboBox ItemsSource="{Binding TrimDirections}"
+					  SelectedIndex="{Binding TrimDirection}"
+					  HorizontalAlignment="Stretch" Cursor="Hand"/>
+
+			<TextBlock Text="Number of characters to remove:" FontSize="11" Foreground="#888888" Margin="0,5,0,0"/>
+			<NumericUpDown Value="{Binding TrimCount}" Minimum="0" Maximum="255" FormatString="0" Cursor="Hand"/>
+		</StackPanel>
+
+		<Border Background="#121212" CornerRadius="4" Padding="10">
+			<TextBlock Text="{Binding PreviewText}"
+                       FontSize="11"
+					   Foreground="{Binding IsValid, Converter={x:Static conv:BoolConverters.ModeToColorConverter}}"
+                       TextWrapping="Wrap" FontStyle="Italic"/>
+		</Border>
+
+		<StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
+			<Button Content="Cancel" Click="OnCancelClick" Background="Transparent" Cursor="Hand"/>
+			<Button Content="Apply Rename" Click="OnApplyClick" IsEnabled="{Binding IsValid}"
+                    Background="#00d26a" Foreground="Black" FontWeight="Bold" Cursor="Hand"/>
+		</StackPanel>
+	</StackPanel>
+	
+</Window>

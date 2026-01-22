@@ -7,9 +7,9 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Video_Size_Optimizer.Models;
+using Video_Size_Optimizer.Utils;
 using Video_Size_Optimizer.Services;
 
 namespace Video_Size_Optimizer.ViewModels;
@@ -35,6 +35,9 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public string CrfDescription => AppConstants.GetCrfLabel(CrfValue);
     public List<string> FpsOptions => AppConstants.FpsOptions;
+    public List<string> AvailableEncoders => AppConstants.AvailableEncoderNames;
+    public List<string> ResolutionOptions => AppConstants.AvailableResolutionNames;
+    public List<string> OutputFormats => AppConstants.AvailableFormats;
     partial void OnCrfValueChanged(int value) => OnPropertyChanged(nameof(CrfDescription));
 
     [ObservableProperty] private int crfValue = 28;
@@ -63,10 +66,6 @@ public partial class MainWindowViewModel : ViewModelBase
     public string PauseActionIconPath => IsPaused
     ? "avares://Videofy/Assets/play.svg"
     : "avares://Videofy/Assets/pause.svg";
-
-    public List<string> AvailableEncoders => AppConstants.AvailableEncoderNames;
-    public List<string> ResolutionOptions => AppConstants.AvailableResolutionNames;
-    public List<string> OutputFormats => AppConstants.AvailableFormats;
 
     public IRelayCommand<Window> BrowseFolderCommand { get; }
     public IRelayCommand SelectAllCommand { get; }
@@ -219,12 +218,35 @@ public partial class MainWindowViewModel : ViewModelBase
 
         IsBusy = true;
         StatusMessage = "Processing...";
+        if (GlobalSettings.PreventSleep)
+            await _systemService.PreventSleepAsync(true, _messageService.ShowErrorAsync);
 
         try
         {
             foreach (var video in selectedVideos)
             {
                 if (!IsBusy) break;
+
+                if (IsDiskSpaceLow())
+                {
+                    _ffmpegService.TogglePause(true);
+                    if (!IsPaused) await TogglePause();
+                    StatusMessage = "Paused: Low Disk Space!";
+                    await _messageService.ShowErrorAsync("Low Disk Space",
+                        $"Available space is below {GlobalSettings.LowDiskBufferGb}GB. " +
+                        $"The process has been paused. Please free up space and click Resume.");
+                    while (IsPaused)
+                    {
+                        if (!IsBusy) break; // If user "Stop" instead of "Resume"
+                        await Task.Delay(1000); 
+                    }
+
+                    if (!IsBusy)
+                    {
+                        IsPaused = false;
+                        break;
+                    }
+                }
 
                 video.IsCompleted = false;
                 video.Progress = 0;
@@ -244,15 +266,21 @@ public partial class MainWindowViewModel : ViewModelBase
                     // Get original width
                     int originalWidth = await _ffprobeService.GetVideoWidthAsync(video.FilePath);
 
+                    string chosenResname = !string.IsNullOrEmpty(video.CustomResolution)
+                                            ? video.CustomResolution : SelectedResolution;
+
                     string resolutionToUse = "Original";
-                    if (SelectedResolution != "Original Resolution" &&
-                        AppConstants.ResolutionMap.TryGetValue(SelectedResolution, out string? targetValue))
+                    if (chosenResname != "Original Resolution" &&
+                        AppConstants.ResolutionMap.TryGetValue(chosenResname, out string? targetValue))
                     {
                         if (int.TryParse(targetValue, out int targetWidth))
                         {
                             resolutionToUse = targetWidth < originalWidth ? targetWidth.ToString() : "Original";
                         }
                     }
+
+                    string fpsToUse = !string.IsNullOrEmpty(video.CustomFps)
+                                       ? video.CustomFps : SelectedFps;
 
                     // Determine Encoder
                     if (!AppConstants.EncoderMap.TryGetValue(SelectedEncoder, out string? encoderValue))
@@ -287,7 +315,7 @@ public partial class MainWindowViewModel : ViewModelBase
                             {
                                 // 2. Run target size compression 
                                 await _ffmpegService.CompressTargetSizeAsync(video.FilePath,
-                                    finalOutputPath, SelectedFps, StripMetadata,
+                                    finalOutputPath, fpsToUse, StripMetadata,
                                     (int)video.CustomTargetSizeMb!, encoderValue,
                                     resolutionToUse, video.DurationSeconds, p);
                             }
@@ -296,7 +324,7 @@ public partial class MainWindowViewModel : ViewModelBase
                         {
                             // Standard Batch Process - Uses Global CRF
                             await _ffmpegService.CompressAsync(video.FilePath, finalOutputPath,
-                                SelectedFps, StripMetadata, CrfValue, encoderValue, resolutionToUse, p);
+                                fpsToUse, StripMetadata, CrfValue, encoderValue, resolutionToUse, p);
                         }
                     }
                  
@@ -343,6 +371,7 @@ public partial class MainWindowViewModel : ViewModelBase
                 finally
                 {
                     video.IsProcessing = false;
+                    if (!IsBusy) IsPaused = false;
                 }
             }
             //Show completion Message
@@ -357,6 +386,7 @@ public partial class MainWindowViewModel : ViewModelBase
         }
         finally
         {
+            await _systemService.PreventSleepAsync(false);
             IsBusy = false;
             StatusMessage = "Ready";
             CurrentSpeed = "0x";
@@ -378,6 +408,20 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             DisplayedVideos.Add(item);
         }
+    }
+
+    private bool IsDiskSpaceLow()
+    {
+        try
+        {
+            // Get the drive 
+            string driveName = Path.GetPathRoot(SelectedFolderPath) ?? "";
+            DriveInfo drive = new DriveInfo(driveName);
+
+            long bufferBytes = (long)GlobalSettings.LowDiskBufferGb * 1024 * 1024 * 1024;
+            return drive.AvailableFreeSpace < bufferBytes;
+        }
+        catch { return false; } // Safety fallback
     }
 
     // Update the Filtered list whenever SearchText or the underlying Videos change
@@ -421,6 +465,7 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             _ffprobeService.KillProcess();
             _ffmpegService.KillProcess();
+            await _systemService.PreventSleepAsync(false);
             IsBusy = false;
             StatusMessage = "Process terminated by user.";
         }
@@ -467,8 +512,19 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void TogglePause()
+    private async Task TogglePause()
     {
+
+        if (IsPaused)
+        {
+            if (IsDiskSpaceLow())
+            {
+                await _messageService.ShowErrorAsync("Resume Blocked",
+                    $"Still low on disk space (under {GlobalSettings.LowDiskBufferGb}GB). Please free up space before resuming.");
+                return;
+            }
+        }
+
         IsPaused = !IsPaused;
         _ffmpegService.TogglePause(IsPaused);
 
@@ -552,39 +608,28 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    public void ClearCustomSize(VideoFile? video)
+    public void ClearCustomSettings(VideoFile? video)
     {
         if (video != null)
         {
-            video.CustomTargetSizeMb = null;
+            video.ResetCustomSettings();
         }
     }
 
     [RelayCommand]
     public async Task AutoDownloadBinaries()
     {
-        if (!DependencyChecker.CheckBinaries(out string targetFolder))
-        {
-            // TargetFolder is returned by your DependencyChecker (e.g., app/ffmpeg/win-x64)
-            // If it returns "Unknown Path" because base dirs are missing, we might need to construct it manually.
-            // Let's ensure we have a valid path.
-            if (targetFolder == "Unknown Path" || string.IsNullOrEmpty(targetFolder))
-            {
-                var baseDir = AppContext.BaseDirectory;
-                string subDir = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "win-x64" : "linux-x64";
-                targetFolder = Path.Combine(baseDir, "ffmpeg", subDir);
-            }
+        string targetFolder = AppPathService.FfmpegBinFolder;
 
             try
             {
                 IsBusy = true;
-                IsDownloading = true; // Use this to toggle UI visibility of the button vs progress
+                IsDownloading = true; 
 
                 var progress = new Progress<string>(status => StatusMessage = status);
 
                 await _systemService.InstallFfmpegAsync(targetFolder, progress);
 
-                // Success! Refresh the check
                 RefreshDependencyCheck();
                 await _messageService.ShowSuccessAsync("Setup Complete", "FFmpeg has been downloaded and installed successfully!");
             }
@@ -598,7 +643,7 @@ public partial class MainWindowViewModel : ViewModelBase
                 IsBusy = false;
                 IsDownloading = false;
             }
-        }
+        
     }
 
 
@@ -619,9 +664,23 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
+    [RelayCommand]
+    public async Task OpenRenameWindow(Window owner)
+    {
+        var selected = Videos.Where(v => v.IsSelected).ToList();
+        if (!selected.Any())
+        {
+            await _messageService.ShowInfoAsync("No Selection", "Please select files to rename first.");
+            return;
+        }
 
+        var vm = new RenameViewModel(selected);
+        var win = new Views.RenameWindow { DataContext = vm };
+        await win.ShowDialog(owner);
 
-
+        // Refresh the filtered list to show new names
+        ApplyFilter();
+    }
 
 
 

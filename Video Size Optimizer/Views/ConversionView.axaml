@@ -54,7 +54,8 @@
 					<ComboBox ItemsSource="{Binding OutputFormats}"
 							  SelectedItem="{Binding ConversionTargetFormat}"
 							  IsEnabled="{Binding !IsBusy}"
-							  Width="100" FontSize="12" FontWeight="Bold"/>
+							  Width="100" FontSize="12" FontWeight="Bold"
+							  Cursor="Hand"/>
 				</StackPanel>
 
 				<TextBlock Text="* Global settings are disabled in this mode."
@@ -65,7 +66,7 @@
 				<Panel Width="180"/>
 
 				<StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-					<Button Command="{Binding TogglePauseCommand}" IsVisible="{Binding IsBusy}" Width="45" Height="40" Background="#3d3d3d" CornerRadius="4">
+					<Button Command="{Binding TogglePauseCommand}" IsVisible="{Binding IsBusy}" Width="45" Height="40" Background="#3d3d3d" CornerRadius="4" Cursor="Hand">
 						<Panel>
 							<Image Width="14" Height="14" IsVisible="{Binding !IsPaused}">
 								<Image.Source>
@@ -79,7 +80,10 @@
 							</Image>
 						</Panel>
 					</Button>
-					<Button Command="{Binding HandleActionCommand}" Content="{Binding ActionButtonText}" Padding="20,0" Height="40" VerticalContentAlignment="Center" Background="{Binding ActionButtonColor}" Foreground="Black" FontWeight="Black" FontSize="12" CornerRadius="4"/>
+					<Button Command="{Binding HandleActionCommand}" Content="{Binding ActionButtonText}"
+							Padding="20,0" Height="40" VerticalContentAlignment="Center" Cursor="Hand"
+							Background="{Binding ActionButtonColor}" Foreground="Black"
+							FontWeight="Black" FontSize="12" CornerRadius="4"/>
 				</StackPanel>
 			</StackPanel>
 

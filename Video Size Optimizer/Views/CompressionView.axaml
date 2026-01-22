@@ -42,10 +42,11 @@
 			</StackPanel>
 
 			<StackPanel Grid.Column="2" Orientation="Vertical" Spacing="4" VerticalAlignment="Center" Margin="20,0">
-				<CheckBox IsChecked="{Binding StripMetadata}" IsEnabled="{Binding !IsBusy}" Margin="80,5,0,0">
+				<CheckBox IsChecked="{Binding StripMetadata}" IsEnabled="{Binding !IsBusy}" Margin="80,5,0,0" Cursor="Hand">
 					<StackPanel Orientation="Horizontal" Spacing="5">
 						<TextBlock Text="Remove video trackers" Foreground="#F5F5F5" FontSize="11"/>
-						<Border Background="#3d3d3d" CornerRadius="10" Width="14" Height="14" ToolTip.Tip="Removes hidden metadata.">
+						<Border Background="#3d3d3d" CornerRadius="10" Width="14" Height="14" 
+								ToolTip.Tip="Removes hidden metadata like GPS location, camera serials, and timestamps.">
 							<TextBlock Text="?" Foreground="#00d26a" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
 						</Border>
 					</StackPanel>
@@ -53,17 +54,17 @@
 
 				<StackPanel Orientation="Horizontal" Spacing="8">
 					<TextBlock Text="Encoder:" VerticalAlignment="Center" Foreground="#CCCCCC" FontSize="11" Width="65"/>
-					<ComboBox ItemsSource="{Binding AvailableEncoders}" SelectedItem="{Binding SelectedEncoder}" IsEnabled="{Binding !IsBusy}" FontSize="12" Width="200"/>
+					<ComboBox ItemsSource="{Binding AvailableEncoders}" SelectedItem="{Binding SelectedEncoder}" IsEnabled="{Binding !IsBusy}" FontSize="12" Width="200" Cursor="Hand"/>
 				</StackPanel>
 
 				<StackPanel Orientation="Horizontal" Spacing="8">
 					<TextBlock Text="Target Res:" VerticalAlignment="Center" Foreground="#CCCCCC" FontSize="11" Width="65"/>
-					<ComboBox ItemsSource="{Binding ResolutionOptions}" SelectedItem="{Binding SelectedResolution}" IsEnabled="{Binding !IsBusy}" FontSize="12" Width="200"/>
+					<ComboBox ItemsSource="{Binding ResolutionOptions}" SelectedItem="{Binding SelectedResolution}" IsEnabled="{Binding !IsBusy}" FontSize="12" Width="200" Cursor="Hand"/>
 				</StackPanel>
 
 				<StackPanel Orientation="Horizontal" Spacing="8">
 					<TextBlock Text="Max FPS:" VerticalAlignment="Center" Foreground="#CCCCCC" FontSize="11" Width="65"/>
-					<ComboBox ItemsSource="{Binding FpsOptions}" SelectedItem="{Binding SelectedFps}" IsEnabled="{Binding !IsBusy}" FontSize="12" Width="200"/>
+					<ComboBox ItemsSource="{Binding FpsOptions}" SelectedItem="{Binding SelectedFps}" IsEnabled="{Binding !IsBusy}" FontSize="12" Width="200" Cursor="Hand"/>
 				</StackPanel>
 			</StackPanel>
 
@@ -90,7 +91,7 @@
 				</StackPanel>
 
 				<StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-					<Button Command="{Binding TogglePauseCommand}" IsVisible="{Binding IsBusy}" Width="45" Height="40" Background="#3d3d3d" CornerRadius="4">
+					<Button Command="{Binding TogglePauseCommand}" IsVisible="{Binding IsBusy}" Width="45" Height="40" Background="#3d3d3d" CornerRadius="4" Cursor="Hand">
 						<Panel>
 							<Image Width="14" Height="14" IsVisible="{Binding !IsPaused}">
 								<Image.Source>
@@ -104,7 +105,10 @@
 							</Image>
 						</Panel>
 					</Button>
-					<Button Command="{Binding HandleActionCommand}" Content="{Binding ActionButtonText}" Padding="20,0" Height="40" VerticalContentAlignment="Center" Background="{Binding ActionButtonColor}" Foreground="Black" FontWeight="Black" FontSize="12" CornerRadius="4"/>
+					<Button Command="{Binding HandleActionCommand}" Content="{Binding ActionButtonText}"
+							Padding="20,0" Height="40" VerticalContentAlignment="Center" Cursor="Hand"
+							Background="{Binding ActionButtonColor}" Foreground="Black"
+							FontWeight="Black" FontSize="12" CornerRadius="4"/>
 				</StackPanel>
 			</StackPanel>
 		</Grid>

@@ -1,10 +1,5 @@
 ﻿using Avalonia.Data.Converters;
 using Avalonia.Media;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Video_Size_Optimizer.Converters;
 
@@ -24,7 +19,10 @@ public static class BoolConverters
         new FuncValueConverter<bool, IBrush>(b =>
             b ? Brushes.Black : Brushes.Gray);
 
+    // New converter for the Rename Window
+    public static readonly IValueConverter IndexToVisible =
+        new FuncValueConverter<int, bool>(i => i == 0);
 
-
-
+    // A more flexible version for multiple modes:
+    public static bool IsEqual(int value, int parameter) => value == parameter;
 }
