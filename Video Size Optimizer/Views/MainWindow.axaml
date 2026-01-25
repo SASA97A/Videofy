@@ -92,19 +92,27 @@
 				<MenuItem Header="_Selection">
 					<MenuItem Header="_Select All" Command="{Binding SelectAllCommand}" IsEnabled="{Binding !IsBusy}" />
 					<MenuItem Header="_Deselect All" Command="{Binding DeselectAllCommand}" IsEnabled="{Binding !IsBusy}"/>
-					<MenuItem Header="Rename"
+					<MenuItem Header="_Batch Rename"
 							  IsEnabled="{Binding !IsBusy}"
 							  Command="{Binding OpenRenameWindowCommand}"
 							  CommandParameter="{Binding $parent[Window]}"/>
 				</MenuItem>
-				<MenuItem Header="_Help">
-					<MenuItem Header="_Global Settings"
+				
+				<MenuItem Header="_Options">
+					<MenuItem Header="_Open Binaries Folder"
+							  IsEnabled="{Binding !IsBusy}"
+							  Command="{Binding OpenExpectedFolderCommand}" />											
+					<MenuItem Header="_Open Settings"
 							  IsEnabled="{Binding !IsBusy}"
 							  Command="{Binding OpenSettingsCommand}"
 							  CommandParameter="{Binding $parent[Window]}"/>
-					<Separator />
+
+				</MenuItem>
+				
+				
+				<MenuItem Header="_Help">
 					<MenuItem Header="_Check for Updates" Command="{Binding CheckForUpdatesCommand}" />
-					<Separator />
+					<!--<Separator />-->
 					<MenuItem Header="_About" Command="{Binding ShowAboutCommand}" />
 				</MenuItem>
 			</Menu>
@@ -242,6 +250,26 @@
 								  GridLinesVisibility="None"
 								  Background="Transparent"
 								  BorderThickness="0">
+
+							<DataGrid.Styles>
+								<Style Selector="DataGridRow">
+									<Setter Property="ContextMenu">
+										<Setter.Value>
+											<ContextMenu>
+												<MenuItem Header="Open Folder in Explorer"
+														  Command="{Binding $parent[DataGrid].DataContext.OpenFileFolderCommand}"
+														  CommandParameter="{Binding}" />
+												
+												<!--<MenuItem Header="Remove from List"
+														  Foreground="#ff4444"
+														  Command="{Binding $parent[DataGrid].DataContext.RemoveVideoCommand}"
+														  CommandParameter="{Binding}" />-->
+											</ContextMenu>
+										</Setter.Value>
+									</Setter>
+								</Style>
+							</DataGrid.Styles>
+
 							<DataGrid.Columns>
 								<DataGridTemplateColumn Width="120" CanUserResize="False">
 									<DataGridTemplateColumn.Header>
@@ -258,7 +286,7 @@
 									</DataGridTemplateColumn.CellTemplate>
 								</DataGridTemplateColumn>
 
-								<DataGridTemplateColumn Header="File Name" Width="0.8*">
+								<DataGridTemplateColumn Header="File Name" Width="0.8*" SortMemberPath="FileName">
 									<DataGridTemplateColumn.CellTemplate>
 										<DataTemplate>
 											<StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="10,0">
@@ -291,7 +319,7 @@
 									</DataGridTemplateColumn.CellTemplate>
 								</DataGridTemplateColumn>
 
-								<DataGridTemplateColumn Header="Folder" Width="0.6*">
+								<DataGridTemplateColumn Header="Folder" Width="0.6*" SortMemberPath="FolderName">
 									<DataGridTemplateColumn.CellTemplate>
 										<DataTemplate>
 											<TextBlock Text="{Binding FolderName}"
@@ -385,7 +413,7 @@
 
 											<Image Width="16" Height="16">
 												<Image.Source>
-													<SvgImage Source="avares://Videofy/Assets/target.svg"/>
+													<SvgImage Source="avares://Videofy/Assets/settings.svg"/>
 												</Image.Source>
 											</Image>										
 											<Button.Flyout>

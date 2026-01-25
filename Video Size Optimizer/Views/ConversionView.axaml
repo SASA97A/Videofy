@@ -58,7 +58,7 @@
 							  Cursor="Hand"/>
 				</StackPanel>
 
-				<TextBlock Text="* Global settings are disabled in this mode."
+				<TextBlock Text="* Only Trim options are applicaple in this mode."
 						   FontSize="11" Foreground="#CCCCCC" Margin="0,2,0,0"/>
 			</StackPanel>
 

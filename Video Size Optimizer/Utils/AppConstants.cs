@@ -7,7 +7,7 @@ namespace Video_Size_Optimizer.Utils;
 
 public static class AppConstants
 {
-    public const string AppVersion = "v1.3.8";
+    public const string AppVersion = "v1.3.9";
 
     // Encoders
     public static readonly Dictionary<string, string> EncoderMap = new()
@@ -20,7 +20,8 @@ public static class AppConstants
         { "Intel Graphics (Fastest)", "hevc_qsv" },
         { "Intel Graphics (Legacy)", "h264_qsv" }
     };
-    public static List<string> AvailableEncoderNames = EncoderMap.Keys.ToList();
+    // public static List<string> AvailableEncoderNames = EncoderMap.Keys.ToList();
+    public static List<string> HardwareEncoderNames => EncoderMap.Keys.Where(k => !k.Contains("Standard")).ToList();
 
     // Resolutions
     public static readonly Dictionary<string, string> ResolutionMap = new()
@@ -58,6 +59,23 @@ public static class AppConstants
         ".flv", ".wmv", ".mpg", ".mpeg", ".ts", ".mts",
         ".m2ts", ".3gp", ".3g2", ".ogv", ".vob", ".asf", ".f4v"
     };
+
+    // Helper To add user extensions
+    public static HashSet<string> GetCombinedExtensions(string customInput)
+    {
+        var combined = new HashSet<string>(SupportedInputExtensions, StringComparer.OrdinalIgnoreCase);
+
+        if (string.IsNullOrWhiteSpace(customInput)) return combined;
+
+        var userExts = customInput.Split(',', StringSplitOptions.RemoveEmptyEntries);
+        foreach (var ext in userExts)
+        {
+            string cleanExt = ext.Trim();
+            if (!cleanExt.StartsWith(".")) cleanExt = "." + cleanExt;
+            combined.Add(cleanExt);
+        }
+        return combined;
+    }
 
     // Framerate label
     public static List<string> FpsOptions { get; } = new() { "Original", "60", "30", "24" };

@@ -86,12 +86,12 @@ public class FfmpegService
         }
     }
 
-    public async Task CompressAsync(string input, string output, string targetFps, bool stripMetadata, int crf, string encoder, string selectedResolution, IProgress<ConversionProgress>? progress = null)
+    public async Task CompressAsync(string input, string output, string targetFps, bool stripMetadata, int crf, string encoder, string selectedResolution, string trimArgs, IProgress<ConversionProgress>? progress = null)
     {
 
         if (encoder == "copy")
         {          
-            var copyArgs = $"-y -i \"{input}\" -c copy -map 0 \"{output}\"";
+            var copyArgs = $"-y {trimArgs} -i \"{input}\" -c copy -map 0 \"{output}\"";
             await RunFfmpegProcessAsync(copyArgs, progress);
             return;
         }
@@ -132,12 +132,12 @@ public class FfmpegService
         }
 
         string filterArgs = filters.Count > 0 ? $"-vf \"{string.Join(",", filters)}\"" : "";
-        var args = $"-y -i \"{input}\" {filterArgs} {codecArgs} {metadataFlag} \"{output}\"";
+        var args = $"-y {trimArgs} -i \"{input}\" {filterArgs} {codecArgs} {metadataFlag} \"{output}\"";
         await RunFfmpegProcessAsync(args, progress);
     }
 
     // Smart target size  
-    public async Task CompressTargetSizeAsync(string input, string output, string targetFps, bool stripMetadata, int targetMb, string encoder, string selectedResolution, double duration, IProgress<ConversionProgress>? progress = null)
+    public async Task CompressTargetSizeAsync(string input, string output, string targetFps, bool stripMetadata, int targetMb, string encoder, string selectedResolution, double duration, string trimArgs, IProgress<ConversionProgress>? progress = null)
     {
         // Bitrate = (Size in MB * 8192) / Duration
         // Subtracting 128kbps as a buffer for the audio stream
@@ -172,9 +172,9 @@ public class FfmpegService
         }));
 
         // PASS 1
-        var pass1 = $"-y -i \"{input}\" {filterArgs} -c:v {encoder} -b:v {videoBitrate}k -pass 1 -passlogfile \"{logName}\" -an -f null {nullDev}";
+        var pass1 = $"-y {trimArgs} -i \"{input}\" {filterArgs} -c:v {encoder} -b:v {videoBitrate}k -pass 1 -passlogfile \"{logName}\" -an -f null {nullDev}";
         // PASS 2
-        var pass2 = $"-y -i \"{input}\" {filterArgs} -c:v {encoder} -b:v {videoBitrate}k -pass 2 -passlogfile \"{logName}\" -c:a aac -b:a 128k \"{output}\"";
+        var pass2 = $"-y {trimArgs} -i \"{input}\" {filterArgs} -c:v {encoder} -b:v {videoBitrate}k -pass 2 -passlogfile \"{logName}\" -c:a aac -b:a 128k \"{output}\"";
 
         await RunFfmpegProcessAsync(pass1, p1);
         await RunFfmpegProcessAsync(pass2, p2);

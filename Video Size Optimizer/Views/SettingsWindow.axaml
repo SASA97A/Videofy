@@ -6,10 +6,12 @@
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="Video_Size_Optimizer.Views.SettingsWindow"
 		x:DataType="vm:SettingsViewModel"
-        Title="Global Settings" Width="400" Height="520"
+        Title="Global Settings" Width="400" Height="650"
         WindowStartupLocation="CenterOwner"
         Background="#1e1e1e" Foreground="White">
-	
+
+	<Grid RowDefinitions="*, Auto">
+		<ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
 	<StackPanel Margin="20" Spacing="20">
 		<TextBlock Text="Encoder Settings" FontSize="18" FontWeight="Bold" Foreground="#00d26a"/>
 
@@ -27,18 +29,28 @@
 						   VerticalAlignment="Center"
 						   />
 			</StackPanel>
-		</StackPanel>	
+		</StackPanel>
+
+		<StackPanel Spacing="5">
+			<CheckBox IsChecked="{Binding ProcessAlreadyOptimized}"
+					  Cursor="Hand"
+					  Content="Allow processing of already optimized videos"/>
+			<TextBlock Text="Allows re-compressing files containing '-CRF' or '-Target'"
+					   FontSize="11" Foreground="#CCCCCC" Margin="32,0,0,0"/>
+		</StackPanel>
 
 		<CheckBox IsChecked="{Binding PreventSleep}" Cursor="Hand" Content="Prevent system sleep during processing"/>
 		
 		<StackPanel Spacing="5">
 			<StackPanel Orientation="Horizontal" Spacing="10">
-				<TextBlock Text="Pause if disk space is below:" FontSize="12"/>
+				<TextBlock Text="Pause if disk space is below:" />
 				<TextBlock Text="{Binding LowDiskBufferGb, StringFormat='{}{0} GB'}"
 						   Foreground="#00d26a" FontWeight="Bold" FontSize="12"/>
 			</StackPanel>
+			<Border Padding="10,0,10,0">
 			<Slider Value="{Binding LowDiskBufferGb}" Minimum="2" Maximum="80"
 					TickFrequency="1" IsSnapToTickEnabled="True" Cursor="Hand"/>
+			</Border>
 		</StackPanel>
 
 		<StackPanel Spacing="5">
@@ -47,17 +59,73 @@
                       SelectedItem="{Binding SelectedFormat}"
                       Width="150" Cursor="Hand"/>
 		</StackPanel>
-		
-		<Separator Background="#333333"/>
 
-		<CheckBox IsChecked="{Binding SaveToDisk}"
-				  Content="Remember these settings for next time"
-				  FontSize="12"
-				  Margin="0,10,0,0" Cursor="Hand"/>
+		<StackPanel Spacing="5" Margin="0,10,0,0">
+			<TextBlock Text="Hardware Acceleration"
+					   FontSize="18"
+					   FontWeight="Bold"
+					   Foreground="#00d26a"
+					   Margin="5,0,0,10"/>
+
+			<Border Background="#252525"
+					BorderBrush="#333333"
+					BorderThickness="1"
+					CornerRadius="6"
+					Padding="12,8">
+
+				<StackPanel>
+					<TextBlock Text="Enable specific hardware encoders for your GPU:"
+							   FontSize="11"
+							   Foreground="#CCCCCC"
+							   Margin="0,0,0,10"/>
+
+					<ItemsControl ItemsSource="{Binding EncoderOptions}">
+						<ItemsControl.ItemTemplate>
+							<DataTemplate>
+								<CheckBox Content="{Binding Name}"
+										  IsChecked="{Binding IsIncluded}"
+										  FontSize="12"
+										  Margin="0,2"
+										  Cursor="Hand"/>
+							</DataTemplate>
+						</ItemsControl.ItemTemplate>
+					</ItemsControl>
+				</StackPanel>
+			</Border>
+		</StackPanel>
+
+
+		<StackPanel Spacing="5" Margin="0,10,0,0">
+			<TextBlock Text="Misc" FontSize="18" FontWeight="Bold" Foreground="#00d26a" Margin="0,0,0,5"/>
+
+			<TextBlock Text="Additional Input Formats" FontSize="12" Foreground="White"/>
+
+			<TextBox Text="{Binding CustomExtensions}"
+					 Watermark="e.g. .mxf, .raw (comma separated)"
+					 FontSize="12"
+					 Background="#252525"
+					 BorderBrush="#333333">
+				<ToolTip.Tip>
+					<StackPanel Spacing="2">
+						<TextBlock Text="Videofy will attempt to read these formats when opening folders." FontWeight="SemiBold"/>
+						<TextBlock Text="Note: Processing success depends on your local FFmpeg capabilities." Foreground="#ffaa00" FontSize="11"/>
+					</StackPanel>
+				</ToolTip.Tip>
+			</TextBox>
+		</StackPanel>
 		
-		<Button Content="Save &amp; Close"
-                Click="OnSaveClick"
-                HorizontalAlignment="Right"
-                Background="#00d26a" Foreground="Black" FontWeight="Bold" Cursor="Hand"/>
+		
+		
 	</StackPanel>
+	</ScrollViewer>
+		
+		
+		<Border Grid.Row="1" Background="#252525" BorderBrush="#333333" BorderThickness="0,1,0,0" Padding="20,10">
+			<Grid ColumnDefinitions="*, Auto">
+				<CheckBox IsChecked="{Binding SaveToDisk}" Content="Remember settings" FontSize="12" VerticalAlignment="Center" Cursor="Hand"/>
+				<Button Grid.Column="1" Content="Save &amp; Close" Click="OnSaveClick" Background="#00d26a" Foreground="Black" FontWeight="Bold" Padding="15,8" Cursor="Hand"/>
+			</Grid>
+		</Border>
+	</Grid>
+	
 </Window>

@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Video_Size_Optimizer.Models;
 using Video_Size_Optimizer.Utils;
 using Video_Size_Optimizer.Services;
+using System.Globalization;
 
 namespace Video_Size_Optimizer.ViewModels;
 
@@ -35,7 +36,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public string CrfDescription => AppConstants.GetCrfLabel(CrfValue);
     public List<string> FpsOptions => AppConstants.FpsOptions;
-    public List<string> AvailableEncoders => AppConstants.AvailableEncoderNames;
+    public List<string> AvailableEncoders => GlobalSettings.EnabledEncoders;
     public List<string> ResolutionOptions => AppConstants.AvailableResolutionNames;
     public List<string> OutputFormats => AppConstants.AvailableFormats;
     partial void OnCrfValueChanged(int value) => OnPropertyChanged(nameof(CrfDescription));
@@ -158,7 +159,8 @@ public partial class MainWindowViewModel : ViewModelBase
         Videos.Clear();
         SelectedFolderPath = folderPath;
 
-        var data = _fileService.GetFolderData(folderPath);
+        var allowedExtensions = AppConstants.GetCombinedExtensions(GlobalSettings.CustomExtensions);
+        var data = _fileService.GetFolderData(folderPath, allowedExtensions);
         TotalFolderSizeDisplay = $"{(data.totalSize / 1024.0 / 1024.0 / 1024.0):F2} GB";
 
         foreach (var path in data.videoPaths)
@@ -188,10 +190,19 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private async Task StartCompressionAsync()
     {
+        var selectedVideos = Videos.Where(v => {
+            // Basic requirements
+            if (!v.IsSelected || v.IsCompleted) return false;
 
-        var selectedVideos = Videos.Where(v => v.IsSelected &&
-                                         !v.IsCompleted &&
-                                         !v.FileName.Contains("-CRF", StringComparison.OrdinalIgnoreCase)).ToList();
+            if (!GlobalSettings.ProcessAlreadyOptimized)
+            {
+                bool isAlreadyOptimized = v.FileName.Contains("-CRF", StringComparison.OrdinalIgnoreCase) ||
+                                         v.FileName.Contains("-Target", StringComparison.OrdinalIgnoreCase);
+                if (isAlreadyOptimized) return false;
+            }
+            return true;
+        }).ToList();
+
         if (selectedVideos.Count == 0)
         {
             await _messageService.ShowInfoAsync("No Selection", AppConstants.NoSelectionMessage);
@@ -297,11 +308,21 @@ public partial class MainWindowViewModel : ViewModelBase
                         CurrentSpeed = cp.Speed;
                     });
 
+                    string trimArgs = "";
+                    if (video.IsTrimmed)
+                    {
+                        trimArgs = $"-ss {video.StartTime.ToString(CultureInfo.InvariantCulture)} ";
+                        if (video.EndTime != 0.0000)
+                        {
+                            trimArgs += $"-to {video.EndTime.ToString(CultureInfo.InvariantCulture)} ";
+                        }
+                    }
+
                     if (SelectedTabIndex == 1)
                     {
                         finalOutputPath = _fileService.GenerateOutputPath(video.FilePath, 0, ConversionTargetFormat);
                         await _ffmpegService.CompressAsync(video.FilePath, finalOutputPath,
-                            "Original", false, 0, "copy", "Original", p);
+                            "Original", false, 0, "copy", "Original", trimArgs, p);
                     }
                     else
                     {
@@ -317,14 +338,14 @@ public partial class MainWindowViewModel : ViewModelBase
                                 await _ffmpegService.CompressTargetSizeAsync(video.FilePath,
                                     finalOutputPath, fpsToUse, StripMetadata,
                                     (int)video.CustomTargetSizeMb!, encoderValue,
-                                    resolutionToUse, video.DurationSeconds, p);
+                                    resolutionToUse, video.DurationSeconds, trimArgs, p);
                             }
                         }
                         else
                         {
                             // Standard Batch Process - Uses Global CRF
                             await _ffmpegService.CompressAsync(video.FilePath, finalOutputPath,
-                                fpsToUse, StripMetadata, CrfValue, encoderValue, resolutionToUse, p);
+                                fpsToUse, StripMetadata, CrfValue, encoderValue, resolutionToUse, trimArgs, p);
                         }
                     }
                  
@@ -345,10 +366,17 @@ public partial class MainWindowViewModel : ViewModelBase
                             completedCount++;
 
                             double newSize = newInfo.Length / 1024.0 / 1024.0;
-                            video.FileSizeDisplay += $" -> {newSize:F2} MB";
+                            video.UpdateStatusSize(newSize);
 
                             video.Progress = 100;
                             video.IsCompleted = true;
+
+                            var index = DisplayedVideos.IndexOf(video);
+                            if (index != -1)
+                            {
+                                // This "re-seats" the item in the collection, forcing the row to refresh
+                                DisplayedVideos[index] = video;
+                            }
 
                             if (SelectedTabIndex != 1 && GlobalSettings.DeleteOriginalAfterCompression && File.Exists(finalOutputPath))
                             {
@@ -558,7 +586,8 @@ public partial class MainWindowViewModel : ViewModelBase
 
         Videos.Clear();
 
-        var data = _fileService.GetFolderData(SelectedFolderPath);
+        var allowedExts = AppConstants.GetCombinedExtensions(GlobalSettings.CustomExtensions);
+        var data = _fileService.GetFolderData(SelectedFolderPath, allowedExts);
         TotalFolderSizeDisplay = $"{(data.totalSize / 1024.0 / 1024.0 / 1024.0):F2} GB";
 
         foreach (var path in data.videoPaths)
@@ -583,8 +612,8 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         try
         {
-            string path = _fileService.EnsureFfmpegDirectoryExists(ExpectedPath);
-            _systemService.OpenLocalFolder(path);
+            AppPathService.EnsureDirectories();
+            _systemService.OpenLocalFolder(AppPathService.FfmpegBinFolder);
         }
         catch (Exception ex)
         {
@@ -658,6 +687,13 @@ public partial class MainWindowViewModel : ViewModelBase
         var newSettings = settingsVM.GetUpdatedSettings();
         GlobalSettings = newSettings;
 
+        OnPropertyChanged(nameof(AvailableEncoders));
+
+        if (!AvailableEncoders.Contains(SelectedEncoder))
+        {
+            SelectedEncoder = AvailableEncoders.First();
+        }
+
         if (settingsVM.SaveToDisk)
         {
             await _settingsService.SaveSettingsAsync(newSettings);
@@ -682,7 +718,45 @@ public partial class MainWindowViewModel : ViewModelBase
         ApplyFilter();
     }
 
+    [RelayCommand]
+    public async Task LoadVideoDuration(VideoFile video)
+    {
+        if (video == null || video.IsDurationLoaded) return;
 
+        try
+        {
+            double duration = await _ffprobeService.GetVideoDurationAsync(video.FilePath);
+            if (duration > 0)
+            {
+                video.DurationSeconds = duration;
+                video.StartTime = 0;
+                video.EndTime = video.DurationSeconds;
+                video.IsDurationLoaded = true;        
+            }
+        }
+        catch (Exception)
+        {
+            await _messageService.ShowErrorAsync("Error", $"Could not read video duration");
+        }
+    }
 
+    [RelayCommand]
+    public void OpenFileFolder(VideoFile video)
+    {
+        if (video == null) return;
+
+        try
+        {
+            string? directory = Path.GetDirectoryName(video.FilePath);
+            if (!string.IsNullOrEmpty(directory) && Directory.Exists(directory))
+            {
+                _systemService.OpenLocalFolder(directory);
+            }
+        }
+        catch (Exception)
+        {
+            // Log later
+        }
+    }
 
 }

@@ -1,7 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net9.0</TargetFramework> <AssemblyName>Videofy</AssemblyName>
+    <TargetFramework>net8.0</TargetFramework>
+	<AssemblyName>Videofy</AssemblyName>
     <Nullable>enable</Nullable>
 	<RootNamespace>Videofy</RootNamespace>
 	<ApplicationIcon>Assets\app.ico</ApplicationIcon>
@@ -19,8 +20,6 @@
     <PackageReference Include="Avalonia.Desktop" Version="11.3.10" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.10" />
     <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.10" />
-	<PackageReference Include="SkiaSharp.NativeAssets.macOS" Version="2.88.9" />
-	<PackageReference Include="SkiaSharp.NativeAssets.linux" Version="2.88.9" />
     <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
     <PackageReference Include="Avalonia.Diagnostics" Version="11.3.10">
       <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>

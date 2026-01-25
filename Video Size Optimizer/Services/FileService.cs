@@ -11,7 +11,7 @@ namespace Video_Size_Optimizer.Services;
 
 public class FileService
 {
-    public (long totalSize, List<string> videoPaths) GetFolderData(string folder)
+    public (long totalSize, List<string> videoPaths) GetFolderData(string folder, HashSet<string> allowedExtensions)
     {
         long totalSize = 0;
         var videoPaths = new List<string>();
@@ -23,7 +23,7 @@ public class FileService
             var info = new FileInfo(file);
             totalSize += info.Length;
 
-            if (AppConstants.SupportedInputExtensions.Contains(info.Extension.ToLower()))
+            if (allowedExtensions.Contains(info.Extension))
             {
                 videoPaths.Add(file);
             }
@@ -31,13 +31,6 @@ public class FileService
 
         return (totalSize, videoPaths);
     }
-
-    //public string SanitizeFileName(string input)
-    //{
-    //    if (string.IsNullOrEmpty(input)) return input;
-    //    var invalidChars = Path.GetInvalidFileNameChars();
-    //    return new string(input.Where(c => !invalidChars.Contains(c)).ToArray());
-    //}
 
     public bool IsPathLengthValid(string directory, string fileName, string extension)
     {
@@ -84,25 +77,4 @@ public class FileService
 
         return candidate;
     }
-
-    public string EnsureFfmpegDirectoryExists(string? expectedPath)
-    {
-        string targetPath = expectedPath ?? "";
-
-        if (string.IsNullOrWhiteSpace(targetPath) || targetPath.Contains("Unknown", StringComparison.OrdinalIgnoreCase))
-        {
-            var baseDir = AppContext.BaseDirectory;
-            string subDir = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "win-x64" :
-                            RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? "osx-x64" : "linux-x64";
-            targetPath = Path.Combine(baseDir, "ffmpeg", subDir);
-        }
-
-        if (!Directory.Exists(targetPath))
-        {
-            Directory.CreateDirectory(targetPath);
-        }
-
-        return targetPath;
-    }
-
 }
