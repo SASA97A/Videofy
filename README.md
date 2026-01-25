@@ -63,15 +63,6 @@ Videofy includes a **startup dependency guard** that:
 ![FFmpeg Version Guide](images/ffmpeg.png)
 ---
 
-## Licensing Clarification
-
-- Videofy is licensed under the **MIT License**
-- FFmpeg is licensed separately under **LGPL/GPL**, depending on the build
-
-Videofy is **not affiliated** with the FFmpeg project.
-
----
-
 ## How It Works
 
 Videofy re-encodes videos using FFmpeg with **CRF (Constant Rate Factor)** settings.
