@@ -10,12 +10,33 @@
         <local:ViewLocator/>
     </Application.DataTemplates>
   
-    <Application.Styles>
-        <FluentTheme />
-		<StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
-    </Application.Styles>
+    
 	<Application.Resources>
 		<Color x:Key="SystemAccentColor">#00D26A</Color>
+		<SolidColorBrush x:Key="PrimaryButtonColor">#0053cf</SolidColorBrush>
+		<SolidColorBrush x:Key="PrimaryColorHover">#1f2125</SolidColorBrush>
+		<SolidColorBrush x:Key="PrimaryColorText">Black</SolidColorBrush>
+		<SolidColorBrush x:Key="SliderThumbColorHover">#44ff44</SolidColorBrush>
+
+		<SolidColorBrush x:Key="MainBackground">#1f2124</SolidColorBrush>
+		<SolidColorBrush x:Key="SecondaryBackground">#282a2e</SolidColorBrush>
+		<SolidColorBrush x:Key="TertiaryBackground">#141414</SolidColorBrush>
+		<SolidColorBrush x:Key="InputBackground">#282a2e</SolidColorBrush>
+
+		<SolidColorBrush x:Key="MainText">#f1f2f3</SolidColorBrush>
+		<SolidColorBrush x:Key="GridHeaderText">White</SolidColorBrush>
+		<SolidColorBrush x:Key="SecondaryText">White</SolidColorBrush>
+		<SolidColorBrush x:Key="DimText">#888888</SolidColorBrush>
+
+		<SolidColorBrush x:Key="RowSelectColor">#748764</SolidColorBrush>
+		<SolidColorBrush x:Key="BorderColor">#333333</SolidColorBrush>
+		<SolidColorBrush x:Key="SeparatorColor">#444444</SolidColorBrush>
+		<SolidColorBrush x:Key="DangerColor">#ff4444</SolidColorBrush>
+		<SolidColorBrush x:Key="WarningColor">#ffaa00</SolidColorBrush>
 	</Application.Resources>
 
+	<Application.Styles>
+		<FluentTheme />
+		<StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
+	</Application.Styles>
 </Application>

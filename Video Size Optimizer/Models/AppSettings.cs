@@ -12,5 +12,7 @@ namespace Video_Size_Optimizer.Models
         public bool ProcessAlreadyOptimized { get; set; } = false;
         public List<string> EnabledEncoders { get; set; } = new() { "Standard (Slow, Best Quality)" };
         public string CustomExtensions { get; set; } = "";
+        public bool PreventUpsampling { get; set; } = false;
+        public bool UseSoftwareRendering { get; set; } = false;
     }
 }

@@ -7,7 +7,7 @@ namespace Video_Size_Optimizer.Utils;
 
 public static class AppConstants
 {
-    public const string AppVersion = "v1.3.9";
+    public const string AppVersion = "v1.4.0";
 
     // Encoders
     public static readonly Dictionary<string, string> EncoderMap = new()
@@ -96,10 +96,12 @@ public static class AppConstants
            "Use 'x265 (CPU)' for the highest possible compression ratio.\n\n";
 
     public const string NoSelectionMessage =
-        "No valid files were found in your selection.\n\n" +
-        "Note: Videos already marked as 'Completed' or files previously compressed by Videofy" +
-        " (containing '-CRF' or '-Target') are skipped to prevent accidental double-compression.\n\n" +
-        "Tip: Use the 'Refresh' button to reset the completion status of the list.";
+    "No valid files were found in your selection.\n\n" +
+    "Note: Files marked as 'Completed' are skipped by default. " +
+        "To re-process previously optimized files (tagged with -CRF or -Target), " +
+        "please ensure the 'Process Optimized Files' setting is enabled " +
+        "in the Options menu.\n\n" +
+    "Tip: Click 'Refresh List' to reset the status of completed files.";
 
     public const string NoFolderAccess =
         "Videofy could not resolve a local path for the selected folder.\n\n" +

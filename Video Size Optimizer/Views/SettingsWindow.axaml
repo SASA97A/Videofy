@@ -8,12 +8,12 @@
 		x:DataType="vm:SettingsViewModel"
         Title="Global Settings" Width="400" Height="650"
         WindowStartupLocation="CenterOwner"
-        Background="#1e1e1e" Foreground="White">
+        Background="{DynamicResource MainBackground}" Foreground="{DynamicResource MainText}">
 
 	<Grid RowDefinitions="*, Auto">
 		<ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
 	<StackPanel Margin="20" Spacing="20">
-		<TextBlock Text="Encoder Settings" FontSize="18" FontWeight="Bold" Foreground="#00d26a"/>
+		<TextBlock Text="Encoder Settings" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource SystemAccentColor}"/>
 
 		<StackPanel Spacing="5">
 			<CheckBox IsChecked="{Binding DeleteOriginal}" Cursor="Hand" Content="Delete original file after successful compression"/>
@@ -24,8 +24,8 @@
 					</Image.Source>
 				</Image>
 				<TextBlock Text="Warning: This action cannot be undone."
-						   FontSize="12"
-						   Foreground="#CCCCCC"
+						   FontSize="11"
+						   Foreground="{DynamicResource DimText}"
 						   VerticalAlignment="Center"
 						   />
 			</StackPanel>
@@ -36,7 +36,20 @@
 					  Cursor="Hand"
 					  Content="Allow processing of already optimized videos"/>
 			<TextBlock Text="Allows re-compressing files containing '-CRF' or '-Target'"
-					   FontSize="11" Foreground="#CCCCCC" Margin="32,0,0,0"/>
+					   FontSize="11" Foreground="{DynamicResource DimText}" Margin="32,0,0,0"/>
+		</StackPanel>
+
+		<StackPanel Spacing="5">
+			<CheckBox IsChecked="{Binding PreventUpsampling}"
+					  Cursor="Hand"
+					  Content="Enable Bitrate Ceiling (Safety Cap)"/>
+			<TextBlock Text="Ensures the output file never exceeds the original bitrate. 
+					   Useful for grainy or noisy videos where CRF might otherwise increase the file size."
+					   FontSize="11"
+					   Foreground="{DynamicResource DimText}"
+					   Margin="32,0,0,0"
+					   TextWrapping="Wrap"
+					   Opacity="0.8"/>
 		</StackPanel>
 
 		<CheckBox IsChecked="{Binding PreventSleep}" Cursor="Hand" Content="Prevent system sleep during processing"/>
@@ -45,7 +58,7 @@
 			<StackPanel Orientation="Horizontal" Spacing="10">
 				<TextBlock Text="Pause if disk space is below:" />
 				<TextBlock Text="{Binding LowDiskBufferGb, StringFormat='{}{0} GB'}"
-						   Foreground="#00d26a" FontWeight="Bold" FontSize="12"/>
+						   Foreground="{DynamicResource SystemAccentColor}" FontWeight="Bold" FontSize="12"/>
 			</StackPanel>
 			<Border Padding="10,0,10,0">
 			<Slider Value="{Binding LowDiskBufferGb}" Minimum="2" Maximum="80"
@@ -64,11 +77,11 @@
 			<TextBlock Text="Hardware Acceleration"
 					   FontSize="18"
 					   FontWeight="Bold"
-					   Foreground="#00d26a"
+					   Foreground="{DynamicResource SystemAccentColor}"
 					   Margin="5,0,0,10"/>
 
 			<Border Background="#252525"
-					BorderBrush="#333333"
+					BorderBrush="{DynamicResource InputBackground}"
 					BorderThickness="1"
 					CornerRadius="6"
 					Padding="12,8">
@@ -76,7 +89,7 @@
 				<StackPanel>
 					<TextBlock Text="Enable specific hardware encoders for your GPU:"
 							   FontSize="11"
-							   Foreground="#CCCCCC"
+							   Foreground="{DynamicResource SecondaryText}"
 							   Margin="0,0,0,10"/>
 
 					<ItemsControl ItemsSource="{Binding EncoderOptions}">
@@ -96,34 +109,46 @@
 
 
 		<StackPanel Spacing="5" Margin="0,10,0,0">
-			<TextBlock Text="Misc" FontSize="18" FontWeight="Bold" Foreground="#00d26a" Margin="0,0,0,5"/>
+			<TextBlock Text="Misc" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource SystemAccentColor}" Margin="0,0,0,5"/>
 
-			<TextBlock Text="Additional Input Formats" FontSize="12" Foreground="White"/>
+			<TextBlock Text="Additional Input Formats" FontSize="12" Foreground="{DynamicResource MainText}"/>
 
 			<TextBox Text="{Binding CustomExtensions}"
 					 Watermark="e.g. .mxf, .raw (comma separated)"
 					 FontSize="12"
 					 Background="#252525"
-					 BorderBrush="#333333">
+					 BorderBrush="{DynamicResource InputBackground}">
 				<ToolTip.Tip>
 					<StackPanel Spacing="2">
 						<TextBlock Text="Videofy will attempt to read these formats when opening folders." FontWeight="SemiBold"/>
-						<TextBlock Text="Note: Processing success depends on your local FFmpeg capabilities." Foreground="#ffaa00" FontSize="11"/>
+						<TextBlock Text="Note: Processing success depends on your local FFmpeg capabilities." Foreground="{DynamicResource WarningColor}" FontSize="11"/>
 					</StackPanel>
 				</ToolTip.Tip>
 			</TextBox>
 		</StackPanel>
-		
-		
-		
+
+
+		<StackPanel Spacing="5">
+			<CheckBox IsChecked="{Binding UseSoftwareRendering}"
+					  Cursor="Hand"
+					  Content="Disable UI Hardware Acceleration"/>
+			<TextBlock Text="Turn this on if you experience flickering, invisible tooltips, or UI lag. Requires settings to be saved (Rememberd) then an application restart to take effect."
+					   FontSize="11"
+					   Foreground="{DynamicResource WarningColor}"
+					   Margin="32,0,0,0"
+					   TextWrapping="Wrap"/>
+		</StackPanel>
+
+
+
 	</StackPanel>
 	</ScrollViewer>
 		
 		
-		<Border Grid.Row="1" Background="#252525" BorderBrush="#333333" BorderThickness="0,1,0,0" Padding="20,10">
+		<Border Grid.Row="1" Background="#252525" BorderBrush="{DynamicResource InputBackground}" BorderThickness="0,1,0,0" Padding="20,10">
 			<Grid ColumnDefinitions="*, Auto">
 				<CheckBox IsChecked="{Binding SaveToDisk}" Content="Remember settings" FontSize="12" VerticalAlignment="Center" Cursor="Hand"/>
-				<Button Grid.Column="1" Content="Save &amp; Close" Click="OnSaveClick" Background="#00d26a" Foreground="Black" FontWeight="Bold" Padding="15,8" Cursor="Hand"/>
+				<Button Grid.Column="1" Content="Save &amp; Close" Click="OnSaveClick" Background="{DynamicResource SystemAccentColor}" Foreground="Black" FontWeight="Bold" Padding="15,8" Cursor="Hand"/>
 			</Grid>
 		</Border>
 	</Grid>

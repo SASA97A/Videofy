@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
@@ -83,6 +85,36 @@ namespace Video_Size_Optimizer.Services
             }
             catch { return 0; }
         }
+
+        // Calculates exact keyframes for precise segement splitting
+        //public async Task<List<double>> GetKeyframeTimestampsAsync(string inputPath)
+        //{
+        //    var timestamps = new List<double>();
+        //    var args = $"-loglevel error -select_streams v:0 -skip_frame nokey -show_entries frame=best_effort_timestamp_time -of csv=p=0 \"{inputPath}\"";
+
+        //    var startInfo = new ProcessStartInfo
+        //    {
+        //        FileName = _ffprobePath,
+        //        Arguments = args,
+        //        UseShellExecute = false,
+        //        RedirectStandardOutput = true,
+        //        CreateNoWindow = true
+        //    };
+
+        //    using var process = Process.Start(startInfo);
+        //    if (process == null) return timestamps;
+
+        //    while (await process.StandardOutput.ReadLineAsync() is string line)
+        //    {
+        //        // Trim and check for empty lines before parsing
+        //        var cleanLine = line.Trim();
+        //        if (!string.IsNullOrEmpty(cleanLine) && double.TryParse(cleanLine, CultureInfo.InvariantCulture, out double val))
+        //            timestamps.Add(val);
+        //    }
+
+        //    await process.WaitForExitAsync();
+        //    return timestamps;
+        //}
 
         public async Task<int> GetVideoWidthAsync(string inputPath)
         {

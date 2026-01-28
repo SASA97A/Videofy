@@ -155,6 +155,7 @@ namespace Video_Size_Optimizer.Models
             CustomFps = null;
             StartTime = 0;
             EndTime = (IsDurationLoaded) ? DurationSeconds : 1;
+           // SplitSizeMb = null;
         }
         public string CustomSettingsBadge
         {
@@ -166,8 +167,9 @@ namespace Video_Size_Optimizer.Models
                 if (HasCustomSize) parts.Add($"{CustomTargetSizeMb}MB");
                 if (!string.IsNullOrEmpty(CustomResolution)) parts.Add(CustomResolution);
                 if (!string.IsNullOrEmpty(CustomFps)) parts.Add(CustomFps + " Fps");
+            //    if (IsSplitEnabled) parts.Add($"Split: {SplitSizeMb}MB");
                 if (IsTrimmed) parts.Add($"{FormatTime(StartTime)} - {FormatTime(EndTime)}");
-
+                
                 return $" {string.Join(" | ", parts)} ";
             }
         }

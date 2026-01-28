@@ -21,6 +21,8 @@ namespace Video_Size_Optimizer.ViewModels
         [ObservableProperty] private bool _processAlreadyOptimized;
         [ObservableProperty] private ObservableCollection<EncoderOption> _encoderOptions = new();
         [ObservableProperty] private string _customExtensions;
+        [ObservableProperty] private bool _preventUpsampling;
+        [ObservableProperty] private bool _useSoftwareRendering;
 
         public List<string> OutputFormats => AppConstants.AvailableFormats;
 
@@ -32,6 +34,8 @@ namespace Video_Size_Optimizer.ViewModels
             LowDiskBufferGb = currentSettings.LowDiskBufferGb;
             ProcessAlreadyOptimized = currentSettings.ProcessAlreadyOptimized;
             CustomExtensions = currentSettings.CustomExtensions;
+            PreventUpsampling = currentSettings.PreventUpsampling;
+            UseSoftwareRendering = currentSettings.UseSoftwareRendering;
 
             foreach (var name in AppConstants.HardwareEncoderNames)
             {
@@ -56,7 +60,9 @@ namespace Video_Size_Optimizer.ViewModels
                 LowDiskBufferGb = LowDiskBufferGb,
                 ProcessAlreadyOptimized = ProcessAlreadyOptimized,
                 EnabledEncoders = enabled,
-                CustomExtensions = CustomExtensions
+                CustomExtensions = CustomExtensions,
+                PreventUpsampling = PreventUpsampling,
+                UseSoftwareRendering = UseSoftwareRendering
             };
         }
 

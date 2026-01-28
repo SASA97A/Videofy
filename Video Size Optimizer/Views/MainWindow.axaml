@@ -11,61 +11,99 @@
 		xmlns:conv="using:Video_Size_Optimizer.Converters"
         Icon="/Assets/app.ico"
         Title="Videofy - Video Size Optimizer"
-		Background="#1e1e1e">
+		Background="{DynamicResource MainBackground}">
 	
 	<Window.Styles>
 		<Style Selector="Separator.vertical">
 			<Setter Property="Width" Value="1"/>
 			<Setter Property="Height" Value="24"/>
 			<Setter Property="Margin" Value="5,0"/>
-			<Setter Property="Background" Value="#444444"/>
+			<Setter Property="Background" Value="{DynamicResource SeparatorColor}"/>
 		</Style>
 		<Style Selector="DataGridColumnHeader">
-			<Setter Property="Background" Value="#2b2b2b"/>
-			<Setter Property="Foreground" Value="#00d26a"/>
+			<Setter Property="Background" Value="{DynamicResource SecondaryBackground}"/>
+			<Setter Property="Foreground" Value="{DynamicResource GridHeaderText}"/>
 			<Setter Property="FontWeight" Value="SemiBold"/>
 			<Setter Property="FontSize" Value="12"/>
 			<Setter Property="Padding" Value="10,5"/>
-			<Setter Property="SeparatorBrush" Value="#444444"/>
+			<Setter Property="SeparatorBrush" Value="{DynamicResource SeparatorColor}"/>
 		</Style>
 		<Style Selector="CheckBox:checked /template/ Border#NormalRectangle">
-			<Setter Property="Background" Value="#00d26a" />
-			<Setter Property="BorderBrush" Value="#00d26a" />
+			<Setter Property="Background" Value="{DynamicResource SystemAccentColor}" />
+			<Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColor}" />
 		</Style>
 
 		<Style Selector="CheckBox:pointerover /template/ Border#NormalRectangle">
-			<Setter Property="BorderBrush" Value="#00d26a" />
+			<Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColor}" />
 		</Style>
 
 		<Style Selector="CheckBox /template/ Path#CheckGlyph">
-			<Setter Property="Fill" Value="White" />
+			<Setter Property="Fill" Value="{DynamicResource MainText}" />
 		</Style>
+		
 		<!-- Slider thumb hover -->
+		<Style Selector="Slider /template/ Thumb">
+			<Setter Property="Background" Value="{DynamicResource SystemAccentColor}"/>
+		</Style>
+
 		<Style Selector="Slider:pointerover /template/ Thumb">
-			<Setter Property="Background" Value="#00d26a"/>
+			<Setter Property="Background" Value="{DynamicResource SliderThumbColorHover}"/>
 		</Style>
 
-		<!-- Slider thumb pressed -->
 		<Style Selector="Slider:pressed /template/ Thumb">
-			<Setter Property="Background" Value="#00d26a"/>
+			<Setter Property="Background" Value="{DynamicResource SystemAccentColor}"/>
 		</Style>
 
-		<!-- Slider track (left side / decrease button) -->
 		<Style Selector="Slider /template/ RepeatButton#PART_DecreaseButton">
-			<Setter Property="Background" Value="#00d26a"/>
+			<Setter Property="Background" Value="{DynamicResource SystemAccentColor}"/>
 		</Style>
 
 		<Style Selector="Slider:pointerover /template/ RepeatButton#PART_DecreaseButton">
-			<Setter Property="Background" Value="#00d26a"/>
+			<Setter Property="Background" Value="{DynamicResource SystemAccentColor}"/>
 		</Style>
 
-		<!-- Slider track (right side / increase button) -->
 		<Style Selector="Slider /template/ RepeatButton#PART_IncreaseButton">
-			<Setter Property="Background" Value="#444444"/>
+			<Setter Property="Background" Value="{DynamicResource SeparatorColor}"/>
 		</Style>
 
 		<Style Selector="Slider:pointerover /template/ RepeatButton#PART_IncreaseButton">
-			<Setter Property="Background" Value="#444444"/>
+			<Setter Property="Background" Value="{DynamicResource SeparatorColor}"/>
+		</Style>
+		
+		<!--DataGrid Selector-->
+		<Style Selector="DataGridRow:selected /template/ Rectangle#BackgroundRectangle">
+			<Setter Property="Fill" Value="{DynamicResource RowSelectColor}" />
+		</Style>
+			
+		<Style Selector="DataGridRow:selected">
+			<Setter Property="Foreground" Value="{DynamicResource MainText}" />
+		</Style>
+
+		<Style Selector="DataGridRow:pointerover /template/ Rectangle#BackgroundRectangle">
+			<Setter Property="Fill" Value="{DynamicResource PrimaryColorHover}" />
+			<Setter Property="Opacity" Value="0.5" />
+		</Style>
+		
+		<!--Menu-->
+		<Style Selector="Menu">
+			<Setter Property="Background" Value="{DynamicResource SecondaryBackground}"/>
+		</Style>
+
+		<Style Selector="MenuItem">
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="Foreground" Value="{DynamicResource MainText}"/>
+		</Style>		
+
+		<Style Selector="Menu > MenuItem Panel">
+			<Setter Property="Background" Value="{DynamicResource SecondaryBackground}"/>
+		</Style>
+		
+		<!--FlyOut-->
+		<Style Selector="FlyoutPresenter">
+			<Setter Property="Padding" Value="0" />
+			<Setter Property="Background" Value="{DynamicResource SecondaryBackground}" />
+			<Setter Property="BorderBrush" Value="{DynamicResource BorderColor}" />
+			<Setter Property="BorderThickness" Value="1" />
 		</Style>
 
 	</Window.Styles>
@@ -80,7 +118,7 @@
 	<Grid RowDefinitions="Auto, *, Auto" Margin="20">
 
 		<StackPanel Grid.Row="0" Margin="-20,-20,-20,20">
-			<Menu Background="#2b2b2b">
+			<Menu Background="{DynamicResource SecondaryBackground}">
 				<MenuItem Header="_File">
 					<MenuItem Header="_Open Folder..."
 							  IsEnabled="{Binding !IsBusy}"
@@ -117,19 +155,19 @@
 				</MenuItem>
 			</Menu>
 
-			<Border Background="#333333" Height="50" BorderBrush="#111111" BorderThickness="0,0,0,1">
+			<Border Background="{DynamicResource InputBackground}" Height="50" BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,0,1">
 				<StackPanel Orientation="Horizontal" Margin="20,0" Spacing="10">
 					<Button Command="{Binding BrowseFolderCommand}"
 							IsEnabled="{Binding !IsBusy}"
 							CommandParameter="{Binding $parent[Window]}"
-							Background="Transparent" BorderThickness="0" Padding="10,5" Cursor="Hand">
+							Background="Transparent" BorderThickness="0" Padding="10,5" Cursor="Hand" Height="40">
 						<StackPanel Orientation="Horizontal" Spacing="8">
 							<Image Width="18" Height="18">
 								<Image.Source>
 									<SvgImage Source="/Assets/folder.svg"/>
 								</Image.Source>
 							</Image>
-							<TextBlock Text="Open Folder" VerticalAlignment="Center" Foreground="White" />
+							<TextBlock Text="Open Folder" VerticalAlignment="Center" Foreground="{DynamicResource MainText}" />
 						</StackPanel>
 					</Button>
 
@@ -137,7 +175,7 @@
 
 					<Button Command="{Binding ToggleSelectAllCommand}"
 							IsEnabled="{Binding !IsBusy}"
-							Background="Transparent" BorderThickness="0" Padding="10,5" Cursor="Hand">
+							Background="Transparent" BorderThickness="0" Padding="10,5" Cursor="Hand" Height="40">
 						<StackPanel Orientation="Horizontal" Spacing="8">
 							<Image Width="18" Height="18" VerticalAlignment="Center">
 								<Image.Source>
@@ -147,7 +185,7 @@
 
 							<TextBlock Text="Toggle All"
 									   VerticalAlignment="Center"
-									   Foreground="White"
+									   Foreground="{DynamicResource MainText}"
 									   />
 						</StackPanel>
 					</Button>
@@ -156,14 +194,14 @@
 
 					<Button Command="{Binding RefreshFolderCommand}"
 							IsEnabled="{Binding !IsBusy}"
-							Background="Transparent" BorderThickness="0" Padding="10,5" Cursor="Hand">
+							Background="Transparent" BorderThickness="0" Padding="10,5" Cursor="Hand" Height="40">
 						<StackPanel Orientation="Horizontal" Spacing="8">
 							<Image Width="16" Height="16" VerticalAlignment="Center">
 								<Image.Source>
 									<SvgImage Source="avares://Videofy/Assets/refresh.svg"/>
 								</Image.Source>
 							</Image>
-							<TextBlock Text="Refresh List" VerticalAlignment="Center" Foreground="White" />
+							<TextBlock Text="Refresh List" VerticalAlignment="Center" Foreground="{DynamicResource MainText}" />
 						</StackPanel>
 					</Button>
 
@@ -171,7 +209,7 @@
 			</Border>
 		</StackPanel>
 
-		<Border Grid.Row="1" Background="#2d2d2d" CornerRadius="8" Padding="5">
+		<Border Grid.Row="1" Background="{DynamicResource SecondaryBackground}" CornerRadius="8" Padding="5">
 			<DockPanel>
 
 				<Border DockPanel.Dock="Top"
@@ -181,7 +219,7 @@
 						CornerRadius="5"
 						Margin="10">
 					<StackPanel>
-						<TextBlock Text="FFmpeg Binaries Missing!" FontWeight="Bold" Foreground="White"/>
+						<TextBlock Text="FFmpeg Binaries Missing!" FontWeight="Bold" Foreground="{DynamicResource MainText}"/>
 						<TextBlock TextWrapping="Wrap" FontSize="12" Margin="0,5" Foreground="#EEEEEE">
 							To use Videofy, you need the FFmpeg binaries. You can download them automatically or install them manually.
 						</TextBlock>
@@ -191,7 +229,7 @@
 						<StackPanel Margin="0,15,0,5">
 							<Button Command="{Binding AutoDownloadBinariesCommand}"
 									IsVisible="{Binding !IsDownloading}"
-									Background="#00d26a" Foreground="Black"
+									Background="{DynamicResource SystemAccentColor}" Foreground="{DynamicResource TertiaryBackground}"
 									HorizontalAlignment="Left"
 									Padding="15,8" CornerRadius="4" Cursor="Hand">
 								<StackPanel Orientation="Horizontal" Spacing="8">
@@ -201,8 +239,8 @@
 							</Button>
 
 							<StackPanel Orientation="Horizontal" Spacing="10" IsVisible="{Binding IsDownloading}">
-								<ProgressBar IsIndeterminate="True" Width="100" Height="4" VerticalAlignment="Center" Foreground="#00d26a"/>
-								<TextBlock Text="Downloading and Extracting... Please wait." VerticalAlignment="Center" Foreground="#00d26a" FontStyle="Italic"/>
+								<ProgressBar IsIndeterminate="True" Width="100" Height="4" VerticalAlignment="Center" Foreground="{DynamicResource SystemAccentColor}"/>
+								<TextBlock Text="Downloading and Extracting... Please wait." VerticalAlignment="Center" Foreground="{DynamicResource MainText}" FontStyle="Italic"/>
 							</StackPanel>
 						</StackPanel>
 
@@ -213,17 +251,17 @@
 						<StackPanel Orientation="Horizontal" Spacing="10" IsEnabled="{Binding !IsDownloading}">
 							<Button Content="1. Open Download Page"
 									Command="{Binding OpenBtbNCommand}"
-									Background="#3d3d3d" Foreground="White"
+									Background="{DynamicResource PrimaryColorHover}" Foreground="{DynamicResource MainText}"
 									Padding="10,5" CornerRadius="4" FontSize="11" Cursor="Hand"/>
 
 							<Button Content="2. Open Dest Folder"
 									Command="{Binding OpenExpectedFolderCommand}"
-									Background="#3d3d3d" Foreground="White"
+									Background="{DynamicResource PrimaryColorHover}" Foreground="{DynamicResource MainText}"
 									Padding="10,5" CornerRadius="4" FontSize="11" Cursor="Hand"/>
 
 							<Button Content="3. Check Again"
 									Command="{Binding RefreshDependencyCheckCommand}"
-									Background="#3d3d3d" Foreground="White"
+									Background="{DynamicResource PrimaryColorHover}" Foreground="{DynamicResource MainText}"
 									Padding="10,5" CornerRadius="4" FontSize="11" Cursor="Hand"/>
 						</StackPanel>
 					</StackPanel>
@@ -236,8 +274,8 @@
 								 IsEnabled="{Binding !IsBusy}"
 								 Watermark="🔍 Search by file or folder name..."
 								 Margin="5"
-								 Background="#333333"
-								 Foreground="White"
+								 Background="{DynamicResource InputBackground}"
+								 Foreground="{DynamicResource MainText}"
 								 BorderBrush="#444444"
 								 VerticalContentAlignment="Center"/>
 
@@ -261,7 +299,7 @@
 														  CommandParameter="{Binding}" />
 												
 												<!--<MenuItem Header="Remove from List"
-														  Foreground="#ff4444"
+														  Foreground="{DynamicResource DangerColor}"
 														  Command="{Binding $parent[DataGrid].DataContext.RemoveVideoCommand}"
 														  CommandParameter="{Binding}" />-->
 											</ContextMenu>
@@ -292,7 +330,7 @@
 											<StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="10,0">
 												<TextBlock Text="{Binding FileName}" 
 														   VerticalAlignment="Center" 
-														   Foreground="White"
+														   Foreground="{DynamicResource MainText}"
 														   TextTrimming="CharacterEllipsis"
 														   ToolTip.Tip="{Binding FileName}"/>
 
@@ -308,7 +346,7 @@
 														<TextBlock Text="Custom Config " FontSize="11" VerticalAlignment="Center"/>
 														<TextBlock Text="{Binding CustomSettingsBadge}"
 																   IsVisible="{Binding HasCustomSettings}"
-																   Foreground="#00d26a"
+																   Foreground="{DynamicResource SystemAccentColor}"
 																   FontSize="11"
 																   FontWeight="Bold"
 																   VerticalAlignment="Center"/>
@@ -325,7 +363,7 @@
 											<TextBlock Text="{Binding FolderName}"
 													   VerticalAlignment="Center"
 													   Margin="10,0"
-													   Foreground="White"
+													   Foreground="{DynamicResource MainText}"
 													   TextTrimming="CharacterEllipsis"
 													   ToolTip.Tip="{Binding FolderName}"/>
 										</DataTemplate>
@@ -335,7 +373,7 @@
 								<DataGridTemplateColumn Header="Size" Width="Auto" SortMemberPath="RawSizeBytes" CanUserResize="False">
 									<DataGridTemplateColumn.CellTemplate>
 										<DataTemplate x:DataType="model:VideoFile">
-											<TextBlock Text="{Binding FileSizeDisplay}" VerticalAlignment="Center" Margin="10,0" Foreground="White" FontSize="12"/>
+											<TextBlock Text="{Binding FileSizeDisplay}" VerticalAlignment="Center" Margin="10,0" Foreground="{DynamicResource MainText}" FontSize="12"/>
 										</DataTemplate>
 									</DataGridTemplateColumn.CellTemplate>
 								</DataGridTemplateColumn>
@@ -352,7 +390,7 @@
 															 IsIndeterminate="{Binding ShowIndeterminate}"
 															 Opacity="{Binding IsProcessing}"
 															 IsHitTestVisible="False"
-															 Foreground="#00d26a"
+															 Foreground="{DynamicResource SystemAccentColor}"
 															 Background="#444444"
 															 CornerRadius="3"
 															 VerticalAlignment="Center"/>
@@ -360,7 +398,7 @@
 													<TextBlock Text="{Binding Eta}"
 															   IsVisible="{Binding IsProcessing}"
 															   FontSize="10"
-															   Foreground="#CCCCCC"
+															   Foreground="{DynamicResource SecondaryText}"
 															   HorizontalAlignment="Right"
 															   Margin="0,2,0,0"/>
 												</StackPanel>
@@ -373,12 +411,12 @@
 														   VerticalAlignment="Center"/>
 
 												<TextBlock Text="Ready"
-														   Foreground="#F5F5F5"
+														   Foreground="{DynamicResource MainText}"
 														   Opacity="{Binding IsReady}"
 														   VerticalAlignment="Center"/>
 
 												<TextBlock Text="Optimized"
-															Foreground="#d1b608"
+															Foreground="{DynamicResource WarningColor}"
 															FontStyle="Italic"
 															FontSize="11"
 															Opacity="{Binding IsInvalid}"
@@ -434,7 +472,7 @@
 													Content="✕"
 													Background="Transparent"
 													BorderThickness="0"
-													Foreground="#666666"
+													Foreground="{DynamicResource SystemAccentColor}"
 													FontSize="12"
 													VerticalAlignment="Center"
 													HorizontalAlignment="Center"
@@ -443,7 +481,7 @@
 													<Button.Styles>
 													<Style Selector="Button:hover /template/ ContentPresenter">
 														<Setter Property="Background" Value="Transparent"/>
-														<Setter Property="TextBlock.Foreground" Value="#ff4444"/>
+														<Setter Property="TextBlock.Foreground" Value="{DynamicResource DangerColor}"/>
 													</Style>
 												</Button.Styles>
 											</Button>
@@ -460,30 +498,30 @@
 								<SvgImage Source="avares://Videofy/Assets/folder.svg"/>
 							</Image.Source>
 						</Image>
-						<TextBlock Text="No videos loaded yet" FontSize="18" FontWeight="SemiBold" Foreground="Gray" HorizontalAlignment="Center"/>
+						<TextBlock Text="No videos loaded yet" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource DimText}" HorizontalAlignment="Center"/>
 						<Button Command="{Binding BrowseFolderCommand}"
 								CommandParameter="{Binding $parent[Window]}"
-								Background="#3d3d3d" CornerRadius="20" Cursor="Hand" HorizontalAlignment="Center">
-							<TextBlock Text="+ Add Files" Foreground="#00d26a" Margin="10,5"/>
+								Background="{DynamicResource TertiaryBackground}" CornerRadius="20" Cursor="Hand" HorizontalAlignment="Center">
+							<TextBlock Text="+ Add Files" Foreground="{DynamicResource MainText}" Margin="10,5"/>
 						</Button>
 					</StackPanel>
 				</Panel>
 			</DockPanel>
 		</Border>
 
-		<Border Grid.Row="2" Margin="-20,20,-20,-20" BorderBrush="#111111" BorderThickness="0,1,0,0" Height="230">
+		<Border Grid.Row="2" Margin="-20,20,-20,-20" BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,1,0,0" Height="230">
 			<TabControl SelectedIndex="{Binding SelectedTabIndex, Mode=TwoWay}" Padding="0" Margin="0">
 				<TabControl.Styles>
 					<Style Selector="TabItem">
 						<Setter Property="FontSize" Value="12"/>
 						<Setter Property="FontWeight" Value="SemiBold"/>
 						<Setter Property="MinHeight" Value="30"/>
-						<Setter Property="Background" Value="#2b2b2b"/>
-						<Setter Property="Foreground" Value="#888888"/>
+						<Setter Property="Background" Value="{DynamicResource SecondaryBackground}"/>
+						<Setter Property="Foreground" Value="{DynamicResource DimText}"/>
 					</Style>
 					<Style Selector="TabItem:selected">
-						<Setter Property="Foreground" Value="#00d26a"/>
-						<Setter Property="Background" Value="#333333"/>
+						<Setter Property="Foreground" Value="{DynamicResource SystemAccentColor}"/>
+						<Setter Property="Background" Value="{DynamicResource InputBackground}"/>
 					</Style>
 					<Style Selector="TabControl /template/ ContentPresenter#PART_SelectedContentHost">
 						<Setter Property="Padding" Value="0"/>
@@ -496,6 +534,10 @@
 
 				<TabItem Header="CONVERT (INSTANT)" IsEnabled="{Binding !IsBusy}" Cursor="Hand">
 					<Views:ConversionView/>
+				</TabItem>
+
+				<TabItem Header="SPLIT (INSTANT)" IsEnabled="{Binding !IsBusy}" Cursor="Hand">
+					<Views:SplitView/>
 				</TabItem>
 				
 			</TabControl>

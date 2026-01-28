@@ -12,6 +12,7 @@ using Video_Size_Optimizer.Models;
 using Video_Size_Optimizer.Utils;
 using Video_Size_Optimizer.Services;
 using System.Globalization;
+using System.Diagnostics;
 
 namespace Video_Size_Optimizer.ViewModels;
 
@@ -57,6 +58,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty] private bool _isDownloading;
     [ObservableProperty] private string _currentSpeed = "0x";
     [ObservableProperty] private int _selectedTabIndex;
+    [ObservableProperty] private int _splitSizeMb = 25;
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(PauseActionIconPath))]
     private bool _isPaused;
     [ObservableProperty] 
@@ -298,6 +300,7 @@ public partial class MainWindowViewModel : ViewModelBase
                     {
                         encoderValue = "libx265";
                     }
+
                     //Ensure we don't override files
                     string finalOutputPath;
 
@@ -318,17 +321,58 @@ public partial class MainWindowViewModel : ViewModelBase
                         }
                     }
 
+                    int? maxBitrate = null;
+                    if (GlobalSettings.PreventUpsampling && video.DurationSeconds > 0)
+                    {
+                        double rawBitrate = ((originalSizeBytes * 8.0) / 1024.0) / video.DurationSeconds;
+                        maxBitrate = (int)(rawBitrate);
+
+                        //No cap under 100kbps or it will be unwatchable.
+                        if (maxBitrate < 100) maxBitrate = null;
+                    }                   
+
                     if (SelectedTabIndex == 1)
                     {
                         finalOutputPath = _fileService.GenerateOutputPath(video.FilePath, 0, ConversionTargetFormat);
                         await _ffmpegService.CompressAsync(video.FilePath, finalOutputPath,
-                            "Original", false, 0, "copy", "Original", trimArgs, p);
+                            "Original", false, 0, "copy", "Original", trimArgs, null, p);
                     }
+
+                    else if (SelectedTabIndex == 2)
+                    {
+                        string originalExtension = Path.GetExtension(video.FilePath);
+                        finalOutputPath = _fileService.GenerateSplitPatternPath(video.FilePath, originalExtension);
+                        double segmentTime = CalculateSegmentTime(video.DurationSeconds, originalSizeBytes, SplitSizeMb);
+
+
+                        if (segmentTime > 0)
+                        {
+                            StatusMessage = "Splitting...";
+                            string splitArgs = $"-f segment -segment_time {segmentTime.ToString(CultureInfo.InvariantCulture)} -reset_timestamps 1";  
+                            
+                            await _ffmpegService.SplitVideoAsync(video.FilePath, finalOutputPath, splitArgs, p);
+
+                            video.IsCompleted = true;
+                            video.Progress = 100;
+                            completedCount++;
+                        }
+                        else
+                        {
+                            // File is already smaller than the target split size
+                            //video.StatusMessage = "Skipped (Small)";
+                            video.IsCompleted = true;
+                            video.Progress = 100;
+                        }
+
+
+                    }
+
                     else
                     {
                         finalOutputPath = video.HasCustomSize
                                             ? _fileService.GenerateTargetSizePath(video.FilePath, (int)video.CustomTargetSizeMb!, GlobalSettings.DefaultOutputFormat)
                                             : _fileService.GenerateOutputPath(video.FilePath, CrfValue, GlobalSettings.DefaultOutputFormat);
+                                                                                                         
 
                         if (video.HasCustomSize)
                         {
@@ -345,12 +389,12 @@ public partial class MainWindowViewModel : ViewModelBase
                         {
                             // Standard Batch Process - Uses Global CRF
                             await _ffmpegService.CompressAsync(video.FilePath, finalOutputPath,
-                                fpsToUse, StripMetadata, CrfValue, encoderValue, resolutionToUse, trimArgs, p);
+                                fpsToUse, StripMetadata, CrfValue, encoderValue, resolutionToUse, trimArgs, maxBitrate, p);
                         }
                     }
                  
                     // Important to avoid deleteing files if user Stops compression!
-                    if (!IsBusy)
+                    if (!IsBusy && !video.IsSplitEnabled)
                     {                      
                         if (File.Exists(finalOutputPath)) File.Delete(finalOutputPath);
                         break;
@@ -359,13 +403,21 @@ public partial class MainWindowViewModel : ViewModelBase
                     if (File.Exists(finalOutputPath))
                     {
                         var newInfo = new FileInfo(finalOutputPath);
+                        long totalOutputSize = newInfo.Length;
 
-                        if (newInfo.Length != 0)
+                        if (video.IsSplitEnabled)
                         {
-                            totalBytesSaved += (originalSizeBytes - newInfo.Length);
+                            totalOutputSize = video.HasCustomSize
+                                ? (long)video.CustomTargetSizeMb! * 1024 * 1024
+                                : originalSizeBytes;
+                        }
+
+                        if (totalOutputSize != 0)
+                        {
+                            totalBytesSaved += (originalSizeBytes - totalOutputSize);
                             completedCount++;
 
-                            double newSize = newInfo.Length / 1024.0 / 1024.0;
+                            double newSize = totalOutputSize / 1024.0 / 1024.0;
                             video.UpdateStatusSize(newSize);
 
                             video.Progress = 100;
@@ -378,7 +430,7 @@ public partial class MainWindowViewModel : ViewModelBase
                                 DisplayedVideos[index] = video;
                             }
 
-                            if (SelectedTabIndex != 1 && GlobalSettings.DeleteOriginalAfterCompression && File.Exists(finalOutputPath))
+                            if (SelectedTabIndex != 1 && GlobalSettings.DeleteOriginalAfterCompression && File.Exists(finalOutputPath) && !video.IsSplitEnabled)
                             {
                                 try
                                 {
@@ -451,6 +503,52 @@ public partial class MainWindowViewModel : ViewModelBase
         }
         catch { return false; } // Safety fallback
     }
+
+    //Returns calculatd segement size
+    private double CalculateSegmentTime(double duration, long originalSizeBytes, int targetSplitMb)
+    {
+        if (duration <= 0 || originalSizeBytes <= 0 || targetSplitMb <= 0) return 0;
+
+        double splitSizeBytes = targetSplitMb * 1024.0 * 1024.0 * 0.9;
+
+        if (splitSizeBytes >= originalSizeBytes) return 0;
+
+        // Math: SegmentDuration = TotalDuration * (TargetSplit / TotalSize)
+        return duration * (splitSizeBytes / originalSizeBytes);
+    }
+
+    //Returns precise calculatd segement size
+    //private async Task<string> CalculatePreciseSplitTimes(string path, double totalDuration, long totalSizeBytes, int targetMb)
+    //{
+    //    var keyframes = await _ffprobeService.GetKeyframeTimestampsAsync(path);
+
+    //    if (keyframes == null || keyframes.Count == 0) return "";
+
+    //    double targetBytes = targetMb * 1024.0 * 1024.0;
+    //    double bytesPerSecond = totalSizeBytes / totalDuration;
+
+    //    var splitPoints = new List<double>();
+    //    double lastSplitTime = 0;
+
+    //    foreach (var frameTime in keyframes)
+    //    {
+    //        // Skip the very first keyframe at 0.0
+    //        if (frameTime <= 0) continue;
+
+    //        double segmentDuration = frameTime - lastSplitTime;
+    //        double estimatedSegmentSize = segmentDuration * bytesPerSecond;
+
+    //        if (estimatedSegmentSize > (targetBytes * 0.98))
+    //        {
+    //            splitPoints.Add(frameTime);
+    //            lastSplitTime = frameTime;
+    //        }
+    //    }
+
+    //    if (splitPoints.Count == 0) return "";
+
+    //    return string.Join(",", splitPoints.Select(s => s.ToString("F3", CultureInfo.InvariantCulture)));
+    //}
 
     // Update the Filtered list whenever SearchText or the underlying Videos change
     partial void OnSearchTextChanged(string value) => ApplyFilter();

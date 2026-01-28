@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
@@ -86,7 +87,7 @@ public class FfmpegService
         }
     }
 
-    public async Task CompressAsync(string input, string output, string targetFps, bool stripMetadata, int crf, string encoder, string selectedResolution, string trimArgs, IProgress<ConversionProgress>? progress = null)
+    public async Task CompressAsync(string input, string output, string targetFps, bool stripMetadata, int crf, string encoder, string selectedResolution, string trimArgs, int? maxBitrateKbps = null, IProgress<ConversionProgress>? progress = null)
     {
 
         if (encoder == "copy")
@@ -112,23 +113,26 @@ public class FfmpegService
 
         string codecArgs;
         string metadataFlag = stripMetadata ? "-map_metadata -1 -map_chapters -1" : "";
+        string bitrateCap = maxBitrateKbps.HasValue
+        ? $"-maxrate {maxBitrateKbps}k -bufsize {maxBitrateKbps * 2}k"
+        : "";
 
         if (encoder.Contains("nvenc"))
         {
-            codecArgs = $"-vcodec {encoder} -preset p5 -rc vbr -cq {crf}";
+            codecArgs = $"-vcodec {encoder} -preset p5 -rc vbr -cq {crf} {bitrateCap}";
         }
         else if (encoder.Contains("amf"))
         {
-            codecArgs = $"-vcodec {encoder} -rc vbr_peak -qp_i {crf} -qp_p {crf} -quality quality";
+            codecArgs = $"-vcodec {encoder} -rc vbr_peak -qp_i {crf} -qp_p {crf} -quality quality {bitrateCap}";
         }
         else if (encoder.Contains("qsv"))
         {
-            codecArgs = $"-vcodec {encoder} -preset veryfast -global_quality {crf}";
+            codecArgs = $"-vcodec {encoder} -preset veryfast -global_quality {crf} {bitrateCap}";
         }
         else
         {
             // Standard CPU (x265)
-            codecArgs = $"-vcodec libx265 -crf {crf}";
+            codecArgs = $"-vcodec libx265 -crf {crf} {bitrateCap}";
         }
 
         string filterArgs = filters.Count > 0 ? $"-vf \"{string.Join(",", filters)}\"" : "";
@@ -182,6 +186,13 @@ public class FfmpegService
         if (File.Exists($"{logName}-0.log")) File.Delete($"{logName}-0.log");
         if (File.Exists($"{logName}-0.log.mbtree")) File.Delete($"{logName}-0.log.mbtree");
         if (File.Exists($"{logName}.log")) File.Delete($"{logName}.log");
+    }
+
+    //Split Video
+    public async Task SplitVideoAsync(string input, string outputPattern, string splitArgs, IProgress<ConversionProgress>? progress = null)
+    {
+        var args = $"-y -i \"{input}\" -c copy -map 0 {splitArgs} \"{outputPattern}\"";
+        await RunFfmpegProcessAsync(args, progress);
     }
 
     private async Task RunFfmpegProcessAsync(string args, IProgress<ConversionProgress>? progress)

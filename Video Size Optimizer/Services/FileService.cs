@@ -77,4 +77,20 @@ public class FileService
 
         return candidate;
     }
+
+    public string GenerateSplitPatternPath(string inputPath, string extension)
+    {
+        string directory = Path.GetDirectoryName(inputPath) ?? "";
+        string fileName = Path.GetFileNameWithoutExtension(inputPath);
+
+        if (!string.IsNullOrEmpty(extension) && !extension.StartsWith("."))
+        {
+            extension = "." + extension;
+        }
+
+        // Returns: C:\Path\Video_part%03d.mp4
+        return Path.Combine(directory, $"{fileName}_part%03d{extension}");
+    }
+
+
 }

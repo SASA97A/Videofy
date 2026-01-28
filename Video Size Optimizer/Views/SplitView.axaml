@@ -4,9 +4,8 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 			 xmlns:vm="using:Video_Size_Optimizer.ViewModels"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-             x:Class="Video_Size_Optimizer.Views.CompressionView"
+             x:Class="Video_Size_Optimizer.Views.SplitView"
 			 x:DataType="vm:MainWindowViewModel">
-
 
 	<Border Background="{DynamicResource SecondaryBackground}" Padding="20">
 		<Grid ColumnDefinitions="Auto, *, Auto, Auto">
@@ -31,6 +30,7 @@
 						</Border>
 					</StackPanel>
 				</StackPanel>
+
 			</StackPanel>
 
 			<StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="2">
@@ -41,54 +41,61 @@
 				</StackPanel>
 			</StackPanel>
 
-			<StackPanel Grid.Column="2" Orientation="Vertical" Spacing="4" VerticalAlignment="Center" Margin="20,0">
-				<CheckBox IsChecked="{Binding StripMetadata}" IsEnabled="{Binding !IsBusy}" Margin="80,5,0,0" Cursor="Hand">
-					<StackPanel Orientation="Horizontal" Spacing="5">
-						<TextBlock Text="Remove video trackers" Foreground="{DynamicResource MainText}" FontSize="11"/>
-						<Border Background="{DynamicResource PrimaryColorHover}" CornerRadius="10" Width="14" Height="14" 
-								ToolTip.Tip="Removes hidden metadata like GPS location, camera serials, and timestamps.">
-							<TextBlock Text="?" Foreground="{DynamicResource SystemAccentColor}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-						</Border>
-					</StackPanel>
-				</CheckBox>
 
-				<StackPanel Orientation="Horizontal" Spacing="8">
-					<TextBlock Text="Encoder:" VerticalAlignment="Center" Foreground="{DynamicResource SecondaryText}" FontSize="11" Width="65"/>
-					<ComboBox ItemsSource="{Binding AvailableEncoders}" SelectedItem="{Binding SelectedEncoder}" IsEnabled="{Binding !IsBusy}" FontSize="12" Width="200" Cursor="Hand"/>
+
+
+			<StackPanel Grid.Column="2"
+						Orientation="Vertical"
+						Spacing="0"
+						VerticalAlignment="Stretch"
+						Margin="20,10"
+						Width="280">
+
+				<StackPanel Spacing="2" Margin="0,0,0,12">
+					<TextBlock Text="SPLIT MODE"
+							   FontWeight="Black"
+							   FontSize="13"
+							   LetterSpacing="1"
+							   Foreground="{DynamicResource SystemAccentColor}"/>
+
+					<Border Background="{DynamicResource MainBackground}"
+							CornerRadius="4"
+							Padding="8"
+							Opacity="0.8"
+							BorderBrush="{DynamicResource BorderColor}"
+							BorderThickness="1">
+						<TextBlock Text="Splitting size is approximate and files may exceed the target size by up to ~10%."
+								   FontSize="10"
+								   Foreground="{DynamicResource MainText}"
+								   TextWrapping="Wrap"
+								   LineHeight="14"/>
+					</Border>
 				</StackPanel>
 
-				<StackPanel Orientation="Horizontal" Spacing="8">
-					<TextBlock Text="Target Res:" VerticalAlignment="Center" Foreground="{DynamicResource SecondaryText}" FontSize="11" Width="65"/>
-					<ComboBox ItemsSource="{Binding ResolutionOptions}" SelectedItem="{Binding SelectedResolution}" IsEnabled="{Binding !IsBusy}" FontSize="12" Width="200" Cursor="Hand"/>
-				</StackPanel>
+				<StackPanel Spacing="8" Margin="0,0,0,15">
+					<TextBlock Text="Target Chunk Size"
+							   FontSize="12"
+							   FontWeight="SemiBold"
+							   Foreground="{DynamicResource SecondaryText}"
+							   HorizontalAlignment="Left"/>
 
-				<StackPanel Orientation="Horizontal" Spacing="8">
-					<TextBlock Text="Max FPS:" VerticalAlignment="Center" Foreground="{DynamicResource SecondaryText}" FontSize="11" Width="65"/>
-					<ComboBox ItemsSource="{Binding FpsOptions}" SelectedItem="{Binding SelectedFps}" IsEnabled="{Binding !IsBusy}" FontSize="12" Width="200" Cursor="Hand"/>
+					<NumericUpDown Value="{Binding SplitSizeMb}"
+								   Minimum="5"
+								   Maximum="100000"
+								   Increment="5"
+								   FormatString="0 MB"
+								   Height="38"
+								   FontSize="14"
+								   HorizontalAlignment="Stretch"
+								   VerticalContentAlignment="Center"/>
 				</StackPanel>
+			
 			</StackPanel>
+			
+			
 
 			<StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="20" HorizontalAlignment="Right">
-				<StackPanel Spacing="3" VerticalAlignment="Center" Width="180">
-					<StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
-						<TextBlock Text="Quality:" FontSize="11" Foreground="{DynamicResource SecondaryText}"/>
-						<TextBlock Text="{Binding CrfDescription}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource SystemAccentColor}" />
-					</StackPanel>
-					<Grid ColumnDefinitions="*, Auto">
-						<StackPanel Grid.Column="0">
-							<Slider Value="{Binding CrfValue}" Minimum="1" Maximum="35" IsEnabled="{Binding !IsBusy}" IsSnapToTickEnabled="True" TickFrequency="1" VerticalAlignment="Center" Cursor="Hand"/>
-							<Grid Margin="0,-12,0,0">
-								<StackPanel HorizontalAlignment="Right" Margin="0,0,16,0" IsHitTestVisible="False">
-									<TextBlock Text="▲" Foreground="{DynamicResource SystemAccentColor}" FontSize="8" HorizontalAlignment="Center" Opacity="0.5"/>
-									<TextBlock Text="REC (28)" Foreground="{DynamicResource MainText}" FontSize="9" HorizontalAlignment="Center" Opacity="0.7"/>
-								</StackPanel>
-							</Grid>
-						</StackPanel>
-						<Border Grid.Column="1" Background="{DynamicResource PrimaryColorHover}" CornerRadius="4" Padding="5,1" Margin="8,-6,0,0" VerticalAlignment="Center">
-							<TextBlock Text="{Binding CrfValue}" Foreground="{DynamicResource MainText}" FontSize="11" FontWeight="Bold" MinWidth="18" TextAlignment="Center"/>
-						</Border>
-					</Grid>
-				</StackPanel>
+				<Panel Width="180"/>
 
 				<StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
 					<Button Command="{Binding TogglePauseCommand}" IsVisible="{Binding IsBusy}" Width="45" Height="40" Background="{DynamicResource PrimaryColorHover}" CornerRadius="4" Cursor="Hand">
@@ -111,7 +118,7 @@
 							FontWeight="Black" FontSize="12" CornerRadius="4"/>
 				</StackPanel>
 			</StackPanel>
+
 		</Grid>
 	</Border>
-	
 </UserControl>

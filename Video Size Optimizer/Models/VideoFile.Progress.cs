@@ -12,17 +12,20 @@ namespace Video_Size_Optimizer.Models
         [ObservableProperty] private string _eta = "";
 
         public bool ShowIndeterminate => IsProcessing && Progress <= 0;
-        public bool IsInvalid => FileName.Contains("-CRF", StringComparison.OrdinalIgnoreCase) ||
-                                 FileName.Contains("-Target", StringComparison.OrdinalIgnoreCase);
+        public bool IsInvalid => (FileName.Contains("-CRF", StringComparison.OrdinalIgnoreCase) ||
+                                  FileName.Contains("-Target", StringComparison.OrdinalIgnoreCase))
+                                  && !IsProcessing && !IsCompleted;
         public bool IsReady => !IsProcessing && !IsCompleted && !IsInvalid;
         partial void OnProgressChanged(double value) => OnPropertyChanged(nameof(ShowIndeterminate));
-        partial void OnIsProcessingChanged(bool value)
-        {
-            OnPropertyChanged(nameof(ShowIndeterminate));
-            OnPropertyChanged(nameof(IsReady));
-        }
-        partial void OnIsCompletedChanged(bool value) => OnPropertyChanged(nameof(IsReady));
+        partial void OnIsProcessingChanged(bool value) => RefreshStatusProperties();
+        partial void OnIsCompletedChanged(bool value) => RefreshStatusProperties();
 
+        private void RefreshStatusProperties()
+        {
+            OnPropertyChanged(nameof(IsInvalid));
+            OnPropertyChanged(nameof(IsReady));
+            OnPropertyChanged(nameof(ShowIndeterminate));
+        }
 
         public void UpdateProgress(double percentage, string speed, string fps)
         {

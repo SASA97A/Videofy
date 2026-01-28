@@ -7,26 +7,26 @@
              x:Class="Video_Size_Optimizer.Views.ConversionView"
 			 x:DataType="vm:MainWindowViewModel">
 
-	<Border Background="#2b2b2b" Padding="20">
+	<Border Background="{DynamicResource SecondaryBackground}" Padding="20">
 		<Grid ColumnDefinitions="Auto, *, Auto, Auto">
 
 			<StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="8" Margin="0,0,20,0">
 				<StackPanel Orientation="Horizontal" Spacing="15">
 					<StackPanel Orientation="Horizontal" Spacing="8">
-						<TextBlock Text="Selection:" Foreground="#888888" FontSize="11"/>
-						<TextBlock Text="{Binding SelectionStatus}" Foreground="#00d26a" FontSize="11" FontWeight="SemiBold"/>
+						<TextBlock Text="Selection:" Foreground="{DynamicResource SecondaryText}" FontSize="11"/>
+						<TextBlock Text="{Binding SelectionStatus}" Foreground="{DynamicResource SystemAccentColor}" FontSize="11" FontWeight="SemiBold"/>
 					</StackPanel>
 				</StackPanel>
 
 				<StackPanel Orientation="Horizontal" Spacing="10" IsVisible="{Binding IsBusy}">
 					<Border Background="#443300" CornerRadius="4" Padding="8,2">
-						<TextBlock Text="{Binding StatusMessage}" Foreground="Yellow" FontSize="10" FontWeight="Bold"/>
+						<TextBlock Text="{Binding StatusMessage}" Foreground="{DynamicResource WarningColor}" FontSize="10" FontWeight="Bold"/>
 					</Border>
 					<Rectangle Width="1" Height="12" Fill="#444444" VerticalAlignment="Center"/>
 					<StackPanel Orientation="Horizontal" Spacing="5">
-						<TextBlock Text="Speed:" Foreground="#888888" FontSize="10" VerticalAlignment="Center"/>
+						<TextBlock Text="Speed:" Foreground="{DynamicResource DimText}" FontSize="10" VerticalAlignment="Center"/>
 						<Border Width="50" Height="18" VerticalAlignment="Center">
-							<TextBlock Text="{Binding CurrentSpeed}" Foreground="#00d26a" FontSize="11" FontWeight="Bold" HorizontalAlignment="Left" VerticalAlignment="Center" />
+							<TextBlock Text="{Binding CurrentSpeed}" Foreground="{DynamicResource SystemAccentColor}" FontSize="11" FontWeight="Bold" HorizontalAlignment="Left" VerticalAlignment="Center" />
 						</Border>
 					</StackPanel>
 				</StackPanel>
@@ -34,23 +34,45 @@
 			</StackPanel>
 
 			<StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="2">
-				<TextBlock Text="{Binding SelectedFolderPath}" Foreground="White" FontSize="11" Opacity="0.5" TextTrimming="CharacterEllipsis" MaxWidth="350" HorizontalAlignment="Center"/>
+				<TextBlock Text="{Binding SelectedFolderPath}" Foreground="{DynamicResource MainText}" FontSize="11" Opacity="0.5" TextTrimming="CharacterEllipsis" MaxWidth="350" HorizontalAlignment="Center"/>
 				<StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="5">
-					<TextBlock Text="Total Size:" Foreground="#CCCCCC" FontSize="11"/>
-					<TextBlock Text="{Binding TotalFolderSizeDisplay}" Foreground="#00d26a" FontSize="11" FontWeight="Bold"/>
+					<TextBlock Text="Total Size:" Foreground="{DynamicResource SecondaryText}" FontSize="11"/>
+					<TextBlock Text="{Binding TotalFolderSizeDisplay}" Foreground="{DynamicResource SystemAccentColor}" FontSize="11" FontWeight="Bold"/>
 				</StackPanel>
 			</StackPanel>
+	
 
-			<StackPanel Grid.Column="2" Orientation="Vertical" Spacing="5" VerticalAlignment="Center" Margin="20,0" Width="265">
-				<StackPanel Spacing="2">
-					<TextBlock Text="INSTANT MODE (EXPERIMENTAL)" FontWeight="Black" FontSize="12" Foreground="#00d26a"/>
+			<StackPanel Grid.Column="2"
+						Orientation="Vertical"
+						Spacing="0"
+						VerticalAlignment="Stretch"
+						Margin="20,10"
+						Width="280">
 
-					<TextBlock Text="Very fast but may result in unplayable files if codecs are incompatible with the target format."
-							   FontSize="11" Foreground="#ffcc00" TextWrapping="Wrap" Margin="5"/>
+				<StackPanel Spacing="2" Margin="0,0,0,12">
+					<TextBlock Text="CONVERSION MODE"
+							   FontWeight="Black"
+							   FontSize="13"
+							   LetterSpacing="1"
+							   Foreground="{DynamicResource SystemAccentColor}"/>
+
+					<Border Background="{DynamicResource MainBackground}"
+							CornerRadius="4"
+							Padding="8"
+							Opacity="0.8"
+							BorderBrush="{DynamicResource BorderColor}"
+							BorderThickness="1">
+						<TextBlock Text="Very fast but may result in unplayable files if codecs are incompatible with the target output format."
+								   FontSize="10"
+								   Foreground="{DynamicResource MainText}"
+								   TextWrapping="Wrap"							   
+								   LineHeight="14"/>
+					</Border>
 				</StackPanel>
+			
 
 				<StackPanel Orientation="Horizontal" Spacing="10" Margin="0,5,0,0">
-					<TextBlock Text="Target Format:" VerticalAlignment="Center" FontSize="11" Foreground="#CCCCCC"/>
+					<TextBlock Text="Target Format:" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource SecondaryText}"/>
 					<ComboBox ItemsSource="{Binding OutputFormats}"
 							  SelectedItem="{Binding ConversionTargetFormat}"
 							  IsEnabled="{Binding !IsBusy}"
@@ -59,14 +81,14 @@
 				</StackPanel>
 
 				<TextBlock Text="* Only Trim options are applicaple in this mode."
-						   FontSize="11" Foreground="#CCCCCC" Margin="0,2,0,0"/>
+						   FontSize="11" Foreground="{DynamicResource SecondaryText}" Margin="0,2,0,0"/>
 			</StackPanel>
 
 			<StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="20" HorizontalAlignment="Right">
 				<Panel Width="180"/>
 
 				<StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-					<Button Command="{Binding TogglePauseCommand}" IsVisible="{Binding IsBusy}" Width="45" Height="40" Background="#3d3d3d" CornerRadius="4" Cursor="Hand">
+					<Button Command="{Binding TogglePauseCommand}" IsVisible="{Binding IsBusy}" Width="45" Height="40" Background="{DynamicResource PrimaryColorHover}" CornerRadius="4" Cursor="Hand">
 						<Panel>
 							<Image Width="14" Height="14" IsVisible="{Binding !IsPaused}">
 								<Image.Source>
@@ -82,7 +104,7 @@
 					</Button>
 					<Button Command="{Binding HandleActionCommand}" Content="{Binding ActionButtonText}"
 							Padding="20,0" Height="40" VerticalContentAlignment="Center" Cursor="Hand"
-							Background="{Binding ActionButtonColor}" Foreground="Black"
+							Background="{Binding ActionButtonColor}" Foreground="{DynamicResource TertiaryBackground}"
 							FontWeight="Black" FontSize="12" CornerRadius="4"/>
 				</StackPanel>
 			</StackPanel>

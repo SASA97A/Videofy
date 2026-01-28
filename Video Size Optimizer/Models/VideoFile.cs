@@ -15,7 +15,7 @@ public partial class VideoFile : ObservableObject
     //Standard Process
     
     public long RawSizeBytes { get; private set; }
-    public double MaxTargetMb => Math.Ceiling(RawSizeBytes / (1024.0 * 1024.0));
+    public double MaxTargetMb => Math.Ceiling(RawSizeBytes / (1024.0 * 1024.0) * 0.90);
     public bool IsAlreadySmall => MaxTargetMb <= 10; 
 
     [ObservableProperty] private string folderName = string.Empty;
@@ -53,8 +53,16 @@ public partial class VideoFile : ObservableObject
     }
     public bool HasCustomSize => CustomTargetSizeMb.HasValue;
 
+    [ObservableProperty]
+   // [NotifyPropertyChangedFor(nameof(HasCustomSettings))]
+   // [NotifyPropertyChangedFor(nameof(CustomSettingsBadge))]
+    private int _splitSizeMb = 0;
+
+    public bool IsSplitEnabled => SplitSizeMb >= 5;
+
     public bool HasCustomSettings => HasCustomSize || !string.IsNullOrEmpty(CustomResolution)
-                                     || !string.IsNullOrEmpty(CustomFps) || IsTrimmed;
+                                     || !string.IsNullOrEmpty(CustomFps) || IsTrimmed ;
+
 
 
     public VideoFile(string filePath, string rootFolder)
