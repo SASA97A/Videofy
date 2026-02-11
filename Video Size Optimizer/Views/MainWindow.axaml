@@ -124,35 +124,74 @@
 							  IsEnabled="{Binding !IsBusy}"
 							  Command="{Binding BrowseFolderCommand}"
 							  CommandParameter="{Binding $parent[Window]}" />
+
+					<MenuItem Header="_Refresh Folder"
+							  IsEnabled="{Binding !IsBusy}"
+							  Command="{Binding RefreshFolderCommand}" />
+
 					<Separator />
-					<MenuItem Header="_Exit" Click="OnExitClick"/>
+
+					<MenuItem Header="_Exit"
+							  Click="OnExitClick" />
 				</MenuItem>
-				<MenuItem Header="_Selection">
-					<MenuItem Header="_Select All" Command="{Binding SelectAllCommand}" IsEnabled="{Binding !IsBusy}" />
-					<MenuItem Header="_Deselect All" Command="{Binding DeselectAllCommand}" IsEnabled="{Binding !IsBusy}"/>
+
+				<!-- EDIT -->
+				<MenuItem Header="_Edit"
+						  IsEnabled="{Binding HasVideos}">
+					<MenuItem Header="_Select All"
+							  IsEnabled="{Binding !IsBusy}"
+							  Command="{Binding SelectAllCommand}" />
+
+					<MenuItem Header="_Deselect All"
+							  IsEnabled="{Binding !IsBusy}"
+							  Command="{Binding DeselectAllCommand}" />
+
+					<Separator />
+
 					<MenuItem Header="_Batch Rename"
 							  IsEnabled="{Binding !IsBusy}"
 							  Command="{Binding OpenRenameWindowCommand}"
-							  CommandParameter="{Binding $parent[Window]}"/>
+							  CommandParameter="{Binding $parent[Window]}" />
 				</MenuItem>
-				
-				<MenuItem Header="_Options">
-					<MenuItem Header="_Open Binaries Folder"
-							  IsEnabled="{Binding !IsBusy}"
-							  Command="{Binding OpenExpectedFolderCommand}" />											
-					<MenuItem Header="_Open Settings"
+
+				<!-- VIEW -->
+				<MenuItem Header="_View">
+					<MenuItem Header="_Show Logs"
+							  Command="{Binding ShowLogsCommand}"
+							  CommandParameter="{Binding $parent[Window]}" />
+
+					<MenuItem Header="_Open Log File"
+							  Command="{Binding OpenLogFileCommand}" />
+				</MenuItem>
+
+				<!-- TOOLS -->
+				<MenuItem Header="_Tools">
+					<MenuItem Header="_Application Settings"
 							  IsEnabled="{Binding !IsBusy}"
 							  Command="{Binding OpenSettingsCommand}"
-							  CommandParameter="{Binding $parent[Window]}"/>
+							  CommandParameter="{Binding $parent[Window]}" />
 
+					<MenuItem Header="_Open Binaries Folder"
+							  IsEnabled="{Binding !IsBusy}"
+							  Command="{Binding OpenExpectedFolderCommand}" />
+
+					<!--<MenuItem Header="_Check Dependencies"
+							  Command="{Binding RefreshDependencyCheckCommand}" />-->
 				</MenuItem>
-				
-				
+
+				<!-- HELP -->
 				<MenuItem Header="_Help">
-					<MenuItem Header="_Check for Updates" Command="{Binding CheckForUpdatesCommand}" />
-					<!--<Separator />-->
-					<MenuItem Header="_About" Command="{Binding ShowAboutCommand}" />
+					<MenuItem Header="_Check for Updates"
+							  IsEnabled="{Binding !IsBusy}"
+							  Command="{Binding CheckForUpdatesCommand}" />
+
+					<Separator />
+
+					<MenuItem Header="_About"
+							  IsEnabled="{Binding !IsBusy}"
+							  Command="{Binding ShowAboutCommand}" />
 				</MenuItem>
+
 			</Menu>
 
 			<Border Background="{DynamicResource InputBackground}" Height="50" BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,0,1">
@@ -164,7 +203,7 @@
 						<StackPanel Orientation="Horizontal" Spacing="8">
 							<Image Width="18" Height="18">
 								<Image.Source>
-									<SvgImage Source="/Assets/folder.svg"/>
+									<SvgImage Source="/Assets/green-folder.svg"/>
 								</Image.Source>
 							</Image>
 							<TextBlock Text="Open Folder" VerticalAlignment="Center" Foreground="{DynamicResource MainText}" />
@@ -202,6 +241,23 @@
 								</Image.Source>
 							</Image>
 							<TextBlock Text="Refresh List" VerticalAlignment="Center" Foreground="{DynamicResource MainText}" />
+						</StackPanel>
+					</Button>
+
+
+					<Separator Classes="vertical" />
+
+					<Button Command="{Binding ShowLogsCommand}"
+							CommandParameter="{Binding $parent[Window]}"
+							ToolTip.Tip="View real-time processing logs"
+							Background="Transparent" BorderThickness="0" Padding="10,5" Cursor="Hand" Height="40">
+						<StackPanel Orientation="Horizontal" Spacing="8">
+							<Image Width="16" Height="16" VerticalAlignment="Center">
+								<Image.Source>
+									<SvgImage Source="avares://Videofy/Assets/logs.svg"/>
+								</Image.Source>
+							</Image>
+							<TextBlock Text="View Logs" VerticalAlignment="Center" Foreground="{DynamicResource MainText}" />
 						</StackPanel>
 					</Button>
 
@@ -462,12 +518,12 @@
 										</Button>
 									</DataTemplate>
 								</DataGridTemplateColumn>
-								
-								
+
+
 								<DataGridTemplateColumn Width="50" CanUserResize="False">
 									<DataGridTemplateColumn.CellTemplate>
 										<DataTemplate>
-											<Button Command="{Binding $parent[DataGrid].DataContext.RemoveVideoCommand}"
+											<Button Command="{Binding $parent[DataGrid].((vm:MainWindowViewModel)DataContext).RemoveVideoCommand}"
 													CommandParameter="{Binding}"
 													Content="✕"
 													Background="Transparent"
@@ -477,8 +533,8 @@
 													VerticalAlignment="Center"
 													HorizontalAlignment="Center"
 													Cursor="Hand"
-													IsEnabled="{Binding !$parent[DataGrid].DataContext.IsBusy}">
-													<Button.Styles>
+													IsEnabled="{Binding !$parent[DataGrid].((vm:MainWindowViewModel)DataContext).IsBusy}">
+												<Button.Styles>
 													<Style Selector="Button:hover /template/ ContentPresenter">
 														<Setter Property="Background" Value="Transparent"/>
 														<Setter Property="TextBlock.Foreground" Value="{DynamicResource DangerColor}"/>
@@ -495,7 +551,7 @@
 					<StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="15" IsVisible="{Binding !HasVideos}">
 						<Image Width="64" Height="64" HorizontalAlignment="Center" Opacity="0.3">
 							<Image.Source>
-								<SvgImage Source="avares://Videofy/Assets/folder.svg"/>
+								<SvgImage Source="avares://Videofy/Assets/green-folder.svg"/>
 							</Image.Source>
 						</Image>
 						<TextBlock Text="No videos loaded yet" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource DimText}" HorizontalAlignment="Center"/>

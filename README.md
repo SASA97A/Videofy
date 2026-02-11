@@ -2,7 +2,9 @@
 
 ![Videofy app preview](images/app.png)
 
-Videofy is a cross-platform desktop application for batch video compression with quality control.
+Videofy is an open source cross-platform desktop application for batch video compression with quality control.
+
+Videofy is designed as a streamlined alternative to **HandBrake**. While HandBrake offers extensive features for power users, its interface can be complex. Videofy prioritizes simplicity and ease of use, making video compression accessible to everyone.
 
 Videofy does **not** implement or distribute its own codecs.  
 All video processing is performed by **FFmpeg**, which is used as an external dependency.
@@ -23,16 +25,23 @@ As a result, **older release files have been removed** from GitHub because they 
 
 ---
 
+## Project Status
+
+**Version 1.4.1** marks the completion of the current development roadmap.
+Feature suggestions and bug reports are still welcome.
+
+---
+
 ## Features
 
 - Batch compression of multiple video files
 - Resolution downscaling during compression:
-  - 2K · 1080p · 720p · 480p · 360p
+  - 4k · 2K · 1080p · 720p · 480p · 360p
 - Upscale protection (prevents quality loss when source resolution is lower)
 - Cross-platform support:
   - Windows
   - Linux
-- macOS support coming soon
+  - macOS: The underlying codebase supports macOS; however, official builds are currently unavailable pending hardware verification.
 
 ---
 
@@ -60,8 +69,8 @@ Videofy includes a **startup dependency guard** that:
 - Guides you directly to the correct destination folder
 
 #### Recommended FFmpeg Version to download
-![FFmpeg Version Guide](images/ffmpeg.png)
----
+
+## ![FFmpeg Version Guide](images/ffmpeg.png)
 
 ## How It Works
 
@@ -72,13 +81,14 @@ Videofy re-encodes videos using FFmpeg with **CRF (Constant Rate Factor)** setti
 
 This approach provides consistent visual results across different source videos.
 
-### Pro Tips
+### Best Practices
 
 - Videos will not upscale if the source resolution is lower than selected.
 - CPU (x265): Recommended CRF is 28.
 - NVIDIA (NVENC): Aim for 2-5 digits LOWER than CPU (e.g., 23-25).
 - AMD (AMF): Aim for 5-8 digits LOWER than CPU (e.g., 20-23).
 - Intel (QSV): Similar to CPU, try 24-26 for best results.
+
 ---
 
 ## Requirements
@@ -86,7 +96,7 @@ This approach provides consistent visual results across different source videos.
 - Windows or Linux (ARM untested)
 - User-provided FFmpeg & FFprobe binaries (GPL build)
 - Use full GPL builds only. LGPL, Shared, and Master builds are not supported.
-- .NET runtime compatible with **.NET 9.0**
+- .NET runtime compatible with **.NET 8.0**
 
 ---
 

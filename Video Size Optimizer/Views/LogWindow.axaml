@@ -1,0 +1,53 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:services="using:Video_Size_Optimizer.Services"
+        x:Class="Video_Size_Optimizer.Views.LogWindow"
+        x:DataType="services:LogService"
+        Title="System Logs" Width="700" Height="450"
+        Background="{DynamicResource MainBackground}"
+        WindowStartupLocation="CenterOwner">
+
+	<Grid RowDefinitions="*, Auto">
+		<TextBox Name="LogTextBox"
+                 Grid.Row="0"
+                 Text="{Binding FullLogText, Mode=OneWay}"
+                 IsReadOnly="True"
+                 AcceptsReturn="True"
+                 TextWrapping="Wrap"
+                 Background="{DynamicResource TertiaryBackground}"
+                 Foreground="{DynamicResource MainText}"
+                 BorderThickness="0"
+                 FontSize="12"
+                 FontFamily="Consolas, Monospace"
+                 Padding="10"
+                 CaretBrush="{DynamicResource SystemAccentColor}"
+                 ScrollViewer.VerticalScrollBarVisibility="Auto"/>
+
+		<Border Grid.Row="1"
+        Background="{DynamicResource SecondaryBackground}"
+        BorderBrush="{DynamicResource BorderColor}"
+        BorderThickness="0,1,0,0"
+        Padding="10">
+
+			<Grid ColumnDefinitions="*, Auto">
+
+				<!-- Log size -->
+				<TextBlock Grid.Column="0"
+						   Text="{Binding LogFileSizeDisplay}"
+						   VerticalAlignment="Center"
+						   Foreground="{DynamicResource MainText}"
+						   FontSize="12"
+						   Opacity="0.8"/>
+
+				<!-- Close button -->
+				<Button Grid.Column="1"
+						Content="Close"
+						Click="CloseClick"
+						Background="{DynamicResource MainBackground}"
+						Foreground="{DynamicResource MainText}"
+						BorderBrush="{DynamicResource BorderColor}"
+						Padding="20,5"/>
+			</Grid>
+		</Border>
+	</Grid>
+</Window>

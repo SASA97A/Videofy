@@ -5,14 +5,14 @@ using CommunityToolkit.Mvvm.Input;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Video_Size_Optimizer.Models;
-using Video_Size_Optimizer.Utils;
 using Video_Size_Optimizer.Services;
-using System.Globalization;
-using System.Diagnostics;
+using Video_Size_Optimizer.Utils;
 
 namespace Video_Size_Optimizer.ViewModels;
 
@@ -25,6 +25,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly SystemUtilityService _systemService = new();
     private readonly MessageService _messageService = new();
     private readonly SettingsService _settingsService = new();
+    private Views.LogWindow? _logWindow;
     [ObservableProperty] private AppSettings _globalSettings = new();
     [ObservableProperty] private string _conversionTargetFormat = ".mp4";
 
@@ -78,6 +79,9 @@ public partial class MainWindowViewModel : ViewModelBase
     public MainWindowViewModel()
     {
 
+        LogService.Instance.Section("Application Session Started" + DateTime.Now.ToString(" - yyyy.MM.dd"));
+        LogService.Instance.Log("MainWindowViewModel initialized.");
+
         BrowseFolderCommand = new RelayCommand<Window>(BrowseFolder);
 
         SelectAllCommand = new RelayCommand(() =>
@@ -96,18 +100,26 @@ public partial class MainWindowViewModel : ViewModelBase
 
         if (!DependencyChecker.CheckBinaries(out string path))
         {
+            LogService.Instance.Log($"FFmpeg binaries missing. Expected path: {path}", LogLevel.Warning, "Warning");
             ShowDependencyWarning = true;
             ExpectedPath = path;
             StatusMessage = "Setup Required: Missing FFmpeg files.";
         }
+        else
+        {
+            LogService.Instance.Log("FFmpeg binaries detected.");
+        }
 
         GlobalSettings = _settingsService.LoadSettings();
+        LogService.Instance.Log("Global settings loaded.");
     }
 
     // Check for updates
     [RelayCommand]
     public async Task CheckForUpdates()
-    {    
+    {
+        LogService.Instance.Log("Checking for updates!");
+
         var latestVersion = await _systemService.GetLatestGithubTagNameAsync("SASA97A", "Videofy");
 
         if (latestVersion == null)
@@ -117,6 +129,8 @@ public partial class MainWindowViewModel : ViewModelBase
         }
         if (latestVersion != AppConstants.AppVersion)
         {
+            LogService.Instance.Log($"New app version found {latestVersion}", LogLevel.Success);
+
             bool update = await _messageService.ShowYesNoAsync("Update Available",
             $"Version {latestVersion} is available! \n\nWould you like to open the download page?");
             if (update) _systemService.OpenAppWebLink(AppLink.GitHub);
@@ -147,7 +161,11 @@ public partial class MainWindowViewModel : ViewModelBase
         var result = await parentWindow.StorageProvider.OpenFolderPickerAsync(options);
 
         // 2. The result is a list (even for single selection), check if user picked anything
-        if (result == null || result.Count == 0) return;
+        if (result == null || result.Count == 0)
+        {
+            LogService.Instance.Log("Folder picker cancelled by user.");
+            return;
+        }
 
         // 3. Convert the StorageFolder to a local path string
         var folderPath = result[0].TryGetLocalPath();
@@ -161,16 +179,28 @@ public partial class MainWindowViewModel : ViewModelBase
         Videos.Clear();
         SelectedFolderPath = folderPath;
 
+        LogService.Instance.Section("Folder Scan");
+
         var allowedExtensions = AppConstants.GetCombinedExtensions(GlobalSettings.CustomExtensions);
+        LogService.Instance.Log(
+              $"Readable extensions: {string.Join(", ", allowedExtensions)}");
+
         var data = _fileService.GetFolderData(folderPath, allowedExtensions);
         TotalFolderSizeDisplay = $"{(data.totalSize / 1024.0 / 1024.0 / 1024.0):F2} GB";
+
+        LogService.Instance.Log(
+                $"Path: {folderPath}");
+        LogService.Instance.Log(
+                $"Files found: {data.videoPaths.Count}");
+        LogService.Instance.Log(
+                $"Total size: {TotalFolderSizeDisplay}");
 
         foreach (var path in data.videoPaths)
         {
             var video = new VideoFile(path, folderPath);
             video.PropertyChanged += VideoFile_PropertyChanged;
             Videos.Add(video);
-        }
+        }       
 
         ApplyFilter();
         RefreshStats();
@@ -191,7 +221,8 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     private async Task StartCompressionAsync()
-    {
+    {      
+
         var selectedVideos = Videos.Where(v => {
             // Basic requirements
             if (!v.IsSelected || v.IsCompleted) return false;
@@ -203,25 +234,31 @@ public partial class MainWindowViewModel : ViewModelBase
                 if (isAlreadyOptimized) return false;
             }
             return true;
-        }).ToList();
+        }).ToList();      
 
         if (selectedVideos.Count == 0)
         {
+            LogService.Instance.Log("No videos selected. Batch aborted.");
             await _messageService.ShowInfoAsync("No Selection", AppConstants.NoSelectionMessage);
             return;
         }
 
+
         // Platform Permission Checks (Linux/macOS)
+        LogService.Instance.Log("Checking FFmpeg permissions...");
         var ffmpegError = _ffmpegService.InitializePermissions();
         if (ffmpegError != null)
         {
+            LogService.Instance.Log($"FFmpeg permission error: {ffmpegError}", LogLevel.Error, "Error");
             await _messageService.ShowErrorAsync("Platform Permission Error", ffmpegError);
             return;
         }
 
+        LogService.Instance.Log("Checking FFprobe permissions...");
         var ffprobeError = _ffprobeService.InitializePermissions();
         if (ffprobeError != null)
         {
+            LogService.Instance.Log($"FFprobe permission error: {ffprobeError}", LogLevel.Error, "Error");
             await _messageService.ShowErrorAsync("Platform Permission Error", ffprobeError);
             return;
         }
@@ -231,31 +268,62 @@ public partial class MainWindowViewModel : ViewModelBase
 
         IsBusy = true;
         StatusMessage = "Processing...";
+
         if (GlobalSettings.PreventSleep)
+        {
             await _systemService.PreventSleepAsync(true, _messageService.ShowErrorAsync);
+        }
+
+        LogService.Instance.Section("Batch Start");
+
+        LogService.Instance.Log($"Videos selected: {selectedVideos.Count}");
+        LogService.Instance.Log($"Mode: {(SelectedTabIndex == 0 ? "Encode" : SelectedTabIndex == 1 ? "Stream Copy" : "Split")}");
+        LogService.Instance.Log($"Encoder preset: {SelectedEncoder}");
+        LogService.Instance.Log($"Default format: {GlobalSettings.DefaultOutputFormat}");
+        LogService.Instance.Log($"Strip metadata: {StripMetadata}");
+        LogService.Instance.Log($"Prevent sleep: {GlobalSettings.PreventSleep}");
+
+
 
         try
         {
             foreach (var video in selectedVideos)
             {
-                if (!IsBusy) break;
+                if (!IsBusy)
+                {
+                    LogService.Instance.Log("Batch cancelled by user.");
+                    break;
+                }
+
+                LogService.Instance.Section($"Processing video: {video.FileName}");
 
                 if (IsDiskSpaceLow())
                 {
+                    LogService.Instance.Log("Low disk space detected. Pausing batch.", LogLevel.Warning, "Warning");
                     _ffmpegService.TogglePause(true);
+
                     if (!IsPaused) await TogglePause();
                     StatusMessage = "Paused: Low Disk Space!";
+                    LogService.Instance.Log(
+                                $"Pause reason: Low disk space (< {GlobalSettings.LowDiskBufferGb}GB)");
+
                     await _messageService.ShowErrorAsync("Low Disk Space",
                         $"Available space is below {GlobalSettings.LowDiskBufferGb}GB. " +
                         $"The process has been paused. Please free up space and click Resume.");
+
                     while (IsPaused)
                     {
-                        if (!IsBusy) break; // If user "Stop" instead of "Resume"
+                        if (!IsBusy)
+                        { 
+                            LogService.Instance.Log("User cancelled batch during low disk pause.");
+                            break;
+                        }                           
                         await Task.Delay(1000); 
                     }
 
                     if (!IsBusy)
                     {
+                        LogService.Instance.Log("Batch cancelled by user.");
                         IsPaused = false;
                         break;
                     }
@@ -267,10 +335,12 @@ public partial class MainWindowViewModel : ViewModelBase
 
                 await Task.Delay(50);
 
+                LogService.Instance.SubSection("***Source info***");
+
                 try
                 {
                     if (video.DurationSeconds <= 0)
-                    {
+                    {                      
                         video.DurationSeconds = await _ffprobeService.GetVideoDurationAsync(video.FilePath);
                     }
 
@@ -278,6 +348,11 @@ public partial class MainWindowViewModel : ViewModelBase
 
                     // Get original width
                     int originalWidth = await _ffprobeService.GetVideoWidthAsync(video.FilePath);
+
+                    LogService.Instance.Log(
+                        $"Duration: {video.DurationSeconds:F2}s");
+                    LogService.Instance.Log(
+                        $"Original size: {(originalSizeBytes / 1024.0 / 1024.0):F2} MB");
 
                     string chosenResname = !string.IsNullOrEmpty(video.CustomResolution)
                                             ? video.CustomResolution : SelectedResolution;
@@ -291,15 +366,22 @@ public partial class MainWindowViewModel : ViewModelBase
                             resolutionToUse = targetWidth < originalWidth ? targetWidth.ToString() : "Original";
                         }
                     }
+                    LogService.Instance.SubSection("***Encoding settings***");
+
+                    LogService.Instance.Log($"Resolution: {resolutionToUse}");
 
                     string fpsToUse = !string.IsNullOrEmpty(video.CustomFps)
                                        ? video.CustomFps : SelectedFps;
 
+                    LogService.Instance.Log($"FPS: {fpsToUse}");
+
                     // Determine Encoder
                     if (!AppConstants.EncoderMap.TryGetValue(SelectedEncoder, out string? encoderValue))
                     {
-                        encoderValue = "libx265";
+                        encoderValue = "libx265";                       
                     }
+
+                    LogService.Instance.Log($"Encoder: {encoderValue}");
 
                     //Ensure we don't override files
                     string finalOutputPath;
@@ -319,6 +401,9 @@ public partial class MainWindowViewModel : ViewModelBase
                         {
                             trimArgs += $"-to {video.EndTime.ToString(CultureInfo.InvariantCulture)} ";
                         }
+
+                        LogService.Instance.Log(
+                        $"Trimming enabled: {video.StartTime:F2}s → {video.EndTime:F2}s");
                     }
 
                     int? maxBitrate = null;
@@ -329,21 +414,34 @@ public partial class MainWindowViewModel : ViewModelBase
 
                         //No cap under 100kbps or it will be unwatchable.
                         if (maxBitrate < 100) maxBitrate = null;
-                    }                   
+
+                        if (maxBitrate.HasValue)
+                            LogService.Instance.Log($"Bitrate cap applied: {maxBitrate} kbps");
+                    }
+
+                    int videoIndex = completedCount + 1;
+                    LogService.Instance.Section(
+                            $"Processing ({videoIndex}/{selectedVideos.Count}): {video.FileName}");
 
                     if (SelectedTabIndex == 1)
                     {
+                        //LogService.Instance.Log("[Main] Mode: Stream copy.");
                         finalOutputPath = _fileService.GenerateOutputPath(video.FilePath, 0, ConversionTargetFormat);
                         await _ffmpegService.CompressAsync(video.FilePath, finalOutputPath,
                             "Original", false, 0, "copy", "Original", trimArgs, null, p);
+
+                        LogService.Instance.Log($"Output path: {finalOutputPath}");
                     }
 
                     else if (SelectedTabIndex == 2)
                     {
+                        //LogService.Instance.Log($"[Main] Mode: Split video ({SplitSizeMb}MB parts).");
+
                         string originalExtension = Path.GetExtension(video.FilePath);
                         finalOutputPath = _fileService.GenerateSplitPatternPath(video.FilePath, originalExtension);
                         double segmentTime = CalculateSegmentTime(video.DurationSeconds, originalSizeBytes, SplitSizeMb);
 
+                        LogService.Instance.Log($"Segment time calculated: {segmentTime:F2}s");
 
                         if (segmentTime > 0)
                         {
@@ -355,11 +453,15 @@ public partial class MainWindowViewModel : ViewModelBase
                             video.IsCompleted = true;
                             video.Progress = 100;
                             completedCount++;
+
+                            LogService.Instance.Log("Splitting completed.");
+                            LogService.Instance.Log($"Output path: {finalOutputPath}");
                         }
                         else
                         {
                             // File is already smaller than the target split size
                             //video.StatusMessage = "Skipped (Small)";
+                            LogService.Instance.Log("Split skipped: file already small.", LogLevel.Warning, "Warning");
                             video.IsCompleted = true;
                             video.Progress = 100;
                         }
@@ -368,7 +470,8 @@ public partial class MainWindowViewModel : ViewModelBase
                     }
 
                     else
-                    {
+                    {                      
+
                         finalOutputPath = video.HasCustomSize
                                             ? _fileService.GenerateTargetSizePath(video.FilePath, (int)video.CustomTargetSizeMb!, GlobalSettings.DefaultOutputFormat)
                                             : _fileService.GenerateOutputPath(video.FilePath, CrfValue, GlobalSettings.DefaultOutputFormat);
@@ -376,9 +479,17 @@ public partial class MainWindowViewModel : ViewModelBase
 
                         if (video.HasCustomSize)
                         {
+
+                            LogService.Instance.Log(
+                                        $"Target size mode: {video.CustomTargetSizeMb} MB (2-pass)",
+                                        LogLevel.Info);
+
                             if (video.DurationSeconds > 0)
                             {
                                 // 2. Run target size compression 
+
+                                LogService.Instance.Log($"2-pass encoding started");
+
                                 await _ffmpegService.CompressTargetSizeAsync(video.FilePath,
                                     finalOutputPath, fpsToUse, StripMetadata,
                                     (int)video.CustomTargetSizeMb!, encoderValue,
@@ -387,10 +498,15 @@ public partial class MainWindowViewModel : ViewModelBase
                         }
                         else
                         {
+                            LogService.Instance.Log(
+                                        $"CRF mode: CRF={CrfValue}",
+                                        LogLevel.Info);
                             // Standard Batch Process - Uses Global CRF
                             await _ffmpegService.CompressAsync(video.FilePath, finalOutputPath,
                                 fpsToUse, StripMetadata, CrfValue, encoderValue, resolutionToUse, trimArgs, maxBitrate, p);
                         }
+
+                        LogService.Instance.Log($"Output path: {finalOutputPath}");
                     }
                  
                     // Important to avoid deleteing files if user Stops compression!
@@ -423,6 +539,10 @@ public partial class MainWindowViewModel : ViewModelBase
                             video.Progress = 100;
                             video.IsCompleted = true;
 
+                            LogService.Instance.Log(
+                                        $"Completed | New size: {newSize:F2} MB",
+                                        LogLevel.Success);
+
                             var index = DisplayedVideos.IndexOf(video);
                             if (index != -1)
                             {
@@ -436,16 +556,21 @@ public partial class MainWindowViewModel : ViewModelBase
                                 {
                                     File.Delete(video.FilePath);
                                 }
-                                catch (Exception)
+                                catch (Exception ex)
                                 {
-                                    // Log later
+                                    LogService.Instance.Log(
+                                        $"Video deletion failed: {video.FileName} | {ex.Message}", LogLevel.Error, "Error");
                                 }
                             }
                         }                                                   
                     }                                     
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
+                    LogService.Instance.Log(
+                    $"Video processing failed | File={video.FileName} | Mode={SelectedTabIndex}" +
+                    $" | Error={ex}", LogLevel.Error, "Error");
+
                     if (IsBusy) StatusMessage = $"Error: {video.FileName} failed.";
                 }
                 finally
@@ -460,13 +585,22 @@ public partial class MainWindowViewModel : ViewModelBase
                    double savedMb = totalBytesSaved / 1024.0 / 1024.0;
                    string sizeDisplay = savedMb > 1024 ? $"{(savedMb / 1024.0):F2} GB" : $"{savedMb:F2} MB";
 
-                   await _messageService.ShowSuccessAsync("Task Completed",
+                LogService.Instance.Section("Batch Completed");
+
+                LogService.Instance.Log($"Videos processed: {completedCount}");
+                LogService.Instance.Log($"Space saved: {sizeDisplay}", LogLevel.Success);
+
+                await _messageService.ShowSuccessAsync("Task Completed",
                        $"Successfully processed {completedCount} videos.\n\nTotal space saved: {sizeDisplay}");
                }
         }
         finally
         {
             await _systemService.PreventSleepAsync(false);
+
+            LogService.Instance.Log("System sleep prevention disabled.");
+            LogService.Instance.Log("Batch finished. Application idle.");
+
             IsBusy = false;
             StatusMessage = "Ready";
             CurrentSpeed = "0x";
@@ -499,9 +633,17 @@ public partial class MainWindowViewModel : ViewModelBase
             DriveInfo drive = new DriveInfo(driveName);
 
             long bufferBytes = (long)GlobalSettings.LowDiskBufferGb * 1024 * 1024 * 1024;
+
+            LogService.Instance.Log(
+                $"Drive={drive.Name} | Free={drive.AvailableFreeSpace / 1024 / 1024 / 1024}GB | Buffer={GlobalSettings.LowDiskBufferGb}GB");
+
             return drive.AvailableFreeSpace < bufferBytes;
         }
-        catch { return false; } // Safety fallback
+        catch (Exception ex) 
+        {
+            LogService.Instance.Log($"There was an error while checking disk space: {ex.Message}", LogLevel.Error, "ERROR");
+            return false;
+        } 
     }
 
     //Returns calculatd segement size
@@ -516,39 +658,6 @@ public partial class MainWindowViewModel : ViewModelBase
         // Math: SegmentDuration = TotalDuration * (TargetSplit / TotalSize)
         return duration * (splitSizeBytes / originalSizeBytes);
     }
-
-    //Returns precise calculatd segement size
-    //private async Task<string> CalculatePreciseSplitTimes(string path, double totalDuration, long totalSizeBytes, int targetMb)
-    //{
-    //    var keyframes = await _ffprobeService.GetKeyframeTimestampsAsync(path);
-
-    //    if (keyframes == null || keyframes.Count == 0) return "";
-
-    //    double targetBytes = targetMb * 1024.0 * 1024.0;
-    //    double bytesPerSecond = totalSizeBytes / totalDuration;
-
-    //    var splitPoints = new List<double>();
-    //    double lastSplitTime = 0;
-
-    //    foreach (var frameTime in keyframes)
-    //    {
-    //        // Skip the very first keyframe at 0.0
-    //        if (frameTime <= 0) continue;
-
-    //        double segmentDuration = frameTime - lastSplitTime;
-    //        double estimatedSegmentSize = segmentDuration * bytesPerSecond;
-
-    //        if (estimatedSegmentSize > (targetBytes * 0.98))
-    //        {
-    //            splitPoints.Add(frameTime);
-    //            lastSplitTime = frameTime;
-    //        }
-    //    }
-
-    //    if (splitPoints.Count == 0) return "";
-
-    //    return string.Join(",", splitPoints.Select(s => s.ToString("F3", CultureInfo.InvariantCulture)));
-    //}
 
     // Update the Filtered list whenever SearchText or the underlying Videos change
     partial void OnSearchTextChanged(string value) => ApplyFilter();
@@ -576,6 +685,8 @@ public partial class MainWindowViewModel : ViewModelBase
     public async Task StopAllProcessing(bool skipConfirmation = false)
     {
 
+        LogService.Instance.Log("StopAllProcessing invoked.");
+
         // Only show the message if we are NOT skipping confirmation
         bool confirm = true;
 
@@ -593,6 +704,7 @@ public partial class MainWindowViewModel : ViewModelBase
             _ffmpegService.KillProcess();
             await _systemService.PreventSleepAsync(false);
             IsBusy = false;
+            LogService.Instance.Log("Processing force-stopped by user.");
             StatusMessage = "Process terminated by user.";
         }
     }
@@ -633,6 +745,7 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             video.PropertyChanged -= VideoFile_PropertyChanged;
             Videos.Remove(video);
+            ApplyFilter();
             RefreshStats();
         }
     }
@@ -640,11 +753,14 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     private async Task TogglePause()
     {
+        LogService.Instance.Log($"TogglePause requested. CurrentPaused={IsPaused}");
 
         if (IsPaused)
         {
             if (IsDiskSpaceLow())
             {
+                LogService.Instance.Log("Resume blocked due to low disk space.");
+
                 await _messageService.ShowErrorAsync("Resume Blocked",
                     $"Still low on disk space (under {GlobalSettings.LowDiskBufferGb}GB). Please free up space before resuming.");
                 return;
@@ -653,6 +769,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
         IsPaused = !IsPaused;
         _ffmpegService.TogglePause(IsPaused);
+        LogService.Instance.Log($"Pause state changed. IsPaused={IsPaused}");
 
         if (StatusMessage == "Processing..." || StatusMessage == "Paused" || StatusMessage == "Ready")
         {
@@ -715,7 +832,8 @@ public partial class MainWindowViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-           await  _messageService.ShowErrorAsync("Folder Error", $"Could not prepare or open the folder: {ex.Message}");
+            LogService.Instance.Log($"Could not prepare or open the folder: {ex.Message}", LogLevel.Error, "Error");
+            await  _messageService.ShowErrorAsync("Folder Error", $"Could not prepare or open the folder: {ex.Message}");
         }
     }
 
@@ -748,29 +866,36 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         string targetFolder = AppPathService.FfmpegBinFolder;
 
-            try
-            {
-                IsBusy = true;
-                IsDownloading = true; 
+        LogService.Instance.Log($"Auto-download started. Target={targetFolder}");
 
-                var progress = new Progress<string>(status => StatusMessage = status);
+        try
+        {
+            IsBusy = true;
+            IsDownloading = true;
 
-                await _systemService.InstallFfmpegAsync(targetFolder, progress);
+            var progress = new Progress<string>(status => StatusMessage = status);
 
-                RefreshDependencyCheck();
-                await _messageService.ShowSuccessAsync("Setup Complete", "FFmpeg has been downloaded and installed successfully!");
-            }
-            catch (Exception ex)
-            {
-                await _messageService.ShowErrorAsync("Download Failed", $"Could not auto-download FFmpeg.\n\nError: {ex.Message}\n\nPlease try the manual method.");
-                StatusMessage = "Download failed.";
-            }
-            finally
-            {
-                IsBusy = false;
-                IsDownloading = false;
-            }
-        
+            await _systemService.InstallFfmpegAsync(targetFolder, progress);
+
+            RefreshDependencyCheck();
+            await _messageService.ShowSuccessAsync("Setup Complete", "FFmpeg has been downloaded and installed successfully!");
+
+            LogService.Instance.Log("FFmpeg download & installation completed.", LogLevel.Success);
+
+        }
+
+        catch (Exception ex)
+        {
+            LogService.Instance.Log($"There was an error during auto-download: {ex.Message}", LogLevel.Error, "Error");
+            await _messageService.ShowErrorAsync("Download Failed", $"Could not auto-download FFmpeg.\n\nError: {ex.Message}\n\nPlease try the manual method.");
+            StatusMessage = "Download failed.";
+        }
+        finally
+        {
+            IsBusy = false;
+            IsDownloading = false;
+        }
+
     }
 
 
@@ -795,6 +920,11 @@ public partial class MainWindowViewModel : ViewModelBase
         if (settingsVM.SaveToDisk)
         {
             await _settingsService.SaveSettingsAsync(newSettings);
+            LogService.Instance.Log("Settings saved to disk.");
+        }
+        else
+        {
+            LogService.Instance.Log("Settings applied without saving.");
         }
     }
 
@@ -832,8 +962,9 @@ public partial class MainWindowViewModel : ViewModelBase
                 video.IsDurationLoaded = true;        
             }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            LogService.Instance.Log($"Could not load video duration: {ex.Message}", LogLevel.Error, "Error");
             await _messageService.ShowErrorAsync("Error", $"Could not read video duration");
         }
     }
@@ -851,10 +982,37 @@ public partial class MainWindowViewModel : ViewModelBase
                 _systemService.OpenLocalFolder(directory);
             }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            // Log later
+            LogService.Instance.Log($"There was an error while opening file folder: {ex.Message}", LogLevel.Error, "Error");
         }
+    }
+
+
+    [RelayCommand]
+    public void OpenLogFile()
+    {
+        // Opens the logs.txt in Notepad/Default Editor
+        string folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Videofy");
+        string logFile = Path.Combine(folder, "app_logs.txt");
+        if (File.Exists(logFile))
+        {
+            Process.Start(new ProcessStartInfo(logFile) { UseShellExecute = true });
+        }
+    }
+
+    [RelayCommand]
+    public void ShowLogs(Window parent)
+    {
+        if (_logWindow != null)
+        {
+            _logWindow.Activate(); 
+            return;
+        }
+
+        _logWindow = new Views.LogWindow();
+        _logWindow.Closed += (s, e) => _logWindow = null; // Reset when closed
+        _logWindow.Show(parent);
     }
 
 }

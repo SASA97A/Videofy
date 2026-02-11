@@ -47,8 +47,11 @@ namespace Video_Size_Optimizer.Services
                     _initialized = true;
                     return null;
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
+                    LogService.Instance.Log(
+                        $"Permission initialization failed. Path={_ffprobePath} | {ex.Message}", LogLevel.Error, "FFPROBE");
+
                     return "Videofy doesn't have permission to analyze your videos.\n\n" +
                            "The FFprobe binary needs execution rights to work.\n\n" +
                            "How to fix:\n" +
@@ -81,40 +84,19 @@ namespace Video_Size_Optimizer.Services
                 string output = await process.StandardOutput.ReadToEndAsync();
                 await process.WaitForExitAsync();
 
-                return double.TryParse(output, out double seconds) ? seconds : 0;
+                //return double.TryParse(output, out double seconds) ? seconds : 0;
+                return double.TryParse(output, NumberStyles.Any, CultureInfo.InvariantCulture, out double seconds)
+                        ? seconds
+                        : 0;
             }
-            catch { return 0; }
+            catch (Exception ex)
+            {
+                LogService.Instance.Log(
+                    $"Failed to read duration. File={filePath} | {ex.Message}", LogLevel.Error, "FFPROBE");
+                return 0;
+            }
         }
 
-        // Calculates exact keyframes for precise segement splitting
-        //public async Task<List<double>> GetKeyframeTimestampsAsync(string inputPath)
-        //{
-        //    var timestamps = new List<double>();
-        //    var args = $"-loglevel error -select_streams v:0 -skip_frame nokey -show_entries frame=best_effort_timestamp_time -of csv=p=0 \"{inputPath}\"";
-
-        //    var startInfo = new ProcessStartInfo
-        //    {
-        //        FileName = _ffprobePath,
-        //        Arguments = args,
-        //        UseShellExecute = false,
-        //        RedirectStandardOutput = true,
-        //        CreateNoWindow = true
-        //    };
-
-        //    using var process = Process.Start(startInfo);
-        //    if (process == null) return timestamps;
-
-        //    while (await process.StandardOutput.ReadLineAsync() is string line)
-        //    {
-        //        // Trim and check for empty lines before parsing
-        //        var cleanLine = line.Trim();
-        //        if (!string.IsNullOrEmpty(cleanLine) && double.TryParse(cleanLine, CultureInfo.InvariantCulture, out double val))
-        //            timestamps.Add(val);
-        //    }
-
-        //    await process.WaitForExitAsync();
-        //    return timestamps;
-        //}
 
         public async Task<int> GetVideoWidthAsync(string inputPath)
         {
@@ -144,9 +126,11 @@ namespace Video_Size_Optimizer.Services
                     return width;
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                return 0; // Return 0 if probe fails
+                LogService.Instance.Log(
+                    $"Failed to read video width. File={inputPath} | {ex.Message}", LogLevel.Error, "FFPROBE");
+                return 0;
             }
             finally
             {
@@ -165,7 +149,11 @@ namespace Video_Size_Optimizer.Services
                     _currentProcess.Kill(true);
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                LogService.Instance.Log(
+                    $"Failed to kill ffprobe process | {ex.Message}", LogLevel.Error, "FFPROBE");
+            }
         }
     }
 }

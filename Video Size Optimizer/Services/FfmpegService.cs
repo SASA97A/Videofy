@@ -36,15 +36,23 @@ public class FfmpegService
     {
         if (_currentProcess == null || _currentProcess.HasExited) return;
 
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        try
         {
-            if (isPaused) NtSuspendProcess(_currentProcess.Handle);
-            else NtResumeProcess(_currentProcess.Handle);
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                if (isPaused) NtSuspendProcess(_currentProcess.Handle);
+                else NtResumeProcess(_currentProcess.Handle);
+            }
+            else // Linux & Mac
+            {
+                var signal = isPaused ? "-STOP" : "-CONT";
+                Process.Start("kill", $"{signal} {_currentProcess.Id}");
+            }
         }
-        else // Linux & Mac
+        catch (Exception ex)
         {
-            var signal = isPaused ? "-STOP" : "-CONT";
-            Process.Start("kill", $"{signal} {_currentProcess.Id}");
+            LogService.Instance.Log(
+                $"Failed to toggle pause. Paused={isPaused} | {ex.Message}", LogLevel.Error, "FFMPEG");
         }
     }
 
@@ -75,8 +83,11 @@ public class FfmpegService
                 _initialized = true;
                 return null;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                LogService.Instance.Log(
+                    $"Permission initialization failed. Path={_ffmpegPath} | {ex.Message}", LogLevel.Error, "FFMPEG");
+
                 return "Videofy doesn't have permission to run FFmpeg.\n\n" +
                        "The FFmpeg binary needs execution rights to work.\n\n" +
                        "How to fix:\n" +
@@ -89,55 +100,63 @@ public class FfmpegService
 
     public async Task CompressAsync(string input, string output, string targetFps, bool stripMetadata, int crf, string encoder, string selectedResolution, string trimArgs, int? maxBitrateKbps = null, IProgress<ConversionProgress>? progress = null)
     {
-
-        if (encoder == "copy")
-        {          
-            var copyArgs = $"-y {trimArgs} -i \"{input}\" -c copy -map 0 \"{output}\"";
-            await RunFfmpegProcessAsync(copyArgs, progress);
-            return;
-        }
-
-        var filters = new List<string>();
-
-        if (!string.IsNullOrEmpty(selectedResolution) && selectedResolution != "Original")
+        try
         {
-            // Extract the width (e.g., from "1920 (1080p)")
-            string width = selectedResolution.Split(' ')[0];
-            filters.Add($"scale={width}:-2");
-        }
-        if (targetFps != "Original" && int.TryParse(targetFps, out int fpsValue))
-        {
-            // -fps_max caps the framerate without forcing a specific number if it's lower
-            filters.Add($"fps={fpsValue}");
-        }
+            if (encoder == "copy")
+            {
+                var copyArgs = $"-y {trimArgs} -i \"{input}\" -c copy -map 0 \"{output}\"";
+                await RunFfmpegProcessAsync(copyArgs, progress);
+                return;
+            }
 
-        string codecArgs;
-        string metadataFlag = stripMetadata ? "-map_metadata -1 -map_chapters -1" : "";
-        string bitrateCap = maxBitrateKbps.HasValue
-        ? $"-maxrate {maxBitrateKbps}k -bufsize {maxBitrateKbps * 2}k"
-        : "";
+            var filters = new List<string>();
 
-        if (encoder.Contains("nvenc"))
-        {
-            codecArgs = $"-vcodec {encoder} -preset p5 -rc vbr -cq {crf} {bitrateCap}";
-        }
-        else if (encoder.Contains("amf"))
-        {
-            codecArgs = $"-vcodec {encoder} -rc vbr_peak -qp_i {crf} -qp_p {crf} -quality quality {bitrateCap}";
-        }
-        else if (encoder.Contains("qsv"))
-        {
-            codecArgs = $"-vcodec {encoder} -preset veryfast -global_quality {crf} {bitrateCap}";
-        }
-        else
-        {
-            // Standard CPU (x265)
-            codecArgs = $"-vcodec libx265 -crf {crf} {bitrateCap}";
-        }
+            if (!string.IsNullOrEmpty(selectedResolution) && selectedResolution != "Original")
+            {
+                // Extract the width (e.g., from "1920 (1080p)")
+                string width = selectedResolution.Split(' ')[0];
+                filters.Add($"scale={width}:-2");
+            }
+            if (targetFps != "Original" && int.TryParse(targetFps, out int fpsValue))
+            {
+                // -fps_max caps the framerate without forcing a specific number if it's lower
+                filters.Add($"fps={fpsValue}");
+            }
 
-        string filterArgs = filters.Count > 0 ? $"-vf \"{string.Join(",", filters)}\"" : "";
-        var args = $"-y {trimArgs} -i \"{input}\" {filterArgs} {codecArgs} {metadataFlag} \"{output}\"";
-        await RunFfmpegProcessAsync(args, progress);
+            string codecArgs;
+            string metadataFlag = stripMetadata ? "-map_metadata -1 -map_chapters -1" : "";
+            string bitrateCap = maxBitrateKbps.HasValue
+            ? $"-maxrate {maxBitrateKbps}k -bufsize {maxBitrateKbps * 2}k"
+            : "";
+
+            if (encoder.Contains("nvenc"))
+            {
+                codecArgs = $"-vcodec {encoder} -preset p5 -rc vbr -cq {crf} {bitrateCap}";
+            }
+            else if (encoder.Contains("amf"))
+            {
+                codecArgs = $"-vcodec {encoder} -rc vbr_peak -qp_i {crf} -qp_p {crf} -quality quality {bitrateCap}";
+            }
+            else if (encoder.Contains("qsv"))
+            {
+                codecArgs = $"-vcodec {encoder} -preset veryfast -global_quality {crf} {bitrateCap}";
+            }
+            else
+            {
+                // Standard CPU (x265)
+                codecArgs = $"-vcodec libx265 -crf {crf} {bitrateCap}";
+            }
+
+            string filterArgs = filters.Count > 0 ? $"-vf \"{string.Join(",", filters)}\"" : "";
+            var args = $"-y {trimArgs} -i \"{input}\" {filterArgs} {codecArgs} {metadataFlag} \"{output}\"";
+            await RunFfmpegProcessAsync(args, progress);
+        }
+        catch (Exception ex)
+        {
+            LogService.Instance.Log(
+                $"Compress/Encoding failed. Input={input} | Output={output} | {ex.Message}", LogLevel.Error, "FFMPEG");
+            throw;
+        }      
     }
 
     // Smart target size  
@@ -176,77 +195,122 @@ public class FfmpegService
         }));
 
         // PASS 1
+        LogService.Instance.Log("PASS 1 Start");
         var pass1 = $"-y {trimArgs} -i \"{input}\" {filterArgs} -c:v {encoder} -b:v {videoBitrate}k -pass 1 -passlogfile \"{logName}\" -an -f null {nullDev}";
         // PASS 2
+        LogService.Instance.Log("PASS 2 Start");
         var pass2 = $"-y {trimArgs} -i \"{input}\" {filterArgs} -c:v {encoder} -b:v {videoBitrate}k -pass 2 -passlogfile \"{logName}\" -c:a aac -b:a 128k \"{output}\"";
+        
+        LogService.Instance.Log("PASS Complete");
 
-        await RunFfmpegProcessAsync(pass1, p1);
-        await RunFfmpegProcessAsync(pass2, p2);
-
-        if (File.Exists($"{logName}-0.log")) File.Delete($"{logName}-0.log");
-        if (File.Exists($"{logName}-0.log.mbtree")) File.Delete($"{logName}-0.log.mbtree");
-        if (File.Exists($"{logName}.log")) File.Delete($"{logName}.log");
+        try
+        {
+            await RunFfmpegProcessAsync(pass1, p1);
+            await RunFfmpegProcessAsync(pass2, p2);
+        }
+        catch (Exception ex)
+        {
+            LogService.Instance.Log(
+                $"Target-size compression failed. Input={input}, Target={targetMb}MB | {ex.Message}", LogLevel.Error, "FFMPEG");
+        }
+        finally
+        {
+            try
+            {
+                if (File.Exists($"{logName}-0.log")) File.Delete($"{logName}-0.log");
+                if (File.Exists($"{logName}-0.log.mbtree")) File.Delete($"{logName}-0.log.mbtree");
+                if (File.Exists($"{logName}.log")) File.Delete($"{logName}.log");
+            }
+            catch (Exception ex)
+            {
+                LogService.Instance.Log(
+                    $"Failed to clean 2-pass logs | {ex.Message}", LogLevel.Error, "FFMPEG");
+            }
+        }
     }
 
     //Split Video
     public async Task SplitVideoAsync(string input, string outputPattern, string splitArgs, IProgress<ConversionProgress>? progress = null)
     {
-        var args = $"-y -i \"{input}\" -c copy -map 0 {splitArgs} \"{outputPattern}\"";
-        await RunFfmpegProcessAsync(args, progress);
+
+        try
+        {
+            var args = $"-y -i \"{input}\" -c copy -map 0 {splitArgs} \"{outputPattern}\"";
+            await RunFfmpegProcessAsync(args, progress);
+        }
+        catch (Exception ex)
+        {
+            LogService.Instance.Log(
+                $"Split failed. Input={input} | {ex.Message}", LogLevel.Error, "FFMPEG");
+            throw;
+        }
     }
 
     private async Task RunFfmpegProcessAsync(string args, IProgress<ConversionProgress>? progress)
     {
         if (!File.Exists(_ffmpegPath)) throw new FileNotFoundException("FFmpeg not found", _ffmpegPath);
 
-        _currentProcess = new Process
+        try 
         {
-            StartInfo = new ProcessStartInfo
+            _currentProcess = new Process
             {
-                FileName = _ffmpegPath,
-                Arguments = args,
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                RedirectStandardError = true
-            }
-        };
-
-        double totalDuration = 0;
-        _currentProcess.Start();
-
-        using (var reader = _currentProcess.StandardError)
-        {
-            while (await reader.ReadLineAsync() is string line)
-            {
-                if (totalDuration == 0)
+                StartInfo = new ProcessStartInfo
                 {
-                    var match = Regex.Match(line, @"Duration:\s(\d+):(\d+):(\d+\.\d+)");
-                    if (match.Success)
-                        totalDuration = (double.Parse(match.Groups[1].Value) * 3600) + (double.Parse(match.Groups[2].Value) * 60) + double.Parse(match.Groups[3].Value);
+                    FileName = _ffmpegPath,
+                    Arguments = args,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    RedirectStandardError = true
                 }
+            };
 
-                var timeMatch = Regex.Match(line, @"time=(\d+):(\d+):(\d+\.\d+)");
-                var speedMatch = Regex.Match(line, @"speed=\s*(\d+\.\d+x)");
-                var fpsMatch = Regex.Match(line, @"fps=\s*(\d+)");
+            double totalDuration = 0;
+            _currentProcess.Start();
 
-                if (timeMatch.Success && totalDuration > 0 && progress != null)
+            using (var reader = _currentProcess.StandardError)
+            {
+                while (await reader.ReadLineAsync() is string line)
                 {
-                    double currentSeconds = (double.Parse(timeMatch.Groups[1].Value) * 3600) + (double.Parse(timeMatch.Groups[2].Value) * 60) + double.Parse(timeMatch.Groups[3].Value);
-                    progress.Report( new ConversionProgress
+                    if (totalDuration == 0)
                     {
-                        Percentage = Math.Clamp((currentSeconds / totalDuration) * 100, 0, 100),
-                        Speed = speedMatch.Success ? speedMatch.Groups[1].Value : "0x",
-                        Fps = fpsMatch.Success ? fpsMatch.Groups[1].Value : "0"
-                    });
+                        var match = Regex.Match(line, @"Duration:\s(\d+):(\d+):(\d+\.\d+)");
+                        if (match.Success)
+                            totalDuration = (double.Parse(match.Groups[1].Value) * 3600) + (double.Parse(match.Groups[2].Value) * 60) + double.Parse(match.Groups[3].Value, CultureInfo.InvariantCulture);
+                    }
+
+                    var timeMatch = Regex.Match(line, @"time=(\d+):(\d+):(\d+\.\d+)");
+                    //var speedMatch = Regex.Match(line, @"speed=\s*(\d+\.\d+x)"); strict  
+                    var speedMatch = Regex.Match(line, @"speed=\s*([\d\.]+x)");
+                    // var fpsMatch = Regex.Match(line, @"fps=\s*(\d+)");  strict
+                    var fpsMatch = Regex.Match(line, @"fps=\s*([\d\.]+)");
+
+                    if (timeMatch.Success && totalDuration > 0 && progress != null)
+                    {
+                        double currentSeconds = (double.Parse(timeMatch.Groups[1].Value) * 3600) + (double.Parse(timeMatch.Groups[2].Value) * 60) + double.Parse(timeMatch.Groups[3].Value, CultureInfo.InvariantCulture);
+                        progress.Report(new ConversionProgress
+                        {
+                            Percentage = Math.Clamp((currentSeconds / totalDuration) * 100, 0, 100),
+                            Speed = speedMatch.Success ? speedMatch.Groups[1].Value : "0x",
+                            Fps = fpsMatch.Success ? fpsMatch.Groups[1].Value : "0"
+                        });
+                    }
                 }
             }
+
+            await _currentProcess.WaitForExitAsync();
+            if (_currentProcess.ExitCode != 0 && _currentProcess.ExitCode != -1)
+                throw new Exception($"FFmpeg failed with exit code {_currentProcess.ExitCode}");
         }
-
-        await _currentProcess.WaitForExitAsync();
-        if (_currentProcess.ExitCode != 0 && _currentProcess.ExitCode != -1) 
-            throw new Exception($"FFmpeg failed with exit code {_currentProcess.ExitCode}");
-
-        _currentProcess = null;
+        catch (Exception ex)
+        {
+            LogService.Instance.Log(
+                $"Execution failed. Args={args} | {ex.Message}", LogLevel.Error, "FFMPEG");
+            throw;
+        }
+        finally
+        {
+            _currentProcess = null;
+        }
     }
 
     public void KillProcess()
@@ -258,7 +322,12 @@ public class FfmpegService
                 _currentProcess.Kill(true);
             }
         }
-        catch { /* Process might have already closed */ }
+        catch (Exception ex)
+        {
+            LogService.Instance.Log(
+                $"Failed to kill ffmpeg process | {ex.Message}", LogLevel.Error, "FFMPEG");
+        }
     }
+
 
 }

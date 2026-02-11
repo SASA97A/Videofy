@@ -43,6 +43,7 @@ namespace Video_Size_Optimizer
 
         public void OpenAppWebLink(AppLink link)
         {
+            LogService.Instance.Log($"Redirecting to Videofy page on Github.", LogLevel.Info, "SysUtil");
             string url = link switch
             {
                 AppLink.GitHub => gitHubRepoUrl,
@@ -85,8 +86,9 @@ namespace Video_Size_Optimizer
                 using var doc = System.Text.Json.JsonDocument.Parse(response);
                 return doc.RootElement.GetProperty("tag_name").GetString();
             }
-            catch
+            catch (Exception ex)
             {
+                LogService.Instance.Log($"Connection failed {ex.Message}.", LogLevel.Error, "SysUtil");
                 return null;
             }
         }
