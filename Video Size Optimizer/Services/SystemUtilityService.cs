@@ -1,10 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
+using System.Net.Http.Json;
 using System.Runtime.InteropServices;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Video_Size_Optimizer.Services;
 
@@ -14,9 +17,7 @@ namespace Video_Size_Optimizer
     public enum AppLink
     {
         GitHub,
-        BtbNReleases,
-        WinUrl,
-        LinuxUrl
+        BtbNReleases
     }
 
     public class SystemUtilityService
@@ -24,8 +25,19 @@ namespace Video_Size_Optimizer
         private readonly HttpClient _httpClient;
         private const string gitHubRepoUrl = "https://github.com/SASA97A/Videofy/releases";
         private const string btbNRepo = "https://github.com/BtbN/FFmpeg-Builds/releases";
-        private const string WinUrl = "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-01-16-12-57/ffmpeg-n8.0.1-48-g0592be14ff-win64-gpl-8.0.zip";
-        private const string LinuxUrl = "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-01-16-12-57/ffmpeg-n8.0.1-48-g0592be14ff-linux64-gpl-8.0.tar.xz";
+
+
+        // GitHub API classes to parse the response
+        public class GitHubRelease
+        {
+            [JsonPropertyName("assets")] public List<GitHubAsset> Assets { get; set; } = new();
+        }
+        public class GitHubAsset
+        {
+            [JsonPropertyName("name")] public string Name { get; set; } = "";
+            [JsonPropertyName("browser_download_url")] public string DownloadUrl { get; set; } = "";
+        }
+
 
         //Windows API for sleep preventation
         [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
@@ -33,8 +45,10 @@ namespace Video_Size_Optimizer
         private const uint ES_CONTINUOUS = 0x80000000;
         private const uint ES_SYSTEM_REQUIRED = 0x00000001;
         private const uint ES_AWAYMODE_REQUIRED = 0x00000040;
+
         // For linux sleep preventation
         private Process? _linuxInhibitProcess;
+
         public SystemUtilityService()
         {
             _httpClient = new HttpClient();
@@ -47,9 +61,7 @@ namespace Video_Size_Optimizer
             string url = link switch
             {
                 AppLink.GitHub => gitHubRepoUrl,
-                AppLink.BtbNReleases => btbNRepo,
-                AppLink.WinUrl => WinUrl,
-                AppLink.LinuxUrl => LinuxUrl,
+                AppLink.BtbNReleases => btbNRepo,               
                 _ => gitHubRepoUrl
             };
 
@@ -136,28 +148,66 @@ namespace Video_Size_Optimizer
                 }
             }
             return true;
-        }
-
+        }      
 
         public async Task InstallFfmpegAsync(string destinationFolder, IProgress<string> statusReporter)
         {
+            bool isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+            bool isLinux = RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
+
+            if (!isWindows && !isLinux)
+                throw new PlatformNotSupportedException("Auto-download is only supported on Windows and Linux.");
+
+            statusReporter.Report("Searching for latest FFmpeg builds...");
+
             string downloadUrl;
             string archiveName;
-            bool isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+            string remoteFileName;
 
-            if (isWindows)
+            try
             {
-                downloadUrl = WinUrl;
-                archiveName = "ffmpeg_setup.zip";
+                var release = await _httpClient.GetFromJsonAsync<GitHubRelease>("https://api.github.com/repos/BtbN/FFmpeg-Builds/releases/latest");
+
+                if (release == null || !release.Assets.Any())
+                    throw new Exception("Could not retrieve file list from GitHub.");
+
+                // Filter for the "n8" GPL builds
+                // Criteria: win64-gpl (Windows) or linux64-gpl (Linux) and matches 'n' versioning
+                GitHubAsset? targetAsset;
+
+                if (isWindows)
+                {
+                    targetAsset = release.Assets.FirstOrDefault(a =>
+                        a.Name.Contains("win64-gpl") &&
+                        a.Name.Contains("-n8") &&
+                        a.Name.EndsWith(".zip"));
+                    archiveName = "ffmpeg_setup.zip";
+                }
+                else
+                {
+                    targetAsset = release.Assets.FirstOrDefault(a =>
+                        a.Name.Contains("linux64-gpl") &&
+                        (a.Name.Contains("-n") || a.Name.Contains("master")) &&
+                        a.Name.EndsWith(".tar.xz"));
+                    archiveName = "ffmpeg_setup.tar.xz";
+                }
+
+                if (targetAsset == null)
+                    throw new Exception("Could not find a compatible GPL build in the latest release.");
+
+                downloadUrl = targetAsset.DownloadUrl;
+                remoteFileName = targetAsset.Name;
+
+
+                LogService.Instance.Section("FFmpeg Update Found");
+                LogService.Instance.Log($"Build Identified: {remoteFileName}", LogLevel.Success);
+                LogService.Instance.Log($"Direct Link: {downloadUrl}", LogLevel.Info);
+
             }
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            catch (Exception ex)
             {
-                downloadUrl = LinuxUrl;
-                archiveName = "ffmpeg_setup.tar.xz";
-            }
-            else
-            {
-                throw new PlatformNotSupportedException("Auto-download is currently only supported on Windows and Linux.");
+                LogService.Instance.Log($"GitHub API Error: {ex.Message}", LogLevel.Error, "Error");
+                throw;
             }
 
             string tempFolder = Path.Combine(Path.GetTempPath(), "Videofy_Setup_" + Guid.NewGuid());
@@ -169,15 +219,13 @@ namespace Video_Size_Optimizer
 
             try
             {
-                // 1. Download
-                statusReporter.Report("Downloading FFmpeg binaries...");
+                statusReporter.Report($"Downloading {Path.GetFileName(downloadUrl)}...");
                 using (var stream = await _httpClient.GetStreamAsync(downloadUrl))
                 using (var fileStream = new FileStream(archivePath, FileMode.Create))
                 {
                     await stream.CopyToAsync(fileStream);
                 }
 
-                // 2. Extract
                 statusReporter.Report("Extracting files...");
                 if (isWindows)
                 {
@@ -185,7 +233,6 @@ namespace Video_Size_Optimizer
                 }
                 else
                 {
-                    // Linux: Use native tar command for .tar.xz
                     var psi = new ProcessStartInfo
                     {
                         FileName = "tar",
@@ -197,26 +244,19 @@ namespace Video_Size_Optimizer
                     if (p != null) await p.WaitForExitAsync();
                 }
 
-                // 3. Recursive Search & Install
                 statusReporter.Report("Installing...");
-
                 string ffmpegExe = isWindows ? "ffmpeg.exe" : "ffmpeg";
                 string ffprobeExe = isWindows ? "ffprobe.exe" : "ffprobe";
 
-                // Find the files anywhere inside the temp folder (e.g. inside bin/)
                 var foundFfmpeg = Directory.GetFiles(tempFolder, ffmpegExe, SearchOption.AllDirectories).FirstOrDefault();
                 var foundFfprobe = Directory.GetFiles(tempFolder, ffprobeExe, SearchOption.AllDirectories).FirstOrDefault();
 
                 if (foundFfmpeg == null || foundFfprobe == null)
-                {
                     throw new FileNotFoundException("Could not locate ffmpeg/ffprobe inside the downloaded archive.");
-                }
 
-                // Move files to final destination (Overwrite if exists)
                 File.Move(foundFfmpeg, Path.Combine(finalBinFolder, ffmpegExe), true);
                 File.Move(foundFfprobe, Path.Combine(finalBinFolder, ffprobeExe), true);
 
-                // Linux: Ensure +x permission
                 if (!isWindows)
                 {
                     Process.Start("chmod", $"+x \"{Path.Combine(finalBinFolder, ffmpegExe)}\"");
@@ -225,7 +265,6 @@ namespace Video_Size_Optimizer
             }
             finally
             {
-                // 4. Cleanup
                 if (Directory.Exists(tempFolder))
                     Directory.Delete(tempFolder, true);
             }

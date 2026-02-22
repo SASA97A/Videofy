@@ -21,6 +21,7 @@
                  FontFamily="Consolas, Monospace"
                  Padding="10"
                  CaretBrush="{DynamicResource SystemAccentColor}"
+				 SelectionBrush="{DynamicResource RowSelectColor}"
                  ScrollViewer.VerticalScrollBarVisibility="Auto"/>
 
 		<Border Grid.Row="1"
