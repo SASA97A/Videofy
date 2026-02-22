@@ -187,7 +187,7 @@ namespace Video_Size_Optimizer
                 {
                     targetAsset = release.Assets.FirstOrDefault(a =>
                         a.Name.Contains("linux64-gpl") &&
-                        (a.Name.Contains("-n") || a.Name.Contains("master")) &&
+                        a.Name.Contains("-n8") &&
                         a.Name.EndsWith(".tar.xz"));
                     archiveName = "ffmpeg_setup.tar.xz";
                 }
