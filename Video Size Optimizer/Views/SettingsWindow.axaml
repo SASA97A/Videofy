@@ -115,7 +115,13 @@
 				<StackPanel Spacing="5" Margin="0,10,0,0">
 					<TextBlock Text="Misc" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource SystemAccentColor}" Margin="0,0,0,5"/>
 
-					<TextBlock Text="Additional Input Formats" FontSize="13" Foreground="{DynamicResource MainText}"/>
+					<CheckBox IsChecked="{Binding AutoCheckUpdates}"
+							  Cursor="Hand"
+							  Content="Automatically check for updates on startup"
+							  FontSize="13"
+							  Foreground="{DynamicResource MainText}"/>
+
+					<TextBlock Text="Additional Input Formats" FontSize="13" Foreground="{DynamicResource MainText}" Margin="0,5,0,0"/>
 
 					<TextBox Text="{Binding CustomExtensions}"
 							 Watermark="e.g. .mxf, .raw (comma separated)"

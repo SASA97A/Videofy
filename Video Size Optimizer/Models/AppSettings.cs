@@ -15,5 +15,6 @@ namespace Video_Size_Optimizer.Models
         public string CustomExtensions { get; set; } = "";
         public bool PreventUpsampling { get; set; } = false;
         public bool UseSoftwareRendering { get; set; } = false;
+        public bool AutoCheckUpdatesOnStartup { get; set; } = true;
     }
 }

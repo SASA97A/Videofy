@@ -28,3 +28,9 @@
 - **WCAG AAA Contrast Palette:** Overhauled global colors (`#14171A` background, `#1E2228` cards, `#282D35` inputs, `#424954` borders) to achieve 4.8:1+ contrast ratios for cards and 7.5:1+ contrast for text.
 - **Enhanced Typography Scaling:** Increased secondary text, label, and slider endpoint font sizes to 11px–13px for crisp legibility on 1080p, 1440p, and 4K displays.
 - **Encapsulated Warning & Info Cards:** Warnings (metadata removal) and info hints (MP4 stream conversion) are now styled in padded amber and sky blue card banners with high-contrast text.
+
+### 🔄 Automatic Startup Update Check & Status Bar Notification
+- **Silent Background Auto-Check:** Videofy automatically checks for new releases on GitHub 1.5 seconds after launch without blocking startup or popping up error dialogs when offline.
+- **Status Bar Notification Pill:** When a new release is detected, a clean, high-contrast green pill (`Update Available: vX.X.X`) appears on the bottom status bar. Clicking it prompts to view details or download.
+- **Global Settings Toggle:** Added an *"Automatically check for updates on startup"* option in Global Settings (enabled by default).
+- **Refactored DRY Architecture:** Single refactored update checking engine shared between silent startup checks and manual checks.

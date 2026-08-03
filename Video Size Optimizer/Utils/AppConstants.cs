@@ -101,8 +101,7 @@ public static class AppConstants
     "Note: Files marked as 'Completed' are skipped by default. " +
         "To re-process previously optimized files (tagged with -CRF or -Target), " +
         "please ensure the 'Process Optimized Files' setting is enabled " +
-        "in the Options menu.\n\n" +
-    "Tip: Click 'Refresh List' to reset the status of completed files.";
+        "in the Options menu.";
 
     public const string NoFolderAccess =
         "Videofy could not resolve a local path for the selected folder.\n\n" +

@@ -661,11 +661,23 @@
 					<TextBlock Text="{Binding SelectionStatus}" Foreground="{DynamicResource SystemAccentColor}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
 				</StackPanel>
 
-				<!-- 3. Total Size -->
+				<!-- 3. Total Size & Update Notification -->
 				<StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" Spacing="6" Margin="10,0" HorizontalAlignment="Left">
 					<Separator Classes="vertical" Margin="0,5,10,5"/>
 					<TextBlock Text="Total Size:" Foreground="{DynamicResource SecondaryText}" FontSize="12" VerticalAlignment="Center"/>
 					<TextBlock Text="{Binding TotalFolderSizeDisplay}" Foreground="{DynamicResource SystemAccentColor}" FontSize="12" FontWeight="Bold" VerticalAlignment="Center"/>
+
+					<!-- Update Notification Pill -->
+					<Button Command="{Binding CheckForUpdatesCommand}"
+							IsVisible="{Binding IsUpdateAvailable}"
+							Background="#2A4D38" BorderBrush="{DynamicResource SystemAccentColor}" BorderThickness="1"
+							CornerRadius="4" Padding="8,2" Margin="15,0,0,0" Cursor="Hand"
+							ToolTip.Tip="Click to view update details">
+						<StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+							<TextBlock Text="Update Available:" Foreground="{DynamicResource SystemAccentColor}" FontSize="11" FontWeight="Bold"/>
+							<TextBlock Text="{Binding LatestAvailableVersion}" Foreground="{DynamicResource MainText}" FontSize="11" FontWeight="Bold"/>
+						</StackPanel>
+					</Button>
 				</StackPanel>
 
 				<!-- 4. Processing Status & Speed (Far Right) -->

@@ -23,6 +23,7 @@ namespace Video_Size_Optimizer.ViewModels
         [ObservableProperty] private string _customExtensions;
         [ObservableProperty] private bool _preventUpsampling;
         [ObservableProperty] private bool _useSoftwareRendering;
+        [ObservableProperty] private bool _autoCheckUpdates;
 
         public List<string> OutputFormats => AppConstants.AvailableFormats;
 
@@ -36,6 +37,7 @@ namespace Video_Size_Optimizer.ViewModels
             CustomExtensions = currentSettings.CustomExtensions;
             PreventUpsampling = currentSettings.PreventUpsampling;
             UseSoftwareRendering = currentSettings.UseSoftwareRendering;
+            AutoCheckUpdates = currentSettings.AutoCheckUpdatesOnStartup;
 
             foreach (var name in AppConstants.HardwareEncoderNames)
             {
@@ -62,7 +64,8 @@ namespace Video_Size_Optimizer.ViewModels
                 EnabledEncoders = enabled,
                 CustomExtensions = CustomExtensions,
                 PreventUpsampling = PreventUpsampling,
-                UseSoftwareRendering = UseSoftwareRendering
+                UseSoftwareRendering = UseSoftwareRendering,
+                AutoCheckUpdatesOnStartup = AutoCheckUpdates
             };
         }
 
