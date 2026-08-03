@@ -7,39 +7,50 @@
              x:Class="Video_Size_Optimizer.Views.CompressionView"
 			 x:DataType="vm:MainWindowViewModel">
 
-
 	<Border Background="{DynamicResource SecondaryBackground}" Padding="20">
 		<Grid ColumnDefinitions="*, Auto">
+			<!-- Left Column: Settings Grid -->
+			<StackPanel Grid.Column="0" Orientation="Vertical" Spacing="8" VerticalAlignment="Center">
+				<Grid ColumnDefinitions="Auto, Auto" RowDefinitions="Auto, Auto">
+					<!-- Encoder -->
+					<StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Spacing="8" Margin="0,0,15,4">
+						<TextBlock Text="Encoder:" VerticalAlignment="Center" Foreground="{DynamicResource SecondaryText}" FontSize="11" Width="65"/>
+						<ComboBox ItemsSource="{Binding AvailableEncoders}" SelectedItem="{Binding SelectedEncoder}" IsEnabled="{Binding !IsBusy}" FontSize="12" Width="180" Cursor="Hand"/>
+					</StackPanel>
 
-			<StackPanel Grid.Column="0" Orientation="Vertical" Spacing="4" VerticalAlignment="Center" Margin="20,0">
-				<CheckBox IsChecked="{Binding StripMetadata}" IsEnabled="{Binding !IsBusy}" Margin="80,5,0,0" Cursor="Hand">
+					<!-- Output Format -->
+					<StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="0,0,0,4">
+						<TextBlock Text="Format:" VerticalAlignment="Center" Foreground="{DynamicResource SecondaryText}" FontSize="11" Width="65"/>
+						<ComboBox ItemsSource="{Binding OutputFormats}" SelectedItem="{Binding SelectedOutputFormat}" IsEnabled="{Binding !IsBusy}" FontSize="12" Width="120" Cursor="Hand"/>
+					</StackPanel>
+
+					<!-- Target Res -->
+					<StackPanel Grid.Row="1" Grid.Column="0" Orientation="Horizontal" Spacing="8" Margin="0,4,15,0">
+						<TextBlock Text="Target Res:" VerticalAlignment="Center" Foreground="{DynamicResource SecondaryText}" FontSize="11" Width="65"/>
+						<ComboBox ItemsSource="{Binding ResolutionOptions}" SelectedItem="{Binding SelectedResolution}" IsEnabled="{Binding !IsBusy}" FontSize="12" Width="180" Cursor="Hand"/>
+					</StackPanel>
+
+					<!-- Max FPS -->
+					<StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="0,4,0,0">
+						<TextBlock Text="Max FPS:" VerticalAlignment="Center" Foreground="{DynamicResource SecondaryText}" FontSize="11" Width="65"/>
+						<ComboBox ItemsSource="{Binding FpsOptions}" SelectedItem="{Binding SelectedFps}" IsEnabled="{Binding !IsBusy}" FontSize="12" Width="120" Cursor="Hand"/>
+					</StackPanel>
+				</Grid>
+
+				<!-- Strip Metadata Checkbox -->
+				<CheckBox IsChecked="{Binding StripMetadata}" IsEnabled="{Binding !IsBusy}" Margin="0,2,0,0" Cursor="Hand">
 					<StackPanel Orientation="Horizontal" Spacing="5">
-						<TextBlock Text="Remove video trackers" Foreground="{DynamicResource MainText}" FontSize="11"/>
-						<Border Background="{DynamicResource PrimaryColorHover}" CornerRadius="10" Width="14" Height="14" 
-								ToolTip.Tip="Removes hidden metadata like GPS location, camera serials, and timestamps.">
+						<TextBlock Text="Remove video trackers (GPS, camera info, metadata)" Foreground="{DynamicResource MainText}" FontSize="11"/>
+						<Border Background="{DynamicResource PrimaryColorHover}" CornerRadius="10" Width="14" Height="14" ToolTip.Tip="Removes hidden metadata like GPS location, camera serials, and timestamps.">
 							<TextBlock Text="?" Foreground="{DynamicResource SystemAccentColor}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
 						</Border>
 					</StackPanel>
 				</CheckBox>
-
-				<StackPanel Orientation="Horizontal" Spacing="8">
-					<TextBlock Text="Encoder:" VerticalAlignment="Center" Foreground="{DynamicResource SecondaryText}" FontSize="11" Width="65"/>
-					<ComboBox ItemsSource="{Binding AvailableEncoders}" SelectedItem="{Binding SelectedEncoder}" IsEnabled="{Binding !IsBusy}" FontSize="12" Width="200" Cursor="Hand"/>
-				</StackPanel>
-
-				<StackPanel Orientation="Horizontal" Spacing="8">
-					<TextBlock Text="Target Res:" VerticalAlignment="Center" Foreground="{DynamicResource SecondaryText}" FontSize="11" Width="65"/>
-					<ComboBox ItemsSource="{Binding ResolutionOptions}" SelectedItem="{Binding SelectedResolution}" IsEnabled="{Binding !IsBusy}" FontSize="12" Width="200" Cursor="Hand"/>
-				</StackPanel>
-
-				<StackPanel Orientation="Horizontal" Spacing="8">
-					<TextBlock Text="Max FPS:" VerticalAlignment="Center" Foreground="{DynamicResource SecondaryText}" FontSize="11" Width="65"/>
-					<ComboBox ItemsSource="{Binding FpsOptions}" SelectedItem="{Binding SelectedFps}" IsEnabled="{Binding !IsBusy}" FontSize="12" Width="200" Cursor="Hand"/>
-				</StackPanel>
 			</StackPanel>
 
-			<StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="20" HorizontalAlignment="Right">
-				<StackPanel Spacing="3" VerticalAlignment="Center" Width="180">
+			<!-- Right Column: Quality Slider & Action Buttons -->
+			<StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="20" HorizontalAlignment="Right" VerticalAlignment="Center">
+				<StackPanel Spacing="3" VerticalAlignment="Center" Width="170">
 					<StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
 						<TextBlock Text="Quality:" FontSize="11" Foreground="{DynamicResource SecondaryText}"/>
 						<TextBlock Text="{Binding CrfDescription}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource SystemAccentColor}" />
@@ -83,5 +94,5 @@
 			</StackPanel>
 		</Grid>
 	</Border>
-	
+
 </UserControl>

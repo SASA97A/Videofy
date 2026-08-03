@@ -14,10 +14,9 @@
 						Orientation="Vertical"
 						Spacing="0"
 						VerticalAlignment="Stretch"
-						Margin="20,10"
-						Width="280">
+						Margin="0,0,20,0">
 
-				<StackPanel Spacing="2" Margin="0,0,0,12">
+				<StackPanel Spacing="2" Margin="0,0,0,8">
 					<TextBlock Text="CONVERSION MODE"
 							   FontWeight="Black"
 							   FontSize="13"
@@ -30,31 +29,25 @@
 							Opacity="0.8"
 							BorderBrush="{DynamicResource BorderColor}"
 							BorderThickness="1">
-						<TextBlock Text="Very fast but may result in unplayable files if codecs are incompatible with the target output format."
+						<TextBlock Text="Very fast stream copy conversion without re-encoding video streams."
 								   FontSize="10"
 								   Foreground="{DynamicResource MainText}"
 								   TextWrapping="Wrap"							   
 								   LineHeight="14"/>
 					</Border>
 				</StackPanel>
-			
 
 				<StackPanel Orientation="Horizontal" Spacing="10" Margin="0,5,0,0">
 					<TextBlock Text="Target Format:" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource SecondaryText}"/>
 					<ComboBox ItemsSource="{Binding OutputFormats}"
 							  SelectedItem="{Binding ConversionTargetFormat}"
 							  IsEnabled="{Binding !IsBusy}"
-							  Width="100" FontSize="12" FontWeight="Bold"
+							  Width="120" FontSize="12" FontWeight="Bold"
 							  Cursor="Hand"/>
 				</StackPanel>
-
-				<TextBlock Text="* Only Trim options are applicaple in this mode."
-						   FontSize="11" Foreground="{DynamicResource SecondaryText}" Margin="0,2,0,0"/>
 			</StackPanel>
 
-			<StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="20" HorizontalAlignment="Right">
-				<Panel Width="180"/>
-
+			<StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="20" HorizontalAlignment="Right" VerticalAlignment="Center">
 				<StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
 					<Button Command="{Binding TogglePauseCommand}" IsVisible="{Binding IsBusy}" Width="45" Height="40" Background="{DynamicResource PrimaryColorHover}" CornerRadius="4" Cursor="Hand">
 						<Panel>

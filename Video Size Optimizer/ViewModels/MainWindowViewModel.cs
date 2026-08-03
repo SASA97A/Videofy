@@ -30,6 +30,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private Views.LogWindow? _logWindow;
     [ObservableProperty] private AppSettings _globalSettings = new();
     [ObservableProperty] private string _conversionTargetFormat = AppConstants.OriginalFormat;
+    [ObservableProperty] private string _selectedOutputFormat = AppConstants.OriginalFormat;
 
     public bool HasVideos => Videos.Count > 0;
     public string SelectionStatus => $"{Videos.Count(v => v.IsSelected)} of {Videos.Count} files selected";
@@ -113,6 +114,7 @@ public partial class MainWindowViewModel : ViewModelBase
         }
 
         GlobalSettings = _settingsService.LoadSettings();
+        SelectedOutputFormat = GlobalSettings.DefaultOutputFormat;
         LogService.Instance.Log("Global settings loaded.");
     }
 
@@ -567,8 +569,8 @@ public partial class MainWindowViewModel : ViewModelBase
                     {                      
 
                         finalOutputPath = video.HasCustomSize
-                                            ? _fileService.GenerateTargetSizePath(video.FilePath, (int)video.CustomTargetSizeMb!, GlobalSettings.DefaultOutputFormat)
-                                            : _fileService.GenerateOutputPath(video.FilePath, CrfValue, GlobalSettings.DefaultOutputFormat);
+                                            ? _fileService.GenerateTargetSizePath(video.FilePath, (int)video.CustomTargetSizeMb!, SelectedOutputFormat)
+                                            : _fileService.GenerateOutputPath(video.FilePath, CrfValue, SelectedOutputFormat);
                                                                                                          
 
                         if (video.HasCustomSize)
