@@ -7,64 +7,72 @@
              x:Class="Video_Size_Optimizer.Views.CompressionView"
 			 x:DataType="vm:MainWindowViewModel">
 
-	<Border Background="{DynamicResource SecondaryBackground}" Padding="15,10">
+	<Border Background="{DynamicResource MainBackground}" Padding="15,10">
 		<Grid ColumnDefinitions="Auto, *, Auto">
 			<!-- CARD 1: Video & Encoding Settings (Left) -->
 			<Border Grid.Column="0"
-					Background="{DynamicResource InputBackground}"
+					Background="{DynamicResource SecondaryBackground}"
 					BorderBrush="{DynamicResource BorderColor}"
 					BorderThickness="1"
 					CornerRadius="6"
 					Padding="15,10"
 					Margin="0,0,15,0">
 				<StackPanel Spacing="8">
-					<TextBlock Text="ENCODING SETTINGS" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource SystemAccentColor}" LetterSpacing="0.5"/>
+					<TextBlock Text="ENCODING SETTINGS" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource SystemAccentColor}" LetterSpacing="0.5"/>
 					
 					<Grid ColumnDefinitions="Auto, Auto" RowDefinitions="Auto, Auto" Margin="0,2,0,0">
 						<!-- Encoder -->
 						<StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Spacing="6" Margin="0,0,15,6">
-							<TextBlock Text="Encoder:" VerticalAlignment="Center" Foreground="{DynamicResource SecondaryText}" FontSize="11" Width="60"/>
-							<ComboBox ItemsSource="{Binding AvailableEncoders}" SelectedItem="{Binding SelectedEncoder}" IsEnabled="{Binding !IsBusy}" FontSize="11" Width="170" Cursor="Hand"/>
+							<TextBlock Text="Encoder:" VerticalAlignment="Center" Foreground="{DynamicResource SecondaryText}" FontSize="12" Width="60"/>
+							<ComboBox ItemsSource="{Binding AvailableEncoders}" SelectedItem="{Binding SelectedEncoder}" IsEnabled="{Binding !IsBusy}" Background="{DynamicResource InputBackground}" BorderBrush="{DynamicResource BorderColor}" FontSize="12" Width="170" Cursor="Hand"/>
 						</StackPanel>
 
 						<!-- Output Format -->
 						<StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="6" Margin="0,0,0,6">
-							<TextBlock Text="Format:" VerticalAlignment="Center" Foreground="{DynamicResource SecondaryText}" FontSize="11" Width="50"/>
-							<ComboBox ItemsSource="{Binding OutputFormats}" SelectedItem="{Binding SelectedOutputFormat}" IsEnabled="{Binding !IsBusy}" FontSize="11" Width="110" Cursor="Hand"/>
+							<TextBlock Text="Format:" VerticalAlignment="Center" Foreground="{DynamicResource SecondaryText}" FontSize="12" Width="55"/>
+							<ComboBox ItemsSource="{Binding OutputFormats}" SelectedItem="{Binding SelectedOutputFormat}" IsEnabled="{Binding !IsBusy}" Background="{DynamicResource InputBackground}" BorderBrush="{DynamicResource BorderColor}" FontSize="12" Width="110" Cursor="Hand"/>
 						</StackPanel>
 
 						<!-- Target Res -->
 						<StackPanel Grid.Row="1" Grid.Column="0" Orientation="Horizontal" Spacing="6" Margin="0,0,15,0">
-							<TextBlock Text="Target Res:" VerticalAlignment="Center" Foreground="{DynamicResource SecondaryText}" FontSize="11" Width="60"/>
-							<ComboBox ItemsSource="{Binding ResolutionOptions}" SelectedItem="{Binding SelectedResolution}" IsEnabled="{Binding !IsBusy}" FontSize="11" Width="170" Cursor="Hand"/>
+							<TextBlock Text="Target Res:" VerticalAlignment="Center" Foreground="{DynamicResource SecondaryText}" FontSize="12" Width="60"/>
+							<ComboBox ItemsSource="{Binding ResolutionOptions}" SelectedItem="{Binding SelectedResolution}" IsEnabled="{Binding !IsBusy}" Background="{DynamicResource InputBackground}" BorderBrush="{DynamicResource BorderColor}" FontSize="12" Width="170" Cursor="Hand"/>
 						</StackPanel>
 
 						<!-- Max FPS -->
 						<StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Spacing="6">
-							<TextBlock Text="Max FPS:" VerticalAlignment="Center" Foreground="{DynamicResource SecondaryText}" FontSize="11" Width="50"/>
-							<ComboBox ItemsSource="{Binding FpsOptions}" SelectedItem="{Binding SelectedFps}" IsEnabled="{Binding !IsBusy}" FontSize="11" Width="110" Cursor="Hand"/>
+							<TextBlock Text="Max FPS:" VerticalAlignment="Center" Foreground="{DynamicResource SecondaryText}" FontSize="12" Width="55"/>
+							<ComboBox ItemsSource="{Binding FpsOptions}" SelectedItem="{Binding SelectedFps}" IsEnabled="{Binding !IsBusy}" Background="{DynamicResource InputBackground}" BorderBrush="{DynamicResource BorderColor}" FontSize="12" Width="110" Cursor="Hand"/>
 						</StackPanel>
 					</Grid>
 
 					<!-- Metadata Checkbox & Format Warning -->
-					<StackPanel Spacing="3" Margin="0,2,0,0">
+					<StackPanel Spacing="4" Margin="0,4,0,0">
 						<CheckBox IsChecked="{Binding StripMetadata}" IsEnabled="{Binding !IsBusy}" Cursor="Hand" Padding="6,0">
-							<StackPanel Orientation="Horizontal" Spacing="5">
-								<TextBlock Text="Remove video trackers &amp; hidden metadata" Foreground="{DynamicResource MainText}" FontSize="11"/>
-								<Border Background="{DynamicResource PrimaryColorHover}" CornerRadius="10" Width="14" Height="14" ToolTip.Tip="Removes hidden metadata like GPS location, camera serials, and timestamps. Note: This will also strip audio/subtitle track names, titles, and language labels.">
-									<TextBlock Text="?" Foreground="{DynamicResource SystemAccentColor}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+							<StackPanel Orientation="Horizontal" Spacing="6">
+								<TextBlock Text="Remove video trackers &amp; hidden metadata" Foreground="{DynamicResource MainText}" FontSize="12"/>
+								<Border Background="{DynamicResource InputBackground}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="10" Width="16" Height="16" ToolTip.Tip="Removes hidden metadata like GPS location, camera serials, and timestamps. Note: This will also strip audio/subtitle track names, titles, and language labels.">
+									<TextBlock Text="?" Foreground="{DynamicResource SystemAccentColor}" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
 								</Border>
 							</StackPanel>
 						</CheckBox>
-						<TextBlock Text="⚠ Removes audio/subtitle track names, titles &amp; language tags" Foreground="#E5A93C" FontSize="10" IsVisible="{Binding StripMetadata}" Margin="28,0,0,0"/>
-						<TextBlock Text="{Binding FormatWarningNotice}" Foreground="#88AABB" FontSize="10" TextWrapping="Wrap" IsVisible="{Binding HasFormatWarning}" Margin="0,2,0,0"/>
+
+						<!-- Encapsulated Warning Card -->
+						<Border Background="#2C2214" BorderBrush="#784400" BorderThickness="1" CornerRadius="4" Padding="8,5" IsVisible="{Binding StripMetadata}" Margin="24,2,0,0">
+							<TextBlock Text="⚠ Removes audio/subtitle track names, titles &amp; language tags" Foreground="{DynamicResource WarningColor}" FontSize="11" FontWeight="SemiBold" TextWrapping="Wrap"/>
+						</Border>
+
+						<!-- Encapsulated Info Card -->
+						<Border Background="#122438" BorderBrush="#1E4976" BorderThickness="1" CornerRadius="4" Padding="8,5" IsVisible="{Binding HasFormatWarning}" Margin="0,2,0,0">
+							<TextBlock Text="{Binding FormatWarningNotice}" Foreground="{DynamicResource InfoColor}" FontSize="11" FontWeight="SemiBold" TextWrapping="Wrap"/>
+						</Border>
 					</StackPanel>
 				</StackPanel>
 			</Border>
 
 			<!-- CARD 2: Quality & Rate Control (Center) -->
 			<Border Grid.Column="1"
-					Background="{DynamicResource InputBackground}"
+					Background="{DynamicResource SecondaryBackground}"
 					BorderBrush="{DynamicResource BorderColor}"
 					BorderThickness="1"
 					CornerRadius="6"
@@ -72,23 +80,23 @@
 					Margin="0,0,15,0">
 				<StackPanel Spacing="6" VerticalAlignment="Center">
 					<Grid ColumnDefinitions="*, Auto">
-						<TextBlock Grid.Column="0" Text="QUALITY PRESET" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource SystemAccentColor}" LetterSpacing="0.5"/>
-						<Border Grid.Column="1" Background="{DynamicResource PrimaryColorHover}" CornerRadius="4" Padding="6,2">
-							<TextBlock Text="{Binding CrfDescription}" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource MainText}"/>
+						<TextBlock Grid.Column="0" Text="QUALITY PRESET" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource SystemAccentColor}" LetterSpacing="0.5"/>
+						<Border Grid.Column="1" Background="{DynamicResource InputBackground}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="4" Padding="8,3">
+							<TextBlock Text="{Binding CrfDescription}" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource MainText}"/>
 						</Border>
 					</Grid>
 
 					<Grid ColumnDefinitions="*, Auto" Margin="0,6,0,0">
 						<StackPanel Grid.Column="0" VerticalAlignment="Center">
 							<Slider Value="{Binding CrfValue}" Minimum="1" Maximum="35" IsEnabled="{Binding !IsBusy}" IsSnapToTickEnabled="True" TickFrequency="1" VerticalAlignment="Center" Cursor="Hand"/>
-							<Grid Margin="0,-6,0,0">
-								<TextBlock Text="Smaller File Size" Foreground="{DynamicResource DimText}" FontSize="9" HorizontalAlignment="Left"/>
-								<TextBlock Text="Higher Quality" Foreground="{DynamicResource DimText}" FontSize="9" HorizontalAlignment="Right"/>
+							<Grid Margin="0,-4,0,0">
+								<TextBlock Text="Smaller File Size" Foreground="{DynamicResource SecondaryText}" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Left"/>
+								<TextBlock Text="Higher Quality" Foreground="{DynamicResource SecondaryText}" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Right"/>
 							</Grid>
 						</StackPanel>
 
-						<Border Grid.Column="1" Background="{DynamicResource SecondaryBackground}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="4" Padding="8,4" Margin="10,0,0,0" VerticalAlignment="Center">
-							<TextBlock Text="{Binding CrfValue, StringFormat='CRF {0}'}" Foreground="{DynamicResource SystemAccentColor}" FontSize="12" FontWeight="Black"/>
+						<Border Grid.Column="1" Background="{DynamicResource InputBackground}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="4" Padding="10,5" Margin="10,0,0,0" VerticalAlignment="Center">
+							<TextBlock Text="{Binding CrfValue, StringFormat='CRF {0}'}" Foreground="{DynamicResource SystemAccentColor}" FontSize="13" FontWeight="Black"/>
 						</Border>
 					</Grid>
 				</StackPanel>
@@ -96,14 +104,14 @@
 
 			<!-- CARD 3: Actions (Right) -->
 			<Border Grid.Column="2"
-					Background="{DynamicResource InputBackground}"
+					Background="{DynamicResource SecondaryBackground}"
 					BorderBrush="{DynamicResource BorderColor}"
 					BorderThickness="1"
 					CornerRadius="6"
 					Padding="15,10"
 					VerticalAlignment="Stretch">
 				<StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-					<Button Command="{Binding TogglePauseCommand}" IsVisible="{Binding IsBusy}" Width="42" Height="42" Background="{DynamicResource PrimaryColorHover}" CornerRadius="6" Cursor="Hand" ToolTip.Tip="Pause or Resume Processing">
+					<Button Command="{Binding TogglePauseCommand}" IsVisible="{Binding IsBusy}" Width="42" Height="42" Background="{DynamicResource InputBackground}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="6" Cursor="Hand" ToolTip.Tip="Pause or Resume Processing">
 						<Panel>
 							<Image Width="16" Height="16" IsVisible="{Binding !IsPaused}">
 								<Image.Source>
