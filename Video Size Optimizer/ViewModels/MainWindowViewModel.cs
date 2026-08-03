@@ -213,21 +213,26 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private void UpdateSelectedFolderPathDisplay()
     {
-        if (Videos.Count == 0 || (_trackedFolders.Count == 0 && _trackedSingleFiles.Count == 0))
+        int folderCount = _trackedFolders.Count;
+        int fileCount = _trackedSingleFiles.Count;
+
+        if (folderCount == 0 && fileCount == 0)
         {
             SelectedFolderPath = "None";
         }
-        else if (_trackedFolders.Count == 0 && _trackedSingleFiles.Count > 0)
-        {
-            SelectedFolderPath = $"Multiple Files ({_trackedSingleFiles.Count} files)";
-        }
-        else if (_trackedFolders.Count == 1)
+        else if (folderCount == 1 && fileCount == 0)
         {
             SelectedFolderPath = _trackedFolders.First();
         }
+        else if (folderCount == 0 && fileCount > 0)
+        {
+            SelectedFolderPath = fileCount == 1
+                ? (Path.GetDirectoryName(_trackedSingleFiles.First()) ?? "Single File")
+                : $"Multiple Files ({fileCount} files)";
+        }
         else
         {
-            SelectedFolderPath = $"Multiple Locations ({_trackedFolders.Count} folders)";
+            SelectedFolderPath = $"Multiple Locations ({folderCount} folders, {fileCount} files)";
         }
     }
 
@@ -619,6 +624,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
                         if (totalOutputSize != 0)
                         {
+                            _trackedSingleFiles.Add(finalOutputPath);
                             totalBytesSaved += (originalSizeBytes - totalOutputSize);
                             completedCount++;
 
