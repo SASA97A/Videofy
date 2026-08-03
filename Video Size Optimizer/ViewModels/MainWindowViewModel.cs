@@ -206,6 +206,72 @@ public partial class MainWindowViewModel : ViewModelBase
         RefreshStats();
     }
 
+    public async Task AddPathsAsync(IEnumerable<string> paths)
+    {
+        if (paths == null || !paths.Any()) return;
+
+        var allowedExtensions = AppConstants.GetCombinedExtensions(GlobalSettings.CustomExtensions);
+        var existingPaths = Videos.Select(v => v.FilePath).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        bool addedAny = false;
+
+        LogService.Instance.Section("Drag & Drop File Handling");
+
+        foreach (var path in paths)
+        {
+            if (Directory.Exists(path))
+            {
+                LogService.Instance.Log($"Scanning dropped directory: {path}");
+                var data = _fileService.GetFolderData(path, allowedExtensions);
+
+                if (SelectedFolderPath == "None" || string.IsNullOrEmpty(SelectedFolderPath))
+                {
+                    SelectedFolderPath = path;
+                }
+
+                foreach (var videoPath in data.videoPaths)
+                {
+                    if (existingPaths.Add(videoPath))
+                    {
+                        var video = new VideoFile(videoPath, path);
+                        video.PropertyChanged += VideoFile_PropertyChanged;
+                        Videos.Add(video);
+                        addedAny = true;
+                    }
+                }
+            }
+            else if (File.Exists(path))
+            {
+                var ext = Path.GetExtension(path);
+                if (allowedExtensions.Contains(ext.ToLower(CultureInfo.InvariantCulture)) && existingPaths.Add(path))
+                {
+                    string parentFolder = Path.GetDirectoryName(path) ?? "";
+                    if (SelectedFolderPath == "None" || string.IsNullOrEmpty(SelectedFolderPath))
+                    {
+                        SelectedFolderPath = parentFolder;
+                    }
+
+                    var video = new VideoFile(path, parentFolder);
+                    video.PropertyChanged += VideoFile_PropertyChanged;
+                    Videos.Add(video);
+                    addedAny = true;
+                }
+            }
+        }
+
+        if (addedAny)
+        {
+            ApplyFilter();
+            RefreshStats();
+
+            long totalSize = Videos.Sum(v => v.RawSizeBytes);
+            TotalFolderSizeDisplay = $"{(totalSize / 1024.0 / 1024.0 / 1024.0):F2} GB";
+
+            LogService.Instance.Log($"Updated total videos count: {Videos.Count}");
+        }
+
+        await Task.CompletedTask;
+    }
+
     private void VideoFile_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(VideoFile.IsSelected))

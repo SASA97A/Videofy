@@ -11,7 +11,11 @@
 		xmlns:conv="using:Video_Size_Optimizer.Converters"
         Icon="/Assets/app.ico"
         Title="Videofy - Video Size Optimizer"
-		Background="{DynamicResource MainBackground}">
+		Background="{DynamicResource MainBackground}"
+		DragDrop.AllowDrop="True"
+		DragDrop.DragEnter="OnDragEnter"
+		DragDrop.DragLeave="OnDragLeave"
+		DragDrop.Drop="OnDrop">
 	
 	<Window.Styles>
 		<Style Selector="Separator.vertical">
@@ -561,6 +565,32 @@
 							<TextBlock Text="+ Add Files" Foreground="{DynamicResource MainText}" Margin="10,5"/>
 						</Button>
 					</StackPanel>
+
+					<!-- Drag & Drop Visual Overlay -->
+					<Border x:Name="DragDropOverlay"
+							IsVisible="False"
+							Background="#EE1A1A1A"
+							CornerRadius="8"
+							BorderBrush="{DynamicResource SystemAccentColor}"
+							BorderThickness="2"
+							Margin="5">
+						<StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="15">
+							<Image Width="64" Height="64" HorizontalAlignment="Center">
+								<Image.Source>
+									<SvgImage Source="avares://Videofy/Assets/green-folder.svg"/>
+								</Image.Source>
+							</Image>
+							<TextBlock Text="Drop Video Files or Folders Here"
+									   FontSize="22"
+									   FontWeight="Bold"
+									   Foreground="{DynamicResource SystemAccentColor}"
+									   HorizontalAlignment="Center"/>
+							<TextBlock Text="Supports MP4, MKV, AVI, MOV, WebM, and other video formats"
+									   FontSize="13"
+									   Foreground="{DynamicResource SecondaryText}"
+									   HorizontalAlignment="Center"/>
+						</StackPanel>
+					</Border>
 				</Panel>
 			</DockPanel>
 		</Border>
