@@ -27,7 +27,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly SettingsService _settingsService = new();
     private Views.LogWindow? _logWindow;
     [ObservableProperty] private AppSettings _globalSettings = new();
-    [ObservableProperty] private string _conversionTargetFormat = ".mp4";
+    [ObservableProperty] private string _conversionTargetFormat = AppConstants.OriginalFormat;
 
     public bool HasVideos => Videos.Count > 0;
     public string SelectionStatus => $"{Videos.Count(v => v.IsSelected)} of {Videos.Count} files selected";
