@@ -41,6 +41,15 @@
 								   Foreground="{DynamicResource SecondaryText}"
 								   VerticalAlignment="Center"/>
 					</StackPanel>
+
+					<!-- Lossless Stream Copy & Trimming Info Banner -->
+					<Border Background="#122438" BorderBrush="#1E4976" BorderThickness="1" CornerRadius="4" Padding="10,6" Margin="0,4,0,0">
+						<StackPanel Spacing="2">
+							<TextBlock Text="ℹ Lossless Stream Copy Mode" Foreground="{DynamicResource InfoColor}" FontSize="11" FontWeight="Bold"/>
+							<TextBlock Text="Remuxes video &amp; audio 1:1 without re-encoding or quality loss. Trimming segments is supported losslessly. (Re-encoding options like CRF quality, Resolution, FPS, and GPU Encoders are bypassed in this mode)."
+									   Foreground="{DynamicResource SecondaryText}" FontSize="11" TextWrapping="Wrap"/>
+						</StackPanel>
+					</Border>
 				</StackPanel>
 			</Border>
 
