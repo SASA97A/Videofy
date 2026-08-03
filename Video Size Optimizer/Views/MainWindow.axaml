@@ -595,7 +595,7 @@
 			</DockPanel>
 		</Border>
 
-		<Border Grid.Row="2" Margin="-20,20,-20,-20" BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,1,0,0" Height="230">
+		<Border Grid.Row="2" Margin="-20,10,-20,0" BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,1,0,0" MinHeight="245">
 			<TabControl SelectedIndex="{Binding SelectedTabIndex, Mode=TwoWay}" Padding="0" Margin="0">
 				<TabControl.Styles>
 					<Style Selector="TabItem">

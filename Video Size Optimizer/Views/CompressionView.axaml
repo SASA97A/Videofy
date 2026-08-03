@@ -7,7 +7,7 @@
              x:Class="Video_Size_Optimizer.Views.CompressionView"
 			 x:DataType="vm:MainWindowViewModel">
 
-	<Border Background="{DynamicResource MainBackground}" Padding="15,10">
+	<Border Background="{DynamicResource MainBackground}" Padding="15,12">
 		<Grid ColumnDefinitions="Auto, *, Auto">
 			<!-- CARD 1: Video & Encoding Settings (Left) -->
 			<Border Grid.Column="0"
@@ -15,8 +15,9 @@
 					BorderBrush="{DynamicResource BorderColor}"
 					BorderThickness="1"
 					CornerRadius="6"
-					Padding="15,10"
-					Margin="0,0,15,0">
+					Padding="15,12"
+					Margin="0,0,15,0"
+					VerticalAlignment="Stretch">
 				<StackPanel Spacing="8">
 					<TextBlock Text="ENCODING SETTINGS" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource SystemAccentColor}" LetterSpacing="0.5"/>
 					
