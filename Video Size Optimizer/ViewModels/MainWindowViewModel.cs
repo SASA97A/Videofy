@@ -1,5 +1,6 @@
 ﻿using Avalonia.Controls;
 using Avalonia.Platform.Storage;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System;
@@ -66,6 +67,8 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty] private bool _showDependencyWarning;
     [ObservableProperty] private string _expectedPath = "";
     [ObservableProperty] private bool _stripMetadata = false;
+    [ObservableProperty] private bool _isUpdateAvailable;
+    [ObservableProperty] private string _latestAvailableVersion = "";
     [ObservableProperty] private bool _isCrfMode = true;
     [ObservableProperty] private int _targetSizeMb = 25;
     [ObservableProperty] private bool _isDownloading;
@@ -125,30 +128,53 @@ public partial class MainWindowViewModel : ViewModelBase
         GlobalSettings = _settingsService.LoadSettings();
         SelectedOutputFormat = GlobalSettings.DefaultOutputFormat;
         LogService.Instance.Log("Global settings loaded.");
+
+        if (GlobalSettings.AutoCheckUpdatesOnStartup)
+        {
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(1500);
+                await Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    await CheckForUpdatesInternalAsync(isManualCheck: false);
+                });
+            });
+        }
     }
 
     // Check for updates
     [RelayCommand]
-    public async Task CheckForUpdates()
+    public async Task CheckForUpdates() => await CheckForUpdatesInternalAsync(isManualCheck: true);
+
+    private async Task CheckForUpdatesInternalAsync(bool isManualCheck)
     {
-        LogService.Instance.Log("Checking for updates!");
+        if (isManualCheck)
+        {
+            LogService.Instance.Log("Checking for updates!");
+        }
 
         var latestVersion = await _systemService.GetLatestGithubTagNameAsync("SASA97A", "Videofy");
 
         if (latestVersion == null)
         {
-            await _messageService.ShowErrorAsync("Check Failed", "Could not connect to GitHub!");
+            if (isManualCheck)
+            {
+                await _messageService.ShowErrorAsync("Check Failed", "Could not connect to GitHub!");
+            }
             return;
         }
+
         if (latestVersion != AppConstants.AppVersion)
         {
             LogService.Instance.Log($"New app version found {latestVersion}", LogLevel.Success);
+            LatestAvailableVersion = latestVersion;
+            IsUpdateAvailable = true;
 
             bool update = await _messageService.ShowYesNoAsync("Update Available",
-            $"Version {latestVersion} is available! \n\nWould you like to open the download page?");
+                $"Version {latestVersion} is available! \n\nWould you like to open the download page?");
             if (update) _systemService.OpenAppWebLink(AppLink.GitHub);
         }
-        else
+        else if (isManualCheck)
         {
             await _messageService.ShowSuccessAsync("Up to Date", $"You are on the latest version ({AppConstants.AppVersion}).");
         }
