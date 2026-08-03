@@ -46,15 +46,19 @@
 						</StackPanel>
 					</Grid>
 
-					<!-- Metadata Checkbox -->
-					<CheckBox IsChecked="{Binding StripMetadata}" IsEnabled="{Binding !IsBusy}" Margin="0,2,0,0" Cursor="Hand" Padding="6,0">
-						<StackPanel Orientation="Horizontal" Spacing="5">
-							<TextBlock Text="Remove video trackers &amp; hidden metadata" Foreground="{DynamicResource MainText}" FontSize="11"/>
-							<Border Background="{DynamicResource PrimaryColorHover}" CornerRadius="10" Width="14" Height="14" ToolTip.Tip="Removes hidden metadata like GPS location, camera serials, and timestamps.">
-								<TextBlock Text="?" Foreground="{DynamicResource SystemAccentColor}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-							</Border>
-						</StackPanel>
-					</CheckBox>
+					<!-- Metadata Checkbox & Format Warning -->
+					<StackPanel Spacing="3" Margin="0,2,0,0">
+						<CheckBox IsChecked="{Binding StripMetadata}" IsEnabled="{Binding !IsBusy}" Cursor="Hand" Padding="6,0">
+							<StackPanel Orientation="Horizontal" Spacing="5">
+								<TextBlock Text="Remove video trackers &amp; hidden metadata" Foreground="{DynamicResource MainText}" FontSize="11"/>
+								<Border Background="{DynamicResource PrimaryColorHover}" CornerRadius="10" Width="14" Height="14" ToolTip.Tip="Removes hidden metadata like GPS location, camera serials, and timestamps. Note: This will also strip audio/subtitle track names, titles, and language labels.">
+									<TextBlock Text="?" Foreground="{DynamicResource SystemAccentColor}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+								</Border>
+							</StackPanel>
+						</CheckBox>
+						<TextBlock Text="⚠ Removes audio/subtitle track names, titles &amp; language tags" Foreground="#E5A93C" FontSize="10" IsVisible="{Binding StripMetadata}" Margin="28,0,0,0"/>
+						<TextBlock Text="{Binding FormatWarningNotice}" Foreground="#88AABB" FontSize="10" TextWrapping="Wrap" IsVisible="{Binding HasFormatWarning}" Margin="0,2,0,0"/>
+					</StackPanel>
 				</StackPanel>
 			</Border>
 
