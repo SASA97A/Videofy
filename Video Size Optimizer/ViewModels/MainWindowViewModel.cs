@@ -25,6 +25,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly SystemUtilityService _systemService = new();
     private readonly MessageService _messageService = new();
     private readonly SettingsService _settingsService = new();
+    private readonly HashSet<string> _trackedFolders = new(StringComparer.OrdinalIgnoreCase);
     private Views.LogWindow? _logWindow;
     [ObservableProperty] private AppSettings _globalSettings = new();
     [ObservableProperty] private string _conversionTargetFormat = AppConstants.OriginalFormat;
@@ -177,7 +178,9 @@ public partial class MainWindowViewModel : ViewModelBase
         }
 
         Videos.Clear();
-        SelectedFolderPath = folderPath;
+        _trackedFolders.Clear();
+        _trackedFolders.Add(folderPath);
+        UpdateSelectedFolderPathDisplay();
 
         LogService.Instance.Section("Folder Scan");
 
@@ -206,6 +209,22 @@ public partial class MainWindowViewModel : ViewModelBase
         RefreshStats();
     }
 
+    private void UpdateSelectedFolderPathDisplay()
+    {
+        if (Videos.Count == 0 || _trackedFolders.Count == 0)
+        {
+            SelectedFolderPath = "None";
+        }
+        else if (_trackedFolders.Count == 1)
+        {
+            SelectedFolderPath = _trackedFolders.First();
+        }
+        else
+        {
+            SelectedFolderPath = $"Multiple Locations ({_trackedFolders.Count} folders)";
+        }
+    }
+
     public async Task AddPathsAsync(IEnumerable<string> paths)
     {
         if (paths == null || !paths.Any()) return;
@@ -221,12 +240,8 @@ public partial class MainWindowViewModel : ViewModelBase
             if (Directory.Exists(path))
             {
                 LogService.Instance.Log($"Scanning dropped directory: {path}");
+                _trackedFolders.Add(path);
                 var data = _fileService.GetFolderData(path, allowedExtensions);
-
-                if (SelectedFolderPath == "None" || string.IsNullOrEmpty(SelectedFolderPath))
-                {
-                    SelectedFolderPath = path;
-                }
 
                 foreach (var videoPath in data.videoPaths)
                 {
@@ -245,18 +260,20 @@ public partial class MainWindowViewModel : ViewModelBase
                 if (allowedExtensions.Contains(ext.ToLower(CultureInfo.InvariantCulture)) && existingPaths.Add(path))
                 {
                     string parentFolder = Path.GetDirectoryName(path) ?? "";
-                    if (SelectedFolderPath == "None" || string.IsNullOrEmpty(SelectedFolderPath))
+                    if (!string.IsNullOrEmpty(parentFolder))
                     {
-                        SelectedFolderPath = parentFolder;
+                        _trackedFolders.Add(parentFolder);
                     }
 
-                    var video = new VideoFile(path, parentFolder);
+                    var video = new VideoFile(path, !string.IsNullOrEmpty(parentFolder) ? parentFolder : "Root");
                     video.PropertyChanged += VideoFile_PropertyChanged;
                     Videos.Add(video);
                     addedAny = true;
                 }
             }
         }
+
+        UpdateSelectedFolderPathDisplay();
 
         if (addedAny)
         {
@@ -789,7 +806,12 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     public void ClearVideos()
     {
+        foreach (var v in Videos)
+            v.PropertyChanged -= VideoFile_PropertyChanged;
+
         Videos.Clear();
+        _trackedFolders.Clear();
+        UpdateSelectedFolderPathDisplay();
         OnPropertyChanged(nameof(HasVideos));
     }
 
@@ -800,6 +822,8 @@ public partial class MainWindowViewModel : ViewModelBase
             v.PropertyChanged -= VideoFile_PropertyChanged;
 
         Videos.Clear();
+        _trackedFolders.Clear();
+        UpdateSelectedFolderPathDisplay();
         ApplyFilter();
         RefreshStats();
     }
@@ -811,6 +835,18 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             video.PropertyChanged -= VideoFile_PropertyChanged;
             Videos.Remove(video);
+
+            if (Videos.Count == 0)
+            {
+                _trackedFolders.Clear();
+            }
+            else
+            {
+                var activeDirs = Videos.Select(v => Path.GetDirectoryName(v.FilePath) ?? "").Where(d => !string.IsNullOrEmpty(d)).ToHashSet(StringComparer.OrdinalIgnoreCase);
+                _trackedFolders.IntersectWith(activeDirs);
+            }
+
+            UpdateSelectedFolderPathDisplay();
             ApplyFilter();
             RefreshStats();
         }
@@ -859,25 +895,44 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     public void RefreshFolder()
     {
-        if (string.IsNullOrEmpty(SelectedFolderPath) || SelectedFolderPath == "None")
+        if (Videos.Count == 0 && _trackedFolders.Count == 0)
             return;
 
-        foreach (var v in Videos)
-            v.PropertyChanged -= VideoFile_PropertyChanged;
-
-        Videos.Clear();
-
         var allowedExts = AppConstants.GetCombinedExtensions(GlobalSettings.CustomExtensions);
-        var data = _fileService.GetFolderData(SelectedFolderPath, allowedExts);
-        TotalFolderSizeDisplay = $"{(data.totalSize / 1024.0 / 1024.0 / 1024.0):F2} GB";
 
-        foreach (var path in data.videoPaths)
+        // 1. Remove missing files from Videos
+        var missingVideos = Videos.Where(v => !File.Exists(v.FilePath)).ToList();
+        foreach (var mv in missingVideos)
         {
-            var video = new VideoFile(path, SelectedFolderPath);
-            video.PropertyChanged += VideoFile_PropertyChanged;
-            Videos.Add(video);
+            mv.PropertyChanged -= VideoFile_PropertyChanged;
+            Videos.Remove(mv);
         }
 
+        // 2. Rescan tracked folders for newly added files
+        var existingPaths = Videos.Select(v => v.FilePath).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var folder in _trackedFolders.ToList())
+        {
+            if (Directory.Exists(folder))
+            {
+                var data = _fileService.GetFolderData(folder, allowedExts);
+                foreach (var path in data.videoPaths)
+                {
+                    if (existingPaths.Add(path))
+                    {
+                        var video = new VideoFile(path, folder);
+                        video.PropertyChanged += VideoFile_PropertyChanged;
+                        Videos.Add(video);
+                    }
+                }
+            }
+        }
+
+        // 3. Update total size display & folder label
+        long totalSize = Videos.Sum(v => v.RawSizeBytes);
+        TotalFolderSizeDisplay = $"{(totalSize / 1024.0 / 1024.0 / 1024.0):F2} GB";
+
+        UpdateSelectedFolderPathDisplay();
         ApplyFilter();
         RefreshStats();
     }
