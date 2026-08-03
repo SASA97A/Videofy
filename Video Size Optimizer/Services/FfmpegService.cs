@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Net.Mail;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -143,12 +144,17 @@ public class FfmpegService
             }
             else
             {
-                // Standard CPU (x265)
-                codecArgs = $"-vcodec libx265 -crf {crf} {bitrateCap}";
+                // Standard CPU (x265) 
+                codecArgs = $"-c:v libx265 -crf {crf} {bitrateCap}";
             }
 
             string filterArgs = filters.Count > 0 ? $"-vf \"{string.Join(",", filters)}\"" : "";
-            var args = $"-y {trimArgs} -i \"{input}\" {filterArgs} {codecArgs} {metadataFlag} \"{output}\"";
+            // -map 0 : Include ALL streams(video, audio, sub, attachments)
+            // -c:a copy : Copy audio streams 1:1
+            // -c:s copy : Copy subtitle streams 1:1
+            // -c:t copy : Copy font/cover attachments 1:1
+            // -dn : Ignore unsupported raw data streams (prevents crashes on GoPro/drone video)
+            var args = $"-y {trimArgs} -i \"{input}\" -map 0 {filterArgs} {codecArgs} -c:a copy -c:s copy -c:t copy -dn {metadataFlag} \"{output}\"";
             await RunFfmpegProcessAsync(args, progress);
         }
         catch (Exception ex)

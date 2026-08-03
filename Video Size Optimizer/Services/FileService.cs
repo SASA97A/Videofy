@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.IO;
+using Video_Size_Optimizer.Utils;
 
 
 namespace Video_Size_Optimizer.Services;
@@ -37,12 +38,23 @@ public class FileService
 
     public string GenerateOutputPath(string inputPath, int crfValue, string extension)
     {
-        return BuildFinalPath(inputPath, $"-CRF{crfValue}", extension);
+        return BuildFinalPath(inputPath, $"-CRF{crfValue}", ResolveOutputExtension(inputPath, extension));
     }
 
     public string GenerateTargetSizePath(string inputPath, int targetMb, string extension)
     {
-        return BuildFinalPath(inputPath, $"-Target{targetMb}MB", extension);
+        return BuildFinalPath(inputPath, $"-Target{targetMb}MB", ResolveOutputExtension(inputPath, extension));
+    }
+
+    private string ResolveOutputExtension(string inputPath, string requestedFormat)
+    {
+        if (string.IsNullOrWhiteSpace(requestedFormat) || requestedFormat == AppConstants.OriginalFormat)
+        {
+            string sourceExtension = Path.GetExtension(inputPath);
+            if (!string.IsNullOrWhiteSpace(sourceExtension)) return sourceExtension;
+        }
+
+        return string.IsNullOrWhiteSpace(requestedFormat) ? ".mp4" : requestedFormat;
     }
 
     private string BuildFinalPath(string inputPath, string suffix, string extension = ".mp4")

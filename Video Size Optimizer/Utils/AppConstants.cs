@@ -47,9 +47,10 @@ public static class AppConstants
     };
 
     //Extensions to convert to (Global Settings)
+    public const string OriginalFormat = "Original";
     public static readonly List<string> AvailableFormats = new()
     {
-        ".mp4", ".mkv", ".mov", ".webm", ".avi", ".ts", ".m4v"
+        OriginalFormat, ".mp4", ".mkv", ".mov", ".webm", ".avi", ".ts", ".m4v"
     };
 
     // Extensions that are readable into app (Video list (datagrid))
