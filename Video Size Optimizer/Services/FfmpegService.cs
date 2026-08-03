@@ -106,8 +106,22 @@ public class FfmpegService
             if (encoder == "copy")
             {
                 var copyArgs = $"-y {trimArgs} -i \"{input}\" -c copy -map 0 \"{output}\"";
-                await RunFfmpegProcessAsync(copyArgs, progress);
-                return;
+                try
+                {
+                    await RunFfmpegProcessAsync(copyArgs, progress);
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    LogService.Instance.Log($"Direct stream copy failed for {output}. Retrying with audio stream fallback... | {ex.Message}", LogLevel.Warning, "FFMPEG");
+                    if (File.Exists(output))
+                    {
+                        try { File.Delete(output); } catch { }
+                    }
+                    var fallbackCopyArgs = $"-y {trimArgs} -i \"{input}\" -c:v copy -c:a aac -b:a 192k -dn \"{output}\"";
+                    await RunFfmpegProcessAsync(fallbackCopyArgs, progress);
+                    return;
+                }
             }
 
             var filters = new List<string>();
@@ -149,13 +163,36 @@ public class FfmpegService
             }
 
             string filterArgs = filters.Count > 0 ? $"-vf \"{string.Join(",", filters)}\"" : "";
-            // -map 0 : Include ALL streams(video, audio, sub, attachments)
-            // -c:a copy : Copy audio streams 1:1
-            // -c:s copy : Copy subtitle streams 1:1
-            // -c:t copy : Copy font/cover attachments 1:1
-            // -dn : Ignore unsupported raw data streams (prevents crashes on GoPro/drone video)
-            var args = $"-y {trimArgs} -i \"{input}\" -map 0 {filterArgs} {codecArgs} -c:a copy -c:s copy -c:t copy -dn {metadataFlag} \"{output}\"";
-            await RunFfmpegProcessAsync(args, progress);
+            
+            string extension = Path.GetExtension(output).ToLowerInvariant();
+            bool isMkv = extension == ".mkv";
+
+            // Format-aware stream arguments:
+            // MKV supports full stream passthrough (-c:a copy -c:s copy -c:t copy).
+            // MP4/MOV do not support font attachments (-c:t) or raw PGS/ASS subtitles, so we convert text subtitles to mov_text and omit attachments.
+            string streamArgs = isMkv
+                ? "-c:a copy -c:s copy -c:t copy"
+                : "-c:a copy -c:s mov_text";
+
+            var args = $"-y {trimArgs} -i \"{input}\" -map 0 {filterArgs} {codecArgs} {streamArgs} -dn {metadataFlag} \"{output}\"";
+
+            try
+            {
+                await RunFfmpegProcessAsync(args, progress);
+            }
+            catch (Exception ex)
+            {
+                LogService.Instance.Log($"Compression failed with primary stream args for {output}. Attempting resilient fallback... | {ex.Message}", LogLevel.Warning, "FFMPEG");
+
+                if (File.Exists(output))
+                {
+                    try { File.Delete(output); } catch { }
+                }
+
+                // Fallback attempt: Transcode audio to high-quality AAC (192k) and drop incompatible streams
+                var fallbackArgs = $"-y {trimArgs} -i \"{input}\" {filterArgs} {codecArgs} -c:a aac -b:a 192k -dn {metadataFlag} \"{output}\"";
+                await RunFfmpegProcessAsync(fallbackArgs, progress);
+            }
         }
         catch (Exception ex)
         {

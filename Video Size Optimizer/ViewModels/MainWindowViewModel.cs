@@ -30,7 +30,16 @@ public partial class MainWindowViewModel : ViewModelBase
     private Views.LogWindow? _logWindow;
     [ObservableProperty] private AppSettings _globalSettings = new();
     [ObservableProperty] private string _conversionTargetFormat = AppConstants.OriginalFormat;
-    [ObservableProperty] private string _selectedOutputFormat = AppConstants.OriginalFormat;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasFormatWarning))]
+    [NotifyPropertyChangedFor(nameof(FormatWarningNotice))]
+    private string _selectedOutputFormat = AppConstants.OriginalFormat;
+
+    public bool HasFormatWarning => SelectedOutputFormat.Equals(".mp4", StringComparison.OrdinalIgnoreCase) || SelectedOutputFormat.Equals(".mov", StringComparison.OrdinalIgnoreCase) || SelectedOutputFormat.Equals(".m4v", StringComparison.OrdinalIgnoreCase);
+
+    public string FormatWarningNotice => HasFormatWarning
+        ? "Note: Target format MP4/MOV converts text subtitles to mov_text and transcodes incompatible audio to AAC. Select MKV for 1:1 stream passthrough."
+        : string.Empty;
 
     public bool HasVideos => Videos.Count > 0;
     public string SelectionStatus => $"{Videos.Count(v => v.IsSelected)} of {Videos.Count} files selected";
@@ -56,7 +65,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty] private string _selectedFps = "Original";
     [ObservableProperty] private bool _showDependencyWarning;
     [ObservableProperty] private string _expectedPath = "";
-    [ObservableProperty] private bool _stripMetadata = true;
+    [ObservableProperty] private bool _stripMetadata = false;
     [ObservableProperty] private bool _isCrfMode = true;
     [ObservableProperty] private int _targetSizeMb = 25;
     [ObservableProperty] private bool _isDownloading;
