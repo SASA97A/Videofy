@@ -26,6 +26,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly MessageService _messageService = new();
     private readonly SettingsService _settingsService = new();
     private readonly HashSet<string> _trackedFolders = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _trackedSingleFiles = new(StringComparer.OrdinalIgnoreCase);
     private Views.LogWindow? _logWindow;
     [ObservableProperty] private AppSettings _globalSettings = new();
     [ObservableProperty] private string _conversionTargetFormat = AppConstants.OriginalFormat;
@@ -179,6 +180,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
         Videos.Clear();
         _trackedFolders.Clear();
+        _trackedSingleFiles.Clear();
         _trackedFolders.Add(folderPath);
         UpdateSelectedFolderPathDisplay();
 
@@ -211,9 +213,13 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private void UpdateSelectedFolderPathDisplay()
     {
-        if (Videos.Count == 0 || _trackedFolders.Count == 0)
+        if (Videos.Count == 0 || (_trackedFolders.Count == 0 && _trackedSingleFiles.Count == 0))
         {
             SelectedFolderPath = "None";
+        }
+        else if (_trackedFolders.Count == 0 && _trackedSingleFiles.Count > 0)
+        {
+            SelectedFolderPath = $"Multiple Files ({_trackedSingleFiles.Count} files)";
         }
         else if (_trackedFolders.Count == 1)
         {
@@ -257,18 +263,18 @@ public partial class MainWindowViewModel : ViewModelBase
             else if (File.Exists(path))
             {
                 var ext = Path.GetExtension(path);
-                if (allowedExtensions.Contains(ext.ToLower(CultureInfo.InvariantCulture)) && existingPaths.Add(path))
+                if (allowedExtensions.Contains(ext.ToLower(CultureInfo.InvariantCulture)))
                 {
-                    string parentFolder = Path.GetDirectoryName(path) ?? "";
-                    if (!string.IsNullOrEmpty(parentFolder))
-                    {
-                        _trackedFolders.Add(parentFolder);
-                    }
+                    _trackedSingleFiles.Add(path);
 
-                    var video = new VideoFile(path, !string.IsNullOrEmpty(parentFolder) ? parentFolder : "Root");
-                    video.PropertyChanged += VideoFile_PropertyChanged;
-                    Videos.Add(video);
-                    addedAny = true;
+                    if (existingPaths.Add(path))
+                    {
+                        string parentFolder = Path.GetDirectoryName(path) ?? "";
+                        var video = new VideoFile(path, !string.IsNullOrEmpty(parentFolder) ? parentFolder : "Root");
+                        video.PropertyChanged += VideoFile_PropertyChanged;
+                        Videos.Add(video);
+                        addedAny = true;
+                    }
                 }
             }
         }
@@ -811,6 +817,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
         Videos.Clear();
         _trackedFolders.Clear();
+        _trackedSingleFiles.Clear();
         UpdateSelectedFolderPathDisplay();
         OnPropertyChanged(nameof(HasVideos));
     }
@@ -823,6 +830,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
         Videos.Clear();
         _trackedFolders.Clear();
+        _trackedSingleFiles.Clear();
         UpdateSelectedFolderPathDisplay();
         ApplyFilter();
         RefreshStats();
@@ -835,6 +843,7 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             video.PropertyChanged -= VideoFile_PropertyChanged;
             Videos.Remove(video);
+            _trackedSingleFiles.Remove(video.FilePath);
 
             if (Videos.Count == 0)
             {
@@ -895,20 +904,34 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     public void RefreshFolder()
     {
-        if (Videos.Count == 0 && _trackedFolders.Count == 0)
+        if (Videos.Count == 0 && _trackedFolders.Count == 0 && _trackedSingleFiles.Count == 0)
             return;
 
         var allowedExts = AppConstants.GetCombinedExtensions(GlobalSettings.CustomExtensions);
 
-        // 1. Remove missing files from Videos
+        // 1. Remove deleted files from Videos
         var missingVideos = Videos.Where(v => !File.Exists(v.FilePath)).ToList();
         foreach (var mv in missingVideos)
         {
             mv.PropertyChanged -= VideoFile_PropertyChanged;
             Videos.Remove(mv);
+            _trackedSingleFiles.Remove(mv.FilePath);
         }
 
-        // 2. Rescan tracked folders for newly added files
+        // 2. Refresh file size displays for existing files if size changed on disk
+        foreach (var v in Videos)
+        {
+            if (File.Exists(v.FilePath))
+            {
+                var info = new FileInfo(v.FilePath);
+                if (v.RawSizeBytes != info.Length)
+                {
+                    v.UpdateStatusSize(info.Length / 1024.0 / 1024.0);
+                }
+            }
+        }
+
+        // 3. Rescan tracked folders for newly added files
         var existingPaths = Videos.Select(v => v.FilePath).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         foreach (var folder in _trackedFolders.ToList())
@@ -928,7 +951,19 @@ public partial class MainWindowViewModel : ViewModelBase
             }
         }
 
-        // 3. Update total size display & folder label
+        // 4. Re-add tracked single files if they exist and aren't present
+        foreach (var file in _trackedSingleFiles.ToList())
+        {
+            if (File.Exists(file) && existingPaths.Add(file))
+            {
+                string parentFolder = Path.GetDirectoryName(file) ?? "Root";
+                var video = new VideoFile(file, parentFolder);
+                video.PropertyChanged += VideoFile_PropertyChanged;
+                Videos.Add(video);
+            }
+        }
+
+        // 5. Update total size display & folder label
         long totalSize = Videos.Sum(v => v.RawSizeBytes);
         TotalFolderSizeDisplay = $"{(totalSize / 1024.0 / 1024.0 / 1024.0):F2} GB";
 

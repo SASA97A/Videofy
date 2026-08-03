@@ -13,6 +13,15 @@ namespace Video_Size_Optimizer.Models
         [NotifyPropertyChangedFor(nameof(TrimDisplay))]
         private double _durationSeconds;
 
+        partial void OnDurationSecondsChanged(double value)
+        {
+            if (!IsDurationLoaded || EndTime <= 0)
+            {
+                EndTime = value;
+                IsDurationLoaded = true;
+            }
+        }
+
         [ObservableProperty]
         private bool _isDurationLoaded = false;
 
@@ -147,7 +156,7 @@ namespace Video_Size_Optimizer.Models
         }
 
         public string TrimDisplay => IsTrimmed ? $"{FormatTime(StartTime)} - {FormatTime(EndTime)}" : "";
-        public bool IsTrimmed => StartTime > 0.001 || EndTime < (DurationSeconds - 0.001);
+        public bool IsTrimmed => IsDurationLoaded && EndTime > 0 && (StartTime > 0.001 || Math.Abs(EndTime - DurationSeconds) > 0.05);
         public void ResetCustomSettings()
         {
             CustomTargetSizeMb = null;
