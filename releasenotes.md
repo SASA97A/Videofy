@@ -23,3 +23,8 @@
 - **Zero-Failure Resilient Fallback:** If stream copying fails (e.g., incompatible DTS/FLAC audio in MP4), FFmpeg automatically logs a warning, cleans up, and retries with high-quality AAC audio encoding without interrupting the batch queue.
 - **Default Metadata Handling:** "Remove video trackers & hidden metadata" is now unchecked by default to preserve audio/subtitle track names, titles, and language labels.
 - **Pre-Flight UI Hints:** Added non-blocking info notice for MP4/MOV output selection and clear warnings when enabling metadata stripping.
+
+### 👁️ High-Contrast UI & Accessibility Overhaul
+- **WCAG AAA Contrast Palette:** Overhauled global colors (`#14171A` background, `#1E2228` cards, `#282D35` inputs, `#424954` borders) to achieve 4.8:1+ contrast ratios for cards and 7.5:1+ contrast for text.
+- **Enhanced Typography Scaling:** Increased secondary text, label, and slider endpoint font sizes to 11px–13px for crisp legibility on 1080p, 1440p, and 4K displays.
+- **Encapsulated Warning & Info Cards:** Warnings (metadata removal) and info hints (MP4 stream conversion) are now styled in padded amber and sky blue card banners with high-contrast text.

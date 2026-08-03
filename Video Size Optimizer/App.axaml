@@ -12,27 +12,28 @@
   
     
 	<Application.Resources>
-		<Color x:Key="SystemAccentColor">#00D26A</Color>
+		<Color x:Key="SystemAccentColor">#00E676</Color>
 		<SolidColorBrush x:Key="PrimaryButtonColor">#0053cf</SolidColorBrush>
-		<SolidColorBrush x:Key="PrimaryColorHover">#1f2125</SolidColorBrush>
+		<SolidColorBrush x:Key="PrimaryColorHover">#282D35</SolidColorBrush>
 		<SolidColorBrush x:Key="PrimaryColorText">Black</SolidColorBrush>
-		<SolidColorBrush x:Key="SliderThumbColorHover">#44ff44</SolidColorBrush>
+		<SolidColorBrush x:Key="SliderThumbColorHover">#69F0AE</SolidColorBrush>
 
-		<SolidColorBrush x:Key="MainBackground">#1f2124</SolidColorBrush>
-		<SolidColorBrush x:Key="SecondaryBackground">#282a2e</SolidColorBrush>
-		<SolidColorBrush x:Key="TertiaryBackground">#141414</SolidColorBrush>
-		<SolidColorBrush x:Key="InputBackground">#282a2e</SolidColorBrush>
+		<SolidColorBrush x:Key="MainBackground">#14171A</SolidColorBrush>
+		<SolidColorBrush x:Key="SecondaryBackground">#1E2228</SolidColorBrush>
+		<SolidColorBrush x:Key="TertiaryBackground">#0F1114</SolidColorBrush>
+		<SolidColorBrush x:Key="InputBackground">#282D35</SolidColorBrush>
 
-		<SolidColorBrush x:Key="MainText">#f1f2f3</SolidColorBrush>
-		<SolidColorBrush x:Key="GridHeaderText">White</SolidColorBrush>
-		<SolidColorBrush x:Key="SecondaryText">White</SolidColorBrush>
-		<SolidColorBrush x:Key="DimText">#888888</SolidColorBrush>
+		<SolidColorBrush x:Key="MainText">#F8FAFC</SolidColorBrush>
+		<SolidColorBrush x:Key="GridHeaderText">#F8FAFC</SolidColorBrush>
+		<SolidColorBrush x:Key="SecondaryText">#CBD5E1</SolidColorBrush>
+		<SolidColorBrush x:Key="DimText">#A0AEC0</SolidColorBrush>
 
-		<SolidColorBrush x:Key="RowSelectColor">#748764</SolidColorBrush>
-		<SolidColorBrush x:Key="BorderColor">#333333</SolidColorBrush>
-		<SolidColorBrush x:Key="SeparatorColor">#444444</SolidColorBrush>
-		<SolidColorBrush x:Key="DangerColor">#ff4444</SolidColorBrush>
-		<SolidColorBrush x:Key="WarningColor">#ffaa00</SolidColorBrush>
+		<SolidColorBrush x:Key="RowSelectColor">#2A4D38</SolidColorBrush>
+		<SolidColorBrush x:Key="BorderColor">#424954</SolidColorBrush>
+		<SolidColorBrush x:Key="SeparatorColor">#4F5765</SolidColorBrush>
+		<SolidColorBrush x:Key="DangerColor">#FF5252</SolidColorBrush>
+		<SolidColorBrush x:Key="WarningColor">#F59E0B</SolidColorBrush>
+		<SolidColorBrush x:Key="InfoColor">#38BDF8</SolidColorBrush>
 	</Application.Resources>
 
 	<Application.Styles>

@@ -7,55 +7,69 @@
              x:Class="Video_Size_Optimizer.Views.SplitView"
 			 x:DataType="vm:MainWindowViewModel">
 
-	<Border Background="{DynamicResource SecondaryBackground}" Padding="15,10">
+	<Border Background="{DynamicResource MainBackground}" Padding="15,12">
 		<Grid ColumnDefinitions="*, Auto">
 			<!-- CARD 1: Split Settings (Left) -->
 			<Border Grid.Column="0"
-					Background="{DynamicResource InputBackground}"
+					Background="{DynamicResource SecondaryBackground}"
 					BorderBrush="{DynamicResource BorderColor}"
 					BorderThickness="1"
 					CornerRadius="6"
-					Padding="15,10"
-					Margin="0,0,15,0">
+					Padding="15,12"
+					Margin="0,0,15,0"
+					VerticalAlignment="Stretch">
 				<StackPanel Spacing="8" VerticalAlignment="Center">
 					<StackPanel Orientation="Horizontal" Spacing="8">
 						<TextBlock Text="SPLIT MODE" FontWeight="Black" FontSize="11" LetterSpacing="0.5" Foreground="{DynamicResource SystemAccentColor}"/>
-						<TextBlock Text="(Fast Segment Splitting)" FontSize="11" Foreground="{DynamicResource DimText}"/>
+						<TextBlock Text="(Fast Segment Splitting)" FontSize="12" Foreground="{DynamicResource SecondaryText}"/>
 					</StackPanel>
 
 					<StackPanel Orientation="Horizontal" Spacing="15" VerticalAlignment="Center">
 						<StackPanel Orientation="Horizontal" Spacing="8">
-							<TextBlock Text="Target Chunk Size:" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource SecondaryText}"/>
+							<TextBlock Text="Target Chunk Size:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource SecondaryText}"/>
 							<NumericUpDown Value="{Binding SplitSizeMb}"
 										   Minimum="5"
 										   Maximum="100000"
 										   Increment="5"
 										   FormatString="0 MB"
-										   Height="32"
-										   Width="120"
+										   Background="{DynamicResource InputBackground}"
+										   BorderBrush="{DynamicResource BorderColor}"
+										   Height="36"
+										   Width="160"
+										   Padding="8,0"
 										   FontSize="13"
+										   FontWeight="Bold"
+										   Foreground="{DynamicResource MainText}"
 										   VerticalContentAlignment="Center"/>
 						</StackPanel>
 
 						<TextBlock Text="Splitting size is approximate (~10% buffer)."
-								   FontSize="11"
-								   Foreground="{DynamicResource MainText}"
-								   Opacity="0.7"
+								   FontSize="12"
+								   Foreground="{DynamicResource SecondaryText}"
 								   VerticalAlignment="Center"/>
 					</StackPanel>
+
+					<!-- Fast Splitting Info Banner -->
+					<Border Background="#122438" BorderBrush="#1E4976" BorderThickness="1" CornerRadius="4" Padding="10,6" Margin="0,4,0,0">
+						<StackPanel Spacing="2">
+							<TextBlock Text="ℹ Lossless Segment Splitting" Foreground="{DynamicResource InfoColor}" FontSize="11" FontWeight="Bold"/>
+							<TextBlock Text="Splits videos at keyframes without re-encoding data. Quality, resolution, and codecs remain 100% untouched."
+									   Foreground="{DynamicResource SecondaryText}" FontSize="11" TextWrapping="Wrap"/>
+						</StackPanel>
+					</Border>
 				</StackPanel>
 			</Border>
 
 			<!-- CARD 2: Actions (Right) -->
 			<Border Grid.Column="1"
-					Background="{DynamicResource InputBackground}"
+					Background="{DynamicResource SecondaryBackground}"
 					BorderBrush="{DynamicResource BorderColor}"
 					BorderThickness="1"
 					CornerRadius="6"
 					Padding="15,10"
 					VerticalAlignment="Stretch">
 				<StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-					<Button Command="{Binding TogglePauseCommand}" IsVisible="{Binding IsBusy}" Width="42" Height="42" Background="{DynamicResource PrimaryColorHover}" CornerRadius="6" Cursor="Hand">
+					<Button Command="{Binding TogglePauseCommand}" IsVisible="{Binding IsBusy}" Width="42" Height="42" Background="{DynamicResource InputBackground}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="6" Cursor="Hand">
 						<Panel>
 							<Image Width="16" Height="16" IsVisible="{Binding !IsPaused}">
 								<Image.Source>
