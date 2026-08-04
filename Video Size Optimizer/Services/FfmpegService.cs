@@ -444,7 +444,7 @@ public class FfmpegService
     public string GenerateChapterFile(List<VideoMetadata> metadataList)
     {
         string metaFile = Path.Combine(Path.GetTempPath(), $"ffmetadata_{Guid.NewGuid()}.txt");
-        using var writer = new StreamWriter(metaFile, false, System.Text.Encoding.UTF8);
+        using var writer = new StreamWriter(metaFile, false, new System.Text.UTF8Encoding(false));
         writer.WriteLine(";FFMETADATA1");
 
         double currentTime = 0.0;
@@ -481,7 +481,7 @@ public class FfmpegService
             {
                 LogService.Instance.Log("Streams are compatible. Using Lossless Concat Demuxer (-c copy)...", LogLevel.Info, "MERGE");
                 string listFile = Path.Combine(Path.GetTempPath(), $"concat_{Guid.NewGuid()}.txt");
-                using (var writer = new StreamWriter(listFile, false, System.Text.Encoding.UTF8))
+                using (var writer = new StreamWriter(listFile, false, new System.Text.UTF8Encoding(false)))
                 {
                     foreach (var meta in metadataList)
                     {
