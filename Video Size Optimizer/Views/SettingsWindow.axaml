@@ -78,11 +78,23 @@
 				</StackPanel>
 
 				<StackPanel Spacing="5" Margin="0,10,0,0">
-					<TextBlock Text="Hardware Acceleration"
-							   FontSize="18"
-							   FontWeight="Bold"
-							   Foreground="{DynamicResource SystemAccentColor}"
-							   Margin="5,0,0,10"/>
+					<Grid ColumnDefinitions="*, Auto" Margin="5,0,0,10">
+						<TextBlock Text="Hardware Acceleration"
+								   FontSize="18"
+								   FontWeight="Bold"
+								   Foreground="{DynamicResource SystemAccentColor}"
+								   VerticalAlignment="Center"/>
+						<Button Grid.Column="1"
+								Content="Auto-detect"
+								Command="{Binding AutoDetectHardwareCommand}"
+								Background="{DynamicResource SystemAccentColor}"
+								Foreground="Black"
+								FontWeight="SemiBold"
+								FontSize="12"
+								Padding="10,4"
+								CornerRadius="4"
+								Cursor="Hand"/>
+					</Grid>
 
 					<Border Background="{DynamicResource SecondaryBackground}"
 							BorderBrush="{DynamicResource BorderColor}"
@@ -101,6 +113,7 @@
 									<DataTemplate>
 										<CheckBox Content="{Binding Name}"
 												  IsChecked="{Binding IsIncluded}"
+												  IsEnabled="{Binding IsSupported}"
 												  FontSize="12.5"
 												  Foreground="{DynamicResource MainText}"
 												  Margin="0,3"
