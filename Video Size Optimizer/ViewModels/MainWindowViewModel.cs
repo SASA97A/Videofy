@@ -129,6 +129,40 @@ public partial class MainWindowViewModel : ViewModelBase
         SelectedOutputFormat = GlobalSettings.DefaultOutputFormat;
         LogService.Instance.Log("Global settings loaded.");
 
+        if (!GlobalSettings.HasDetectedHardware && DependencyChecker.CheckBinaries(out _))
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    LogService.Instance.Log("Running initial hardware detection...", LogLevel.Info, "Hardware");
+                    var detectedEncoders = await _ffmpegService.DetectSupportedHardwareEncodersAsync();
+                    
+                    await Dispatcher.UIThread.InvokeAsync(async () =>
+                    {
+                        GlobalSettings.SupportedHardwareEncoders = detectedEncoders;
+                        var enabled = new List<string> { "Standard (Slow, Best Quality)" };
+                        enabled.AddRange(detectedEncoders);
+                        GlobalSettings.EnabledEncoders = enabled;
+                        GlobalSettings.HasDetectedHardware = true;
+
+                        OnPropertyChanged(nameof(AvailableEncoders));
+                        if (!AvailableEncoders.Contains(SelectedEncoder))
+                        {
+                            SelectedEncoder = AvailableEncoders.First();
+                        }
+
+                        await _settingsService.SaveSettingsAsync(GlobalSettings);
+                        LogService.Instance.Log($"Hardware detection complete. Supported hardware encoders: {string.Join(", ", detectedEncoders)}", LogLevel.Success, "Hardware");
+                    });
+                }
+                catch (Exception ex)
+                {
+                    LogService.Instance.Log($"Initial hardware detection failed: {ex.Message}", LogLevel.Error, "Hardware");
+                }
+            });
+        }
+
         if (GlobalSettings.AutoCheckUpdatesOnStartup)
         {
             _ = Task.Run(async () =>
