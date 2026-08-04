@@ -155,5 +155,109 @@ namespace Video_Size_Optimizer.Services
                     $"Failed to kill ffprobe process | {ex.Message}", LogLevel.Error, "FFPROBE");
             }
         }
+
+        public async Task<VideoMetadata> GetVideoMetadataAsync(string inputPath)
+        {
+            var meta = new VideoMetadata { Path = inputPath };
+            if (!File.Exists(_ffprobePath)) return meta;
+
+            var args = $"-v quiet -print_format json -show_format -show_streams \"{inputPath}\"";
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = _ffprobePath,
+                Arguments = args,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true
+            };
+
+            try
+            {
+                using var process = Process.Start(startInfo);
+                if (process == null) return meta;
+
+                string jsonOutput = await process.StandardOutput.ReadToEndAsync();
+                await process.WaitForExitAsync();
+
+                using var doc = System.Text.Json.JsonDocument.Parse(jsonOutput);
+                var root = doc.RootElement;
+
+                if (root.TryGetProperty("format", out var formatEl))
+                {
+                    if (formatEl.TryGetProperty("duration", out var durEl) &&
+                        double.TryParse(durEl.GetString(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double duration))
+                    {
+                        meta.Duration = duration;
+                    }
+                }
+
+                if (root.TryGetProperty("streams", out var streamsEl))
+                {
+                    foreach (var stream in streamsEl.EnumerateArray())
+                    {
+                        string codecType = stream.TryGetProperty("codec_type", out var ct) ? ct.GetString() ?? "" : "";
+                        if (codecType == "video" && string.IsNullOrEmpty(meta.Video.Codec))
+                        {
+                            meta.Video.Codec = stream.TryGetProperty("codec_name", out var cn) ? cn.GetString() ?? "" : "";
+                            meta.Video.Width = stream.TryGetProperty("width", out var w) ? w.GetInt32() : 0;
+                            meta.Video.Height = stream.TryGetProperty("height", out var h) ? h.GetInt32() : 0;
+                            meta.Video.PixFmt = stream.TryGetProperty("pix_fmt", out var pf) ? pf.GetString() ?? "" : "";
+
+                            string fpsStr = stream.TryGetProperty("r_frame_rate", out var rfr) ? rfr.GetString() ?? "30/1" : "30/1";
+                            var parts = fpsStr.Split('/');
+                            if (parts.Length == 2 && double.TryParse(parts[0], System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double num) &&
+                                double.TryParse(parts[1], System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double den) && den > 0)
+                            {
+                                meta.Video.Fps = num / den;
+                            }
+                            else
+                            {
+                                meta.Video.Fps = 30.0;
+                            }
+                        }
+                        else if (codecType == "audio" && !meta.Audio.Exists)
+                        {
+                            meta.Audio.Exists = true;
+                            meta.Audio.Codec = stream.TryGetProperty("codec_name", out var acn) ? acn.GetString() ?? "" : "";
+                            if (stream.TryGetProperty("sample_rate", out var sr) && int.TryParse(sr.GetString(), out int srVal))
+                                meta.Audio.SampleRate = srVal;
+                            if (stream.TryGetProperty("channels", out var ch))
+                                meta.Audio.Channels = ch.GetInt32();
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                LogService.Instance.Log($"Failed to probe video metadata for {inputPath}: {ex.Message}", LogLevel.Error, "FFPROBE");
+            }
+
+            return meta;
+        }
+    }
+
+    public class VideoStreamMetadata
+    {
+        public string Codec { get; set; } = "";
+        public int Width { get; set; }
+        public int Height { get; set; }
+        public double Fps { get; set; }
+        public string PixFmt { get; set; } = "";
+    }
+
+    public class AudioStreamMetadata
+    {
+        public bool Exists { get; set; }
+        public string Codec { get; set; } = "";
+        public int SampleRate { get; set; } = 48000;
+        public int Channels { get; set; } = 2;
+    }
+
+    public class VideoMetadata
+    {
+        public string Path { get; set; } = "";
+        public double Duration { get; set; }
+        public VideoStreamMetadata Video { get; set; } = new();
+        public AudioStreamMetadata Audio { get; set; } = new();
     }
 }

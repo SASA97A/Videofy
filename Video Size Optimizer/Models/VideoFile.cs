@@ -22,6 +22,18 @@ public partial class VideoFile : ObservableObject
     [ObservableProperty] private string fileSizeDisplay = "";
     [ObservableProperty] private bool isSelected;
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasGroup))]
+    [NotifyPropertyChangedFor(nameof(GroupOrderDisplay))]
+    private int? _groupNumber = null;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(GroupOrderDisplay))]
+    private int _sequenceNumber = 1;
+
+    public bool HasGroup => GroupNumber.HasValue;
+    public string GroupOrderDisplay => HasGroup ? $"G{GroupNumber} - #{SequenceNumber}" : string.Empty;
+
     public void UpdateStatusSize(double newSizeMb)
     {
         // This triggers the NotifyPropertyChanged event properly
