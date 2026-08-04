@@ -340,6 +340,7 @@
 								 VerticalContentAlignment="Center"/>
 
 						<DataGrid ItemsSource="{Binding DisplayedVideos}"
+								  SelectedItem="{Binding SelectedVideo}"
 								  IsReadOnly="{Binding IsBusy}"
 								  AutoGenerateColumns="False"
 								  CanUserSortColumns="True"
@@ -362,7 +363,7 @@
 														  Foreground="{DynamicResource DangerColor}"
 														  Command="{Binding $parent[DataGrid].DataContext.RemoveVideoCommand}"
 														  CommandParameter="{Binding}" />-->
-												<MenuItem Header="Assign to Merge Group" IsVisible="{Binding $parent[DataGrid].DataContext.IsMergeTabActive}">
+												<MenuItem Header="{Binding $parent[DataGrid].DataContext.MergeMenuHeader}" IsVisible="{Binding $parent[DataGrid].DataContext.IsMergeTabActive}">
 													<MenuItem Header="Add to New Group" Command="{Binding $parent[DataGrid].DataContext.AddToNewGroupCommand}"/>
 													<MenuItem Header="Add to Existing Group" IsEnabled="{Binding $parent[DataGrid].DataContext.HasExistingGroups}" ItemsSource="{Binding $parent[DataGrid].DataContext.ExistingGroups}">
 														<MenuItem.ItemTemplate>

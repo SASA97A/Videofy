@@ -36,6 +36,8 @@ public partial class MainWindowViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(FormatWarningNotice))]
     private string _selectedOutputFormat = AppConstants.OriginalFormat;
 
+    [ObservableProperty] private VideoFile? _selectedVideo;
+
     public bool HasFormatWarning => SelectedOutputFormat.Equals(".mp4", StringComparison.OrdinalIgnoreCase) || SelectedOutputFormat.Equals(".mov", StringComparison.OrdinalIgnoreCase) || SelectedOutputFormat.Equals(".m4v", StringComparison.OrdinalIgnoreCase);
 
     public string FormatWarningNotice => HasFormatWarning
@@ -54,6 +56,8 @@ public partial class MainWindowViewModel : ViewModelBase
     public List<string> AvailableEncoders => GlobalSettings.EnabledEncoders;
     public List<string> ResolutionOptions => AppConstants.AvailableResolutionNames;
     public List<string> OutputFormats => AppConstants.AvailableFormats;
+    public string MergeMenuHeader => Videos.Any(v => v.IsSelected) ? "Assign Checked Items to Merge Group" : "Assign to Merge Group";
+    public List<string> MergeOutputFormats => AppConstants.AvailableFormats.Where(f => f != AppConstants.OriginalFormat).ToList();
     partial void OnCrfValueChanged(int value) => OnPropertyChanged(nameof(CrfDescription));
     partial void OnSelectedTabIndexChanged(int value) => OnPropertyChanged(nameof(IsMergeTabActive));
 
@@ -384,6 +388,7 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         OnPropertyChanged(nameof(HasVideos));
         OnPropertyChanged(nameof(SelectionStatus));
+        OnPropertyChanged(nameof(MergeMenuHeader));
     }
 
     private async Task StartCompressionAsync()
@@ -459,6 +464,12 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             if (SelectedTabIndex == 3)
             {
+                var singleVideoGroups = Videos.Where(v => v.HasGroup).GroupBy(v => v.GroupNumber!.Value).Where(g => g.Count() < 2).ToList();
+                foreach (var g in singleVideoGroups)
+                {
+                    LogService.Instance.Log($"Group {g.Key} has only 1 video and will be skipped.", LogLevel.Warning, "MERGE");
+                }
+
                 var activeGroups = Videos.Where(v => v.HasGroup).GroupBy(v => v.GroupNumber!.Value).Where(g => g.Count() >= 2).ToList();
                 if (activeGroups.Count == 0)
                 {
@@ -1353,10 +1364,24 @@ public partial class MainWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(HasExistingGroups));
     }
 
+    private List<VideoFile> GetTargetVideos()
+    {
+        var checkedVideos = Videos.Where(v => v.IsSelected).ToList();
+        if (checkedVideos.Count > 0)
+        {
+            return checkedVideos;
+        }
+        if (SelectedVideo != null)
+        {
+            return new List<VideoFile> { SelectedVideo };
+        }
+        return new List<VideoFile>();
+    }
+
     [RelayCommand]
     public void AddToNewGroup()
     {
-        var selected = Videos.Where(v => v.IsSelected).ToList();
+        var selected = GetTargetVideos();
         if (selected.Count == 0) return;
 
         int newId = ExistingGroups.Count > 0 ? ExistingGroups.Max(g => g.Id) + 1 : 1;
@@ -1372,7 +1397,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     public void AssignToGroup(int groupId)
     {
-        var selected = Videos.Where(v => v.IsSelected).ToList();
+        var selected = GetTargetVideos();
         if (selected.Count == 0) return;
 
         int maxSeq = Videos.Where(v => v.GroupNumber == groupId).Select(v => v.SequenceNumber).DefaultIfEmpty(0).Max();
@@ -1387,7 +1412,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     public void RemoveFromGroup()
     {
-        var selected = Videos.Where(v => v.IsSelected).ToList();
+        var selected = GetTargetVideos();
         foreach (var v in selected)
         {
             int? oldGroup = v.GroupNumber;
