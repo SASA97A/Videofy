@@ -61,7 +61,11 @@ public partial class MainWindowViewModel : ViewModelBase
     public List<string> MergeOutputFormats => AppConstants.AvailableFormats.Where(f => f != AppConstants.OriginalFormat).ToList();
     public List<string> GroupIndexChoices { get; } = new() { "None" };
     partial void OnCrfValueChanged(int value) => OnPropertyChanged(nameof(CrfDescription));
-    partial void OnSelectedTabIndexChanged(int value) => OnPropertyChanged(nameof(IsMergeTabActive));
+    partial void OnSelectedTabIndexChanged(int value)
+    {
+        OnPropertyChanged(nameof(IsMergeTabActive));
+        OnPropertyChanged(nameof(IsOverrideVisible));
+    }
 
     [ObservableProperty] private int crfValue = 28;
     [ObservableProperty] private string statusMessage = "Ready";
@@ -1386,6 +1390,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty] private bool _mergeForceReencode = false;
 
     public bool IsMergeTabActive => SelectedTabIndex == 3;
+    public bool IsOverrideVisible => SelectedTabIndex == 0 || SelectedTabIndex == 1;
     public ObservableCollection<GroupOption> ExistingGroups { get; } = new();
     public bool HasExistingGroups => ExistingGroups.Count > 0;
 
