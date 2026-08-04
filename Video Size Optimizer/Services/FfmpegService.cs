@@ -8,6 +8,7 @@ using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Video_Size_Optimizer.Services;
+using Video_Size_Optimizer.Utils;
 
 
 public struct ConversionProgress
@@ -372,5 +373,49 @@ public class FfmpegService
         }
     }
 
+    public async Task<bool> TestEncoderAsync(string encoder)
+    {
+        if (!File.Exists(_ffmpegPath)) return false;
 
+        try
+        {
+            string nullDev = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "NUL" : "/dev/null";
+            var args = $"-y -f lavfi -i color=c=black:s=256x256:d=0.1 -c:v {encoder} -f null {nullDev}";
+            
+            using var process = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = _ffmpegPath,
+                    Arguments = args,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    RedirectStandardError = true,
+                    RedirectStandardOutput = true
+                }
+            };
+
+            process.Start();
+            await process.WaitForExitAsync();
+            return process.ExitCode == 0;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    public async Task<List<string>> DetectSupportedHardwareEncodersAsync()
+    {
+        var supported = new List<string>();
+        foreach (var kvp in Video_Size_Optimizer.Utils.AppConstants.EncoderMap)
+        {
+            if (kvp.Key.Contains("Standard")) continue;
+            if (await TestEncoderAsync(kvp.Value))
+            {
+                supported.Add(kvp.Key);
+            }
+        }
+        return supported;
+    }
 }
