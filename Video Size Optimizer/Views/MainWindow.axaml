@@ -453,6 +453,19 @@
 									</DataGridTemplateColumn.CellTemplate>
 								</DataGridTemplateColumn>
 
+								<DataGridTemplateColumn Header="Group Assign" Width="140" IsVisible="{Binding $parent[DataGrid].((vm:MainWindowViewModel)DataContext).IsMergeTabActive}">
+									<DataGridTemplateColumn.CellTemplate>
+										<DataTemplate>
+											<ComboBox ItemsSource="{Binding $parent[DataGrid].((vm:MainWindowViewModel)DataContext).GroupIndexChoices}"
+													  SelectedIndex="{Binding GroupIndexUi, Mode=TwoWay}"
+													  IsEnabled="{Binding !$parent[DataGrid].((vm:MainWindowViewModel)DataContext).IsBusy}"
+													  HorizontalAlignment="Stretch"
+													  VerticalAlignment="Center"
+													  Margin="5,0"/>
+										</DataTemplate>
+									</DataGridTemplateColumn.CellTemplate>
+								</DataGridTemplateColumn>
+
 								<DataGridTemplateColumn Header="Group" Width="100" CanUserResize="False">
 									<DataGridTemplateColumn.CellTemplate>
 										<DataTemplate>
@@ -521,7 +534,7 @@
 								</DataGridTemplateColumn>
 
 
-								<DataGridTemplateColumn Header="Override" Width="110">
+								<DataGridTemplateColumn Header="Override" Width="110" IsVisible="{Binding !$parent[DataGrid].((vm:MainWindowViewModel)DataContext).IsMergeTabActive}">
 									<DataTemplate>
 										<Button
 												Background="Transparent"
@@ -529,7 +542,7 @@
 												HorizontalAlignment="Center"
 												Tag="{Binding HasCustomSize}"
 												Cursor="Hand"
-												IsEnabled="{Binding !$parent[DataGrid].DataContext.IsBusy}">
+												IsEnabled="{Binding !$parent[DataGrid].((vm:MainWindowViewModel)DataContext).IsBusy}">
 											<Button.Styles>
 												<Style Selector="Image">
 													<Setter Property="Opacity" Value="0.4"/>

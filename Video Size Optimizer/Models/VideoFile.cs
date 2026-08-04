@@ -28,6 +28,11 @@ public partial class VideoFile : ObservableObject
     private int? _groupNumber = null;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasGroup))]
+    [NotifyPropertyChangedFor(nameof(GroupOrderDisplay))]
+    private int _groupIndexUi = 0;
+
+    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(GroupOrderDisplay))]
     private int _sequenceNumber = 1;
 

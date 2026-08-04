@@ -29,6 +29,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly HashSet<string> _trackedFolders = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _trackedSingleFiles = new(StringComparer.OrdinalIgnoreCase);
     private Views.LogWindow? _logWindow;
+    private bool _isUpdatingGroupIndex;
     [ObservableProperty] private AppSettings _globalSettings = new();
     [ObservableProperty] private string _conversionTargetFormat = AppConstants.OriginalFormat;
     [ObservableProperty]
@@ -58,6 +59,7 @@ public partial class MainWindowViewModel : ViewModelBase
     public List<string> OutputFormats => AppConstants.AvailableFormats;
     public string MergeMenuHeader => Videos.Any(v => v.IsSelected) ? "Assign Checked Items to Merge Group" : "Assign to Merge Group";
     public List<string> MergeOutputFormats => AppConstants.AvailableFormats.Where(f => f != AppConstants.OriginalFormat).ToList();
+    public List<string> GroupIndexChoices { get; } = new() { "None" };
     partial void OnCrfValueChanged(int value) => OnPropertyChanged(nameof(CrfDescription));
     partial void OnSelectedTabIndexChanged(int value) => OnPropertyChanged(nameof(IsMergeTabActive));
 
@@ -98,6 +100,10 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public MainWindowViewModel()
     {
+        for (int i = 1; i <= 30; i++)
+        {
+            GroupIndexChoices.Add($"Group {i}");
+        }
 
         LogService.Instance.Section("Application Session Started");
         LogService.Instance.Log("MainWindowViewModel initialized.");
@@ -381,6 +387,66 @@ public partial class MainWindowViewModel : ViewModelBase
         if (e.PropertyName == nameof(VideoFile.IsSelected))
         {
             RefreshStats();
+        }
+        else if (e.PropertyName == nameof(VideoFile.GroupIndexUi))
+        {
+            if (sender is VideoFile video && !_isUpdatingGroupIndex)
+            {
+                _isUpdatingGroupIndex = true;
+                try
+                {
+                    int? oldGroup = video.GroupNumber;
+                    int? newGroup = video.GroupIndexUi == 0 ? null : video.GroupIndexUi;
+                    
+                    if (oldGroup != newGroup)
+                    {
+                        video.GroupNumber = newGroup;
+                        if (newGroup.HasValue)
+                        {
+                            int maxSeq = Videos
+                                .Where(v => v.GroupNumber == newGroup && v != video)
+                                .Select(v => v.SequenceNumber)
+                                .DefaultIfEmpty(0)
+                                .Max();
+                            video.SequenceNumber = maxSeq + 1;
+                        }
+                        
+                        if (oldGroup.HasValue)
+                        {
+                            ReNormalizeGroupSequence(oldGroup.Value);
+                        }
+                        if (newGroup.HasValue)
+                        {
+                            ReNormalizeGroupSequence(newGroup.Value);
+                        }
+                        
+                        RefreshExistingGroups();
+                    }
+                }
+                finally
+                {
+                    _isUpdatingGroupIndex = false;
+                }
+            }
+        }
+        else if (e.PropertyName == nameof(VideoFile.GroupNumber))
+        {
+            if (sender is VideoFile video && !_isUpdatingGroupIndex)
+            {
+                _isUpdatingGroupIndex = true;
+                try
+                {
+                    int expectedIndex = video.GroupNumber ?? 0;
+                    if (video.GroupIndexUi != expectedIndex)
+                    {
+                        video.GroupIndexUi = expectedIndex;
+                    }
+                }
+                finally
+                {
+                    _isUpdatingGroupIndex = false;
+                }
+            }
         }
     }
 
@@ -1384,29 +1450,54 @@ public partial class MainWindowViewModel : ViewModelBase
         var selected = GetTargetVideos();
         if (selected.Count == 0) return;
 
-        int newId = ExistingGroups.Count > 0 ? ExistingGroups.Max(g => g.Id) + 1 : 1;
-        int seq = 1;
+        int newId = 1;
+        var existingIds = Videos.Where(v => v.HasGroup).Select(v => v.GroupNumber!.Value).ToHashSet();
+        while (newId <= 30 && existingIds.Contains(newId))
+        {
+            newId++;
+        }
+        if (newId > 30) newId = 30;
+
         foreach (var v in selected)
         {
-            v.GroupNumber = newId;
-            v.SequenceNumber = seq++;
+            v.GroupIndexUi = newId;
         }
-        RefreshExistingGroups();
     }
 
     [RelayCommand]
-    public void AssignToGroup(int groupId)
+    public void AssignToGroup(object? groupIdObj)
     {
+        if (groupIdObj == null) return;
+        int groupId = 0;
+        if (groupIdObj is int idInt)
+        {
+            groupId = idInt;
+        }
+        else if (groupIdObj is string idStr && int.TryParse(idStr, out int parsedStr))
+        {
+            groupId = parsedStr;
+        }
+        else
+        {
+            try
+            {
+                groupId = Convert.ToInt32(groupIdObj);
+            }
+            catch
+            {
+                return;
+            }
+        }
+
+        if (groupId <= 0 || groupId > 30) return;
+
         var selected = GetTargetVideos();
         if (selected.Count == 0) return;
 
-        int maxSeq = Videos.Where(v => v.GroupNumber == groupId).Select(v => v.SequenceNumber).DefaultIfEmpty(0).Max();
         foreach (var v in selected)
         {
-            v.GroupNumber = groupId;
-            v.SequenceNumber = ++maxSeq;
+            v.GroupIndexUi = groupId;
         }
-        RefreshExistingGroups();
     }
 
     [RelayCommand]
@@ -1415,11 +1506,8 @@ public partial class MainWindowViewModel : ViewModelBase
         var selected = GetTargetVideos();
         foreach (var v in selected)
         {
-            int? oldGroup = v.GroupNumber;
-            v.GroupNumber = null;
-            if (oldGroup.HasValue) ReNormalizeGroupSequence(oldGroup.Value);
+            v.GroupIndexUi = 0;
         }
-        RefreshExistingGroups();
     }
 
     [RelayCommand]
@@ -1476,11 +1564,8 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     public void RemoveGroupVideo(VideoFile video)
     {
-        if (video == null || !video.HasGroup) return;
-        int oldGroup = video.GroupNumber!.Value;
-        video.GroupNumber = null;
-        ReNormalizeGroupSequence(oldGroup);
-        RefreshExistingGroups();
+        if (video == null) return;
+        video.GroupIndexUi = 0;
     }
 }
 
