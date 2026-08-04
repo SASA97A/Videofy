@@ -24,7 +24,14 @@
 - **Default Metadata Handling:** "Remove video trackers & hidden metadata" is now unchecked by default to preserve audio/subtitle track names, titles, and language labels.
 - **Pre-Flight UI Hints:** Added non-blocking info notice for MP4/MOV output selection and clear warnings when enabling metadata stripping.
 
-### 👁️ High-Contrast UI & Accessibility Overhaul
+### High-Contrast UI & Accessibility Overhaul
 - **WCAG AAA Contrast Palette:** Overhauled global colors (`#14171A` background, `#1E2228` cards, `#282D35` inputs, `#424954` borders) to achieve 4.8:1+ contrast ratios for cards and 7.5:1+ contrast for text.
 - **Enhanced Typography Scaling:** Increased secondary text, label, and slider endpoint font sizes to 11px–13px for crisp legibility on 1080p, 1440p, and 4K displays.
 - **Encapsulated Warning & Info Cards:** Warnings (metadata removal) and info hints (MP4 stream conversion) are now styled in padded amber and sky blue card banners with high-contrast text.
+
+### Human-Readable Log System & Severity-Coded Log Viewer
+- **Emoji-Free Standardized ASCII Tags:** Replaced unicode emojis (`✔`, `⚠`, `✖`, `…`, `•`) with clean ASCII tags (`[ERROR]`, `[WARN]`, `[SUCCESS]`, `[INFO]`, `[DEBUG]`) across UI logs and `app_logs.txt`.
+- **Severity Color-Coded Log Viewer:** Redesigned `LogWindow.axaml` with a virtualized log entry list featuring distinct severity color badges: Crimson Red for Errors, Amber for Warnings, Emerald Green for Success, Cyan for Scopes, and styled visual card banners for section headers.
+- **Log Filtering & Toolbar:** Added log filtering selector (`All Logs`, `Errors Only`, `Warnings & Errors`), a one-click **Copy Logs** button, a **Clear View** button, and log file size tracking.
+- **Enhanced Exception Audit:** Upgraded exception handling in `SettingsService`, `FfmpegService`, `FfprobeService`, and `SystemUtilityService` to capture and log detailed context instead of swallowing errors.
+

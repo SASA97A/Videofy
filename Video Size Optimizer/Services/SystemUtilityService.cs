@@ -100,7 +100,7 @@ namespace Video_Size_Optimizer
             }
             catch (Exception ex)
             {
-                LogService.Instance.Log($"Connection failed {ex.Message}.", LogLevel.Error, "SysUtil");
+                LogService.Instance.Log($"Connection failed: {ex.Message}.", LogLevel.Error, "SysUtil");
                 return null;
             }
         }
@@ -158,6 +158,8 @@ namespace Video_Size_Optimizer
             if (!isWindows && !isLinux)
                 throw new PlatformNotSupportedException("Auto-download is only supported on Windows and Linux.");
 
+            LogService.Instance.Section("FFmpeg Auto-Update");
+            LogService.Instance.Log("Searching for latest FFmpeg builds...", LogLevel.Info, "SysUtil");
             statusReporter.Report("Searching for latest FFmpeg builds...");
 
             string downloadUrl;
@@ -198,15 +200,13 @@ namespace Video_Size_Optimizer
                 downloadUrl = targetAsset.DownloadUrl;
                 remoteFileName = targetAsset.Name;
 
-
-                LogService.Instance.Section("FFmpeg Update Found");
-                LogService.Instance.Log($"Build Identified: {remoteFileName}", LogLevel.Success);
-                LogService.Instance.Log($"Direct Link: {downloadUrl}", LogLevel.Info);
+                LogService.Instance.Log($"Build Identified: {remoteFileName}", LogLevel.Success, "SysUtil");
+                LogService.Instance.Log($"Direct Link: {downloadUrl}", LogLevel.Info, "SysUtil");
 
             }
             catch (Exception ex)
             {
-                LogService.Instance.Log($"GitHub API Error: {ex.Message}", LogLevel.Error, "Error");
+                LogService.Instance.Log($"GitHub API Error: {ex.Message}", LogLevel.Error, "SysUtil");
                 throw;
             }
 
@@ -219,6 +219,7 @@ namespace Video_Size_Optimizer
 
             try
             {
+                LogService.Instance.Log($"Downloading asset: {remoteFileName}...", LogLevel.Info, "SysUtil");
                 statusReporter.Report($"Downloading {Path.GetFileName(downloadUrl)}...");
                 using (var stream = await _httpClient.GetStreamAsync(downloadUrl))
                 using (var fileStream = new FileStream(archivePath, FileMode.Create))
@@ -226,6 +227,7 @@ namespace Video_Size_Optimizer
                     await stream.CopyToAsync(fileStream);
                 }
 
+                LogService.Instance.Log("Extracting files...", LogLevel.Info, "SysUtil");
                 statusReporter.Report("Extracting files...");
                 if (isWindows)
                 {
@@ -244,6 +246,7 @@ namespace Video_Size_Optimizer
                     if (p != null) await p.WaitForExitAsync();
                 }
 
+                LogService.Instance.Log("Installing binaries...", LogLevel.Info, "SysUtil");
                 statusReporter.Report("Installing...");
                 string ffmpegExe = isWindows ? "ffmpeg.exe" : "ffmpeg";
                 string ffprobeExe = isWindows ? "ffprobe.exe" : "ffprobe";
@@ -262,6 +265,12 @@ namespace Video_Size_Optimizer
                     Process.Start("chmod", $"+x \"{Path.Combine(finalBinFolder, ffmpegExe)}\"");
                     Process.Start("chmod", $"+x \"{Path.Combine(finalBinFolder, ffprobeExe)}\"");
                 }
+                LogService.Instance.Log("FFmpeg binaries successfully installed.", LogLevel.Success, "SysUtil");
+            }
+            catch (Exception ex)
+            {
+                LogService.Instance.Log($"Asset download or extraction failed: {ex.Message}", LogLevel.Error, "SysUtil");
+                throw;
             }
             finally
             {

@@ -91,7 +91,7 @@ public partial class MainWindowViewModel : ViewModelBase
     public MainWindowViewModel()
     {
 
-        LogService.Instance.Section("Application Session Started" + DateTime.Now.ToString(" - yyyy.MM.dd"));
+        LogService.Instance.Section("Application Session Started");
         LogService.Instance.Log("MainWindowViewModel initialized.");
 
         BrowseFolderCommand = new RelayCommand<Window>(BrowseFolder);
@@ -354,7 +354,7 @@ public partial class MainWindowViewModel : ViewModelBase
         var ffmpegError = _ffmpegService.InitializePermissions();
         if (ffmpegError != null)
         {
-            LogService.Instance.Log($"FFmpeg permission error: {ffmpegError}", LogLevel.Error, "Error");
+            LogService.Instance.Log($"FFmpeg permission error: {ffmpegError}", LogLevel.Error, "Main");
             await _messageService.ShowErrorAsync("Platform Permission Error", ffmpegError);
             return;
         }
@@ -363,7 +363,7 @@ public partial class MainWindowViewModel : ViewModelBase
         var ffprobeError = _ffprobeService.InitializePermissions();
         if (ffprobeError != null)
         {
-            LogService.Instance.Log($"FFprobe permission error: {ffprobeError}", LogLevel.Error, "Error");
+            LogService.Instance.Log($"FFprobe permission error: {ffprobeError}", LogLevel.Error, "Main");
             await _messageService.ShowErrorAsync("Platform Permission Error", ffprobeError);
             return;
         }
@@ -376,7 +376,11 @@ public partial class MainWindowViewModel : ViewModelBase
 
         if (GlobalSettings.PreventSleep)
         {
-            await _systemService.PreventSleepAsync(true, _messageService.ShowErrorAsync);
+            bool prevented = await _systemService.PreventSleepAsync(true, _messageService.ShowErrorAsync);
+            if (!prevented)
+            {
+                LogService.Instance.Log("Failed to enable sleep prevention.", LogLevel.Warning, "Main");
+            }
         }
 
         LogService.Instance.Section("Batch Start");
@@ -396,21 +400,21 @@ public partial class MainWindowViewModel : ViewModelBase
             {
                 if (!IsBusy)
                 {
-                    LogService.Instance.Log("Batch cancelled by user.");
+                    LogService.Instance.Log("Batch cancelled by user.", LogLevel.Warning, "Main");
                     break;
                 }
 
-                LogService.Instance.Section($"Processing video: {video.FileName}");
+                LogService.Instance.Section($"Processing Video: {video.FileName}");
 
                 if (IsDiskSpaceLow())
                 {
-                    LogService.Instance.Log("Low disk space detected. Pausing batch.", LogLevel.Warning, "Warning");
+                    LogService.Instance.Log($"Low disk space detected (< {GlobalSettings.LowDiskBufferGb}GB). Pausing batch.", LogLevel.Warning, "Main");
                     _ffmpegService.TogglePause(true);
 
                     if (!IsPaused) await TogglePause();
                     StatusMessage = "Paused: Low Disk Space!";
                     LogService.Instance.Log(
-                                $"Pause reason: Low disk space (< {GlobalSettings.LowDiskBufferGb}GB)");
+                                $"Pause reason: Low disk space (< {GlobalSettings.LowDiskBufferGb}GB)", LogLevel.Warning, "Main");
 
                     await _messageService.ShowErrorAsync("Low Disk Space",
                         $"Available space is below {GlobalSettings.LowDiskBufferGb}GB. " +
@@ -420,7 +424,7 @@ public partial class MainWindowViewModel : ViewModelBase
                     {
                         if (!IsBusy)
                         { 
-                            LogService.Instance.Log("User cancelled batch during low disk pause.");
+                            LogService.Instance.Log("User cancelled batch during low disk pause.", LogLevel.Warning, "Main");
                             break;
                         }                           
                         await Task.Delay(1000); 
@@ -428,7 +432,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
                     if (!IsBusy)
                     {
-                        LogService.Instance.Log("Batch cancelled by user.");
+                        LogService.Instance.Log("Batch cancelled by user.", LogLevel.Warning, "Main");
                         IsPaused = false;
                         break;
                     }
@@ -525,8 +529,7 @@ public partial class MainWindowViewModel : ViewModelBase
                     }
 
                     int videoIndex = completedCount + 1;
-                    LogService.Instance.Section(
-                            $"Processing ({videoIndex}/{selectedVideos.Count}): {video.FileName}");
+                    LogService.Instance.Log($"Processing item {videoIndex} of {selectedVideos.Count}: {video.FileName}");
 
                     if (SelectedTabIndex == 1)
                     {
@@ -810,7 +813,7 @@ public partial class MainWindowViewModel : ViewModelBase
             _ffmpegService.KillProcess();
             await _systemService.PreventSleepAsync(false);
             IsBusy = false;
-            LogService.Instance.Log("Processing force-stopped by user.");
+            LogService.Instance.Log("Processing force-stopped by user.", LogLevel.Warning, "Main");
             StatusMessage = "Process terminated by user.";
         }
     }
