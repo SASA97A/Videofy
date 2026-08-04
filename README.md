@@ -35,8 +35,11 @@ Feature suggestions and bug reports are still welcome.
 ## Features
 
 - Batch compression of multiple video files
+- Drag and drop file & recursive folder importing
+- Modern card-based user interface with high-contrast theme & global bottom status bar
+- Container-aware compression with resilient stream copy fallback
 - Resolution downscaling during compression:
-  - 4k · 2K · 1080p · 720p · 480p · 360p
+  - 4K · 2K · 1080p · 720p · 480p · 360p
 - Upscale protection (prevents quality loss when source resolution is lower)
 - Cross-platform support:
   - Windows

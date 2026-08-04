@@ -113,7 +113,7 @@ public class FfmpegService
                 }
                 catch (Exception ex)
                 {
-                    LogService.Instance.Log($"Direct stream copy failed for {output}. Retrying with audio stream fallback... | {ex.Message}", LogLevel.Warning, "FFMPEG");
+                    LogService.Instance.Log($"[FALLBACK] Direct stream copy failed for {output}. Retrying with AAC audio fallback... | Error: {ex.Message}", LogLevel.Warning, "FFMPEG");
                     if (File.Exists(output))
                     {
                         try { File.Delete(output); } catch { }
@@ -182,7 +182,7 @@ public class FfmpegService
             }
             catch (Exception ex)
             {
-                LogService.Instance.Log($"Compression failed with primary stream args for {output}. Attempting resilient fallback... | {ex.Message}", LogLevel.Warning, "FFMPEG");
+                LogService.Instance.Log($"[FALLBACK] Compression failed with primary stream args for {output}. Attempting resilient AAC audio fallback... | Error: {ex.Message}", LogLevel.Warning, "FFMPEG");
 
                 if (File.Exists(output))
                 {
@@ -238,13 +238,13 @@ public class FfmpegService
         }));
 
         // PASS 1
-        LogService.Instance.Log("PASS 1 Start");
+        LogService.Instance.Log("PASS 1 Start", LogLevel.Info, "FFMPEG");
         var pass1 = $"-y {trimArgs} -i \"{input}\" {filterArgs} -c:v {encoder} -b:v {videoBitrate}k -pass 1 -passlogfile \"{logName}\" -an -f null {nullDev}";
         // PASS 2
-        LogService.Instance.Log("PASS 2 Start");
+        LogService.Instance.Log("PASS 2 Start", LogLevel.Info, "FFMPEG");
         var pass2 = $"-y {trimArgs} -i \"{input}\" {filterArgs} -c:v {encoder} -b:v {videoBitrate}k -pass 2 -passlogfile \"{logName}\" -c:a aac -b:a 128k \"{output}\"";
         
-        LogService.Instance.Log("PASS Complete");
+        LogService.Instance.Log("PASS Complete", LogLevel.Info, "FFMPEG");
 
         try
         {
@@ -254,7 +254,7 @@ public class FfmpegService
         catch (Exception ex)
         {
             LogService.Instance.Log(
-                $"Target-size compression failed. Input={input}, Target={targetMb}MB | {ex.Message}", LogLevel.Error, "FFMPEG");
+                $"Target-size compression failed. Input={input} | Output={output} | Target={targetMb}MB | Error: {ex.Message}", LogLevel.Error, "FFMPEG");
         }
         finally
         {
@@ -284,7 +284,7 @@ public class FfmpegService
         catch (Exception ex)
         {
             LogService.Instance.Log(
-                $"Split failed. Input={input} | {ex.Message}", LogLevel.Error, "FFMPEG");
+                $"Split failed. Input={input} | OutputPattern={outputPattern} | Error: {ex.Message}", LogLevel.Error, "FFMPEG");
             throw;
         }
     }

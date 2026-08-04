@@ -21,9 +21,16 @@ namespace Video_Size_Optimizer.Services
         }
         public async Task SaveSettingsAsync(AppSettings settings)
         {
-            var options = new JsonSerializerOptions { WriteIndented = true };
-            string json = JsonSerializer.Serialize(settings, options);
-            await File.WriteAllTextAsync(_settingsPath, json);
+            try
+            {
+                var options = new JsonSerializerOptions { WriteIndented = true };
+                string json = JsonSerializer.Serialize(settings, options);
+                await File.WriteAllTextAsync(_settingsPath, json);
+            }
+            catch (Exception ex)
+            {
+                LogService.Instance.Log($"Failed to save settings to {_settingsPath}: {ex.Message}", LogLevel.Error, "Settings");
+            }
         }
 
         public AppSettings LoadSettings()
@@ -35,8 +42,9 @@ namespace Video_Size_Optimizer.Services
                 string json = File.ReadAllText(_settingsPath);
                 return JsonSerializer.Deserialize<AppSettings>(json) ?? new AppSettings();
             }
-            catch
+            catch (Exception ex)
             {
+                LogService.Instance.Log($"Failed to load settings from {_settingsPath}: {ex.Message}. Reverting to defaults.", LogLevel.Error, "Settings");
                 return new AppSettings(); // Return defaults if file is corrupted
             }
         }

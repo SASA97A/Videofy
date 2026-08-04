@@ -3,35 +3,175 @@
         xmlns:services="using:Video_Size_Optimizer.Services"
         x:Class="Video_Size_Optimizer.Views.LogWindow"
         x:DataType="services:LogService"
-        Title="System Logs" Width="700" Height="450"
+        Title="System Logs" Width="750" Height="480"
         Background="{DynamicResource MainBackground}"
         WindowStartupLocation="CenterOwner">
 
-	<Grid RowDefinitions="*, Auto">
-		<TextBox Name="LogTextBox"
-                 Grid.Row="0"
-                 Text="{Binding FullLogText, Mode=OneWay}"
-                 IsReadOnly="True"
-                 AcceptsReturn="True"
-                 TextWrapping="Wrap"
-                 Background="{DynamicResource TertiaryBackground}"
-                 Foreground="{DynamicResource MainText}"
-                 BorderThickness="0"
-                 FontSize="12"
-                 FontFamily="Consolas, Monospace"
-                 Padding="10"
-                 CaretBrush="{DynamicResource SystemAccentColor}"
-				 SelectionBrush="{DynamicResource RowSelectColor}"
-                 ScrollViewer.VerticalScrollBarVisibility="Auto"/>
+	<Window.Styles>
+		<Style Selector="ListBoxItem">
+			<Setter Property="Padding" Value="4,2"/>
+			<Setter Property="MinHeight" Value="0"/>
+		</Style>
 
-		<Border Grid.Row="1"
-        Background="{DynamicResource SecondaryBackground}"
-        BorderBrush="{DynamicResource BorderColor}"
-        BorderThickness="0,1,0,0"
-        Padding="10">
+		<Style Selector="Border.level-badge[Tag=Error]">
+			<Setter Property="Background" Value="#771B1B"/>
+		</Style>
+		<Style Selector="Border.level-badge[Tag=Error] > TextBlock">
+			<Setter Property="Foreground" Value="#FF8888"/>
+		</Style>
 
+		<Style Selector="Border.level-badge[Tag=Warning]">
+			<Setter Property="Background" Value="#664400"/>
+		</Style>
+		<Style Selector="Border.level-badge[Tag=Warning] > TextBlock">
+			<Setter Property="Foreground" Value="#FFCC80"/>
+		</Style>
+
+		<Style Selector="Border.level-badge[Tag=Success]">
+			<Setter Property="Background" Value="#1B4D2E"/>
+		</Style>
+		<Style Selector="Border.level-badge[Tag=Success] > TextBlock">
+			<Setter Property="Foreground" Value="#81C784"/>
+		</Style>
+
+		<Style Selector="Border.level-badge[Tag=Debug]">
+			<Setter Property="Background" Value="#333333"/>
+		</Style>
+		<Style Selector="Border.level-badge[Tag=Debug] > TextBlock">
+			<Setter Property="Foreground" Value="#AAAAAA"/>
+		</Style>
+
+		<Style Selector="Border.level-badge[Tag=Info]">
+			<Setter Property="Background" Value="#223344"/>
+		</Style>
+		<Style Selector="Border.level-badge[Tag=Info] > TextBlock">
+			<Setter Property="Foreground" Value="#90CAF9"/>
+		</Style>
+	</Window.Styles>
+
+	<Grid RowDefinitions="Auto, *, Auto">
+		<!-- Header Toolbar -->
+		<Border Grid.Row="0"
+				Background="{DynamicResource SecondaryBackground}"
+				BorderThickness="0,0,0,1"
+				BorderBrush="{DynamicResource BorderColor}"
+				Padding="10,6">
+			<Grid ColumnDefinitions="Auto, Auto, *, Auto">
+				<TextBlock Grid.Column="0"
+						   Text="Filter:"
+						   VerticalAlignment="Center"
+						   Margin="0,0,8,0"
+						   Foreground="{DynamicResource MainText}"/>
+				<ComboBox Grid.Column="1"
+						  SelectedIndex="{Binding SelectedFilterIndex, Mode=TwoWay}"
+						  VerticalAlignment="Center">
+					<ComboBoxItem Content="All Logs"/>
+					<ComboBoxItem Content="Errors Only"/>
+					<ComboBoxItem Content="Warnings &amp; Errors"/>
+				</ComboBox>
+
+				<StackPanel Grid.Column="3"
+							Orientation="Horizontal"
+							HorizontalAlignment="Right"
+							VerticalAlignment="Center">
+					<Button Content="Copy Logs"
+							Click="CopyLogsClick"
+							Margin="0,0,8,0"/>
+					<Button Content="Clear View"
+							Click="ClearLogsClick"/>
+				</StackPanel>
+			</Grid>
+		</Border>
+
+		<!-- Log Entries Display -->
+		<ListBox Name="LogListBox"
+				 Grid.Row="1"
+				 ItemsSource="{Binding FilteredLogEntries}"
+				 Background="{DynamicResource TertiaryBackground}"
+				 BorderThickness="0"
+				 Padding="8"
+				 FontFamily="Consolas, Monospace"
+				 FontSize="12">
+			<ListBox.ItemTemplate>
+				<DataTemplate x:DataType="services:LogEntry">
+					<Panel Margin="0,2">
+						<!-- Section Header View -->
+						<Border IsVisible="{Binding IsSectionHeader}"
+								Background="{DynamicResource RowSelectColor}"
+								BorderBrush="{DynamicResource BorderColor}"
+								BorderThickness="1"
+								CornerRadius="4"
+								Padding="12,6"
+								Margin="0,4">
+							<StackPanel HorizontalAlignment="Center">
+								<TextBlock Text="========================================"
+										   Foreground="{DynamicResource DimText}"
+										   HorizontalAlignment="Center"
+										   FontFamily="Consolas, Monospace"
+										   FontSize="11"/>
+								<TextBlock Text="{Binding Message}"
+										   FontWeight="Bold"
+										   FontSize="13"
+										   Foreground="{DynamicResource MainText}"
+										   HorizontalAlignment="Center"
+										   Margin="0,2"/>
+								<TextBlock Text="========================================"
+										   Foreground="{DynamicResource DimText}"
+										   HorizontalAlignment="Center"
+										   FontFamily="Consolas, Monospace"
+										   FontSize="11"/>
+							</StackPanel>
+						</Border>
+
+						<!-- Normal Log Lines View -->
+						<StackPanel IsVisible="{Binding !IsSectionHeader}"
+									Orientation="Horizontal"
+									VerticalAlignment="Center">
+							<!-- Timestamp -->
+							<TextBlock Text="{Binding FormattedTimestamp}"
+									   Foreground="#888888"
+									   Margin="0,0,8,0"
+									   FontFamily="Consolas, Monospace"
+									   VerticalAlignment="Center"/>
+
+							<!-- Level Badge / Tag -->
+							<Border Classes="level-badge"
+									Tag="{Binding Level}"
+									CornerRadius="3"
+									Padding="5,1"
+									Margin="0,0,8,0"
+									VerticalAlignment="Center">
+								<TextBlock Text="{Binding LevelTag}"
+										   FontWeight="Bold"
+										   FontSize="11"
+										   VerticalAlignment="Center"/>
+							</Border>
+
+							<!-- Scope -->
+							<TextBlock Text="{Binding Scope, StringFormat='[{0}]'}"
+									   Foreground="#4DD0E1"
+									   Margin="0,0,8,0"
+									   FontWeight="SemiBold"
+									   VerticalAlignment="Center"/>
+
+							<!-- Message -->
+							<TextBlock Text="{Binding Message}"
+									   Foreground="{DynamicResource MainText}"
+									   TextWrapping="Wrap"
+									   VerticalAlignment="Center"/>
+						</StackPanel>
+					</Panel>
+				</DataTemplate>
+			</ListBox.ItemTemplate>
+		</ListBox>
+
+		<!-- Footer -->
+		<Border Grid.Row="2"
+				Background="{DynamicResource SecondaryBackground}"
+				BorderBrush="{DynamicResource BorderColor}"
+				BorderThickness="0,1,0,0"
+				Padding="10">
 			<Grid ColumnDefinitions="*, Auto">
-
 				<!-- Log size -->
 				<TextBlock Grid.Column="0"
 						   Text="{Binding LogFileSizeDisplay}"

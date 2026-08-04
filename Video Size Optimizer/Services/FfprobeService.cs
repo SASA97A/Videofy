@@ -92,7 +92,7 @@ namespace Video_Size_Optimizer.Services
             catch (Exception ex)
             {
                 LogService.Instance.Log(
-                    $"Failed to read duration. File={filePath} | {ex.Message}", LogLevel.Error, "FFPROBE");
+                    $"Failed to read duration. File={filePath} | Error: {ex.Message}", LogLevel.Error, "FFPROBE");
                 return 0;
             }
         }
@@ -129,7 +129,7 @@ namespace Video_Size_Optimizer.Services
             catch (Exception ex)
             {
                 LogService.Instance.Log(
-                    $"Failed to read video width. File={inputPath} | {ex.Message}", LogLevel.Error, "FFPROBE");
+                    $"Failed to read video width. File={inputPath} | Error: {ex.Message}", LogLevel.Error, "FFPROBE");
                 return 0;
             }
             finally

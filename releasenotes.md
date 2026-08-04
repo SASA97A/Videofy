@@ -34,3 +34,9 @@
 - **Status Bar Notification Pill:** When a new release is detected, a clean, high-contrast green pill (`Update Available: vX.X.X`) appears on the bottom status bar. Clicking it prompts to view details or download.
 - **Global Settings Toggle:** Added an *"Automatically check for updates on startup"* option in Global Settings (enabled by default).
 - **Refactored DRY Architecture:** Single refactored update checking engine shared between silent startup checks and manual checks.
+
+### Human-Readable Log System & Severity-Coded Log Viewer
+- **Emoji-Free Standardized ASCII Tags:** Replaced unicode emojis (`✔`, `⚠`, `✖`, `…`, `•`) with clean ASCII tags (`[ERROR]`, `[WARN]`, `[SUCCESS]`, `[INFO]`, `[DEBUG]`) across UI logs and `app_logs.txt`.
+- **Severity Color-Coded Log Viewer:** Redesigned `LogWindow.axaml` with a virtualized log entry list featuring distinct severity color badges: Crimson Red for Errors, Amber for Warnings, Emerald Green for Success, Cyan for Scopes, and styled visual card banners for section headers.
+- **Log Filtering & Toolbar:** Added log filtering selector (`All Logs`, `Errors Only`, `Warnings & Errors`), a one-click **Copy Logs** button, a **Clear View** button, and log file size tracking.
+- **Enhanced Exception Audit:** Upgraded exception handling in `SettingsService`, `FfmpegService`, `FfprobeService`, and `SystemUtilityService` to capture and log detailed context instead of swallowing errors.
