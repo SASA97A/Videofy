@@ -16,5 +16,7 @@ namespace Video_Size_Optimizer.Models
         public bool PreventUpsampling { get; set; } = false;
         public bool UseSoftwareRendering { get; set; } = false;
         public bool AutoCheckUpdatesOnStartup { get; set; } = true;
+        public List<string> SupportedHardwareEncoders { get; set; } = new();
+        public bool HasDetectedHardware { get; set; } = false;
     }
 }
