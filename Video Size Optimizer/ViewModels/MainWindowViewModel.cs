@@ -574,7 +574,7 @@ public partial class MainWindowViewModel : ViewModelBase
                         CurrentSpeed = cp.Speed;
                     });
 
-                    if (!AppConstants.EncoderMap.TryGetValue(SelectedEncoder, out string? encoderValue))
+                    if (!AppConstants.EncoderMap.TryGetValue(MergeSelectedEncoder, out string? encoderValue))
                         encoderValue = "libx264";
 
                     await _ffmpegService.MergeVideosAsync(metaList, finalPath, MergeForceReencode, encoderValue, p);
@@ -1388,6 +1388,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     [ObservableProperty] private string _mergeTargetFormat = ".mp4";
     [ObservableProperty] private bool _mergeForceReencode = false;
+    [ObservableProperty] private string _mergeSelectedEncoder = "Standard (Slow, Best Quality)";
 
     public bool IsMergeTabActive => SelectedTabIndex == 3;
     public bool IsOverrideVisible => SelectedTabIndex == 0 || SelectedTabIndex == 1;

@@ -148,15 +148,15 @@ public class FfmpegService
 
             if (encoder.Contains("nvenc"))
             {
-                codecArgs = $"-vcodec {encoder} -preset p5 -rc vbr -cq {crf} {bitrateCap}";
+                codecArgs = $"-c:v {encoder} -preset p5 -rc vbr -cq {crf} {bitrateCap}";
             }
             else if (encoder.Contains("amf"))
             {
-                codecArgs = $"-vcodec {encoder} -rc vbr_peak -qp_i {crf} -qp_p {crf} -quality quality {bitrateCap}";
+                codecArgs = $"-c:v {encoder} -rc vbr_peak -qp_i {crf} -qp_p {crf} -quality quality {bitrateCap}";
             }
             else if (encoder.Contains("qsv"))
             {
-                codecArgs = $"-vcodec {encoder} -preset veryfast -global_quality {crf} {bitrateCap}";
+                codecArgs = $"-c:v {encoder} -preset veryfast -global_quality {crf} {bitrateCap}";
             }
             else
             {
