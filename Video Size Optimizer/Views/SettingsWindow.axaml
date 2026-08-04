@@ -169,7 +169,7 @@
 		<Border Grid.Row="1" Background="{DynamicResource SecondaryBackground}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,1,0,0" Padding="20,12">
 			<Grid ColumnDefinitions="*, Auto">
 				<CheckBox IsChecked="{Binding SaveToDisk}" Content="Remember settings" FontSize="13" Foreground="{DynamicResource MainText}" VerticalAlignment="Center" Cursor="Hand"/>
-				<Button Grid.Column="1" Content="Save &amp; Close" Click="OnSaveClick" Background="{DynamicResource SystemAccentColor}" Foreground="Black" FontWeight="Bold" FontSize="13" Padding="18,8" CornerRadius="4" Cursor="Hand"/>
+				<Button Grid.Column="1" Content="Close" Click="OnSaveClick" Background="{DynamicResource SystemAccentColor}" Foreground="Black" FontWeight="Bold" FontSize="13" Padding="18,8" CornerRadius="4" Cursor="Hand"/>
 			</Grid>
 		</Border>
 	</Grid>
