@@ -91,7 +91,8 @@
 				 BorderThickness="0"
 				 Padding="8"
 				 FontFamily="Consolas, Monospace"
-				 FontSize="12">
+				 FontSize="12"
+				 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
 			<ListBox.ItemTemplate>
 				<DataTemplate x:DataType="services:LogEntry">
 					<Panel Margin="0,2">
@@ -124,18 +125,20 @@
 						</Border>
 
 						<!-- Normal Log Lines View -->
-						<StackPanel IsVisible="{Binding !IsSectionHeader}"
-									Orientation="Horizontal"
-									VerticalAlignment="Center">
+						<DockPanel IsVisible="{Binding !IsSectionHeader}"
+								   LastChildFill="True"
+								   VerticalAlignment="Center">
 							<!-- Timestamp -->
-							<TextBlock Text="{Binding FormattedTimestamp}"
+							<TextBlock DockPanel.Dock="Left"
+									   Text="{Binding FormattedTimestamp}"
 									   Foreground="#888888"
 									   Margin="0,0,8,0"
 									   FontFamily="Consolas, Monospace"
 									   VerticalAlignment="Center"/>
 
 							<!-- Level Badge / Tag -->
-							<Border Classes="level-badge"
+							<Border DockPanel.Dock="Left"
+									Classes="level-badge"
 									Tag="{Binding Level}"
 									CornerRadius="3"
 									Padding="5,1"
@@ -148,7 +151,8 @@
 							</Border>
 
 							<!-- Scope -->
-							<TextBlock Text="{Binding Scope, StringFormat='[{0}]'}"
+							<TextBlock DockPanel.Dock="Left"
+									   Text="{Binding Scope, StringFormat='[{0}]'}"
 									   Foreground="#4DD0E1"
 									   Margin="0,0,8,0"
 									   FontWeight="SemiBold"
@@ -159,7 +163,7 @@
 									   Foreground="{DynamicResource MainText}"
 									   TextWrapping="Wrap"
 									   VerticalAlignment="Center"/>
-						</StackPanel>
+						</DockPanel>
 					</Panel>
 				</DataTemplate>
 			</ListBox.ItemTemplate>
