@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Net.Mail;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
@@ -417,5 +418,139 @@ public class FfmpegService
             }
         }
         return supported;
+    }
+
+    public bool CheckMergeCompatibility(List<VideoMetadata> metadataList)
+    {
+        if (metadataList == null || metadataList.Count < 2) return false;
+        var first = metadataList[0];
+        for (int i = 1; i < metadataList.Count; i++)
+        {
+            var v1 = first.Video;
+            var v2 = metadataList[i].Video;
+            var a1 = first.Audio;
+            var a2 = metadataList[i].Audio;
+
+            if (v1.Codec != v2.Codec || v1.Width != v2.Width || v1.Height != v2.Height ||
+                Math.Abs(v1.Fps - v2.Fps) > 0.05 || v1.PixFmt != v2.PixFmt)
+                return false;
+
+            if (a1.Exists != a2.Exists || a1.SampleRate != a2.SampleRate || a1.Channels != a2.Channels)
+                return false;
+        }
+        return true;
+    }
+
+    public string GenerateChapterFile(List<VideoMetadata> metadataList)
+    {
+        string metaFile = Path.Combine(Path.GetTempPath(), $"ffmetadata_{Guid.NewGuid()}.txt");
+        using var writer = new StreamWriter(metaFile, false, System.Text.Encoding.UTF8);
+        writer.WriteLine(";FFMETADATA1");
+
+        double currentTime = 0.0;
+        for (int i = 0; i < metadataList.Count; i++)
+        {
+            long startMs = (long)(currentTime * 1000);
+            long durationMs = (long)(metadataList[i].Duration * 1000);
+            long endMs = startMs + durationMs;
+            string title = Path.GetFileNameWithoutExtension(metadataList[i].Path);
+
+            writer.WriteLine("[CHAPTER]");
+            writer.WriteLine("TIMEBASE=1/1000");
+            writer.WriteLine($"START={startMs}");
+            writer.WriteLine($"END={endMs}");
+            writer.WriteLine($"title=Part {i + 1}: {title}");
+            writer.WriteLine();
+
+            currentTime += metadataList[i].Duration;
+        }
+
+        return metaFile;
+    }
+
+    public async Task MergeVideosAsync(List<VideoMetadata> metadataList, string outputPath, bool forceReencode, string encoder, IProgress<ConversionProgress>? progress = null)
+    {
+        if (metadataList == null || metadataList.Count < 2) return;
+
+        bool isCompatible = CheckMergeCompatibility(metadataList);
+        string chapterFile = GenerateChapterFile(metadataList);
+
+        try
+        {
+            if (isCompatible && !forceReencode)
+            {
+                LogService.Instance.Log("Streams are compatible. Using Lossless Concat Demuxer (-c copy)...", LogLevel.Info, "MERGE");
+                string listFile = Path.Combine(Path.GetTempPath(), $"concat_{Guid.NewGuid()}.txt");
+                using (var writer = new StreamWriter(listFile, false, System.Text.Encoding.UTF8))
+                {
+                    foreach (var meta in metadataList)
+                    {
+                        string safePath = meta.Path.Replace("'", "'\\''");
+                        writer.WriteLine($"file '{safePath}'");
+                    }
+                }
+
+                var copyArgs = $"-y -f concat -safe 0 -i \"{listFile}\" -i \"{chapterFile}\" -map_metadata 1 -c copy \"{outputPath}\"";
+                try
+                {
+                    await RunFfmpegProcessAsync(copyArgs, progress);
+                }
+                finally
+                {
+                    if (File.Exists(listFile)) File.Delete(listFile);
+                }
+            }
+            else
+            {
+                LogService.Instance.Log("Re-encoding required. Building dynamic canvas filtergraph...", LogLevel.Info, "MERGE");
+                int maxW = metadataList.Max(m => m.Video.Width);
+                int maxH = metadataList.Max(m => m.Video.Height);
+                if (maxW % 2 != 0) maxW++;
+                if (maxH % 2 != 0) maxH++;
+                double maxFps = metadataList.Max(m => m.Video.Fps);
+
+                var filterChains = new List<string>();
+                var inputArgs = new List<string>();
+
+                for (int i = 0; i < metadataList.Count; i++)
+                {
+                    var meta = metadataList[i];
+                    inputArgs.Add($"-i \"{meta.Path}\"");
+
+                    string vFilter = $"[{i}:v]scale=w='if(gt(iw/ih,{maxW}/{maxH}),{maxW},-2)':h='if(gt(iw/ih,{maxW}/{maxH}),-2,{maxH})':force_original_aspect_ratio=decrease," +
+                                     $"pad=w={maxW}:h={maxH}:x='({maxW}-iw)/2':y='({maxH}-ih)/2':color=black," +
+                                     $"fps={maxFps.ToString("F2", CultureInfo.InvariantCulture)},setsar=1[v{i}];";
+
+                    string aFilter = meta.Audio.Exists
+                        ? $"[{i}:a]aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo[a{i}];"
+                        : $"anullsrc=channel_layout=stereo:sample_rate=48000,trim=duration={meta.Duration.ToString("F2", CultureInfo.InvariantCulture)}[a{i}];";
+
+                    filterChains.Add(vFilter + aFilter);
+                }
+
+                string concatInputs = string.Join("", Enumerable.Range(0, metadataList.Count).Select(i => $"[v{i}][a{i}]"));
+                string concatFilter = $"{concatInputs}concat=n={metadataList.Count}:v=1:a=1[vout][aout]";
+                string fullFiltergraph = string.Join("", filterChains) + concatFilter;
+
+                inputArgs.Add($"-i \"{chapterFile}\"");
+
+                string codecArgs;
+                if (encoder.Contains("nvenc"))
+                    codecArgs = $"-c:v {encoder} -preset p5 -rc vbr -cq 23";
+                else if (encoder.Contains("amf"))
+                    codecArgs = $"-c:v {encoder} -rc vbr_peak -qp_i 22 -qp_p 22";
+                else if (encoder.Contains("qsv"))
+                    codecArgs = $"-c:v {encoder} -preset veryfast -global_quality 23";
+                else
+                    codecArgs = "-c:v libx264 -crf 18";
+
+                var args = $"-y {string.Join(" ", inputArgs)} -filter_complex \"{fullFiltergraph}\" -map \"[vout]\" -map \"[aout]\" -map_metadata {metadataList.Count} {codecArgs} -c:a aac -b:a 192k \"{outputPath}\"";
+                await RunFfmpegProcessAsync(args, progress);
+            }
+        }
+        finally
+        {
+            if (File.Exists(chapterFile)) File.Delete(chapterFile);
+        }
     }
 }
