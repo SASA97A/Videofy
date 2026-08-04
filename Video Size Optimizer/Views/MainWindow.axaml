@@ -362,6 +362,20 @@
 														  Foreground="{DynamicResource DangerColor}"
 														  Command="{Binding $parent[DataGrid].DataContext.RemoveVideoCommand}"
 														  CommandParameter="{Binding}" />-->
+												<MenuItem Header="Assign to Merge Group" IsVisible="{Binding $parent[DataGrid].DataContext.IsMergeTabActive}">
+													<MenuItem Header="Add to New Group" Command="{Binding $parent[DataGrid].DataContext.AddToNewGroupCommand}"/>
+													<MenuItem Header="Add to Existing Group" IsEnabled="{Binding $parent[DataGrid].DataContext.HasExistingGroups}" ItemsSource="{Binding $parent[DataGrid].DataContext.ExistingGroups}">
+														<MenuItem.ItemTemplate>
+															<DataTemplate x:DataType="vm:GroupOption">
+																<MenuItem Header="{Binding Name}" Command="{Binding $parent[DataGrid].DataContext.AssignToGroupCommand}" CommandParameter="{Binding Id}"/>
+															</DataTemplate>
+														</MenuItem.ItemTemplate>
+													</MenuItem>
+													<Separator/>
+													<MenuItem Header="Remove from Group" Command="{Binding $parent[DataGrid].DataContext.RemoveFromGroupCommand}"/>
+												</MenuItem>
+												
+												<MenuItem Header="Show Group Manager..." IsVisible="{Binding $parent[DataGrid].DataContext.IsMergeTabActive}" Command="{Binding $parent[DataGrid].DataContext.OpenGroupManagerCommand}" CommandParameter="{Binding $parent[Window]}"/>
 											</ContextMenu>
 										</Setter.Value>
 									</Setter>
@@ -434,6 +448,24 @@
 									<DataGridTemplateColumn.CellTemplate>
 										<DataTemplate x:DataType="model:VideoFile">
 											<TextBlock Text="{Binding FileSizeDisplay}" VerticalAlignment="Center" Margin="10,0" Foreground="{DynamicResource MainText}" FontSize="12"/>
+										</DataTemplate>
+									</DataGridTemplateColumn.CellTemplate>
+								</DataGridTemplateColumn>
+
+								<DataGridTemplateColumn Header="Group" Width="100" CanUserResize="False">
+									<DataGridTemplateColumn.CellTemplate>
+										<DataTemplate>
+											<Border IsVisible="{Binding HasGroup}"
+													Background="{DynamicResource SystemAccentColor}"
+													CornerRadius="4"
+													Padding="6,2"
+													HorizontalAlignment="Center"
+													VerticalAlignment="Center">
+												<TextBlock Text="{Binding GroupOrderDisplay}"
+														   Foreground="Black"
+														   FontWeight="Bold"
+														   FontSize="11"/>
+											</Border>
 										</DataTemplate>
 									</DataGridTemplateColumn.CellTemplate>
 								</DataGridTemplateColumn>
@@ -624,6 +656,10 @@
 
 				<TabItem Header="SPLIT (INSTANT)" IsEnabled="{Binding !IsBusy}" Cursor="Hand">
 					<Views:SplitView/>
+				</TabItem>
+
+				<TabItem Header="MERGE (SMART BATCH)" IsEnabled="{Binding !IsBusy}" Cursor="Hand">
+					<Views:MergeView/>
 				</TabItem>
 				
 			</TabControl>
