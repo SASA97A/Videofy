@@ -523,7 +523,7 @@ public class FfmpegService
 
                     string aFilter = meta.Audio.Exists
                         ? $"[{i}:a]aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo[a{i}];"
-                        : $"anullsrc=channel_layout=stereo:sample_rate=48000,trim=duration={meta.Duration.ToString("F2", CultureInfo.InvariantCulture)}[a{i}];";
+                        : $"anullsrc=channel_layout=stereo:sample_rate=48000,atrim=duration={meta.Duration.ToString("F2", CultureInfo.InvariantCulture)}[a{i}];";
 
                     filterChains.Add(vFilter + aFilter);
                 }
@@ -542,7 +542,7 @@ public class FfmpegService
                 else if (encoder.Contains("qsv"))
                     codecArgs = $"-c:v {encoder} -preset veryfast -global_quality 23";
                 else
-                    codecArgs = "-c:v libx264 -crf 18";
+                    codecArgs = $"-c:v {encoder} -crf 18";
 
                 var args = $"-y {string.Join(" ", inputArgs)} -filter_complex \"{fullFiltergraph}\" -map \"[vout]\" -map \"[aout]\" -map_metadata {metadataList.Count} {codecArgs} -c:a aac -b:a 192k \"{outputPath}\"";
                 await RunFfmpegProcessAsync(args, progress);
