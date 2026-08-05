@@ -127,16 +127,19 @@
 					<MenuItem Header="_Open Folder..."
 							  IsEnabled="{Binding !IsBusy}"
 							  Command="{Binding BrowseFolderCommand}"
-							  CommandParameter="{Binding $parent[Window]}" />
+							  CommandParameter="{Binding $parent[Window]}"
+							  ToolTip.Tip="Select a folder containing video files to optimize" />
 
 					<MenuItem Header="_Refresh Folder"
 							  IsEnabled="{Binding !IsBusy}"
-							  Command="{Binding RefreshFolderCommand}" />
+							  Command="{Binding RefreshFolderCommand}"
+							  ToolTip.Tip="Rescan the current folder and refresh video list" />
 
 					<Separator />
 
 					<MenuItem Header="_Exit"
-							  Click="OnExitClick" />
+							  Click="OnExitClick"
+							  ToolTip.Tip="Close application" />
 				</MenuItem>
 
 				<!-- EDIT -->
@@ -144,28 +147,38 @@
 						  IsEnabled="{Binding HasVideos}">
 					<MenuItem Header="_Select All"
 							  IsEnabled="{Binding !IsBusy}"
-							  Command="{Binding SelectAllCommand}" />
+							  Command="{Binding SelectAllCommand}"
+							  ToolTip.Tip="Check all videos in the list for processing" />
 
 					<MenuItem Header="_Deselect All"
 							  IsEnabled="{Binding !IsBusy}"
-							  Command="{Binding DeselectAllCommand}" />
+							  Command="{Binding DeselectAllCommand}"
+							  ToolTip.Tip="Uncheck all videos in the list" />
+
+					<MenuItem Header="_Reset Status to Ready"
+							  IsEnabled="{Binding !IsBusy}"
+							  Command="{Binding ResetSelectedStatusCommand}"
+							  ToolTip.Tip="Reset completed status of selected videos back to Ready" />
 
 					<Separator />
 
 					<MenuItem Header="_Batch Rename"
 							  IsEnabled="{Binding !IsBusy}"
 							  Command="{Binding OpenRenameWindowCommand}"
-							  CommandParameter="{Binding $parent[Window]}" />
+							  CommandParameter="{Binding $parent[Window]}"
+							  ToolTip.Tip="Batch rename loaded video files using flexible pattern tags" />
 				</MenuItem>
 
 				<!-- VIEW -->
 				<MenuItem Header="_View">
 					<MenuItem Header="_Show Logs"
 							  Command="{Binding ShowLogsCommand}"
-							  CommandParameter="{Binding $parent[Window]}" />
+							  CommandParameter="{Binding $parent[Window]}"
+							  ToolTip.Tip="Open real-time log viewer window" />
 
 					<MenuItem Header="_Open Log File"
-							  Command="{Binding OpenLogFileCommand}" />
+							  Command="{Binding OpenLogFileCommand}"
+							  ToolTip.Tip="Open application log text file in default editor" />
 				</MenuItem>
 
 				<!-- TOOLS -->
@@ -173,27 +186,28 @@
 					<MenuItem Header="_Application Settings"
 							  IsEnabled="{Binding !IsBusy}"
 							  Command="{Binding OpenSettingsCommand}"
-							  CommandParameter="{Binding $parent[Window]}" />
+							  CommandParameter="{Binding $parent[Window]}"
+							  ToolTip.Tip="Open global settings and hardware preferences" />
 
 					<MenuItem Header="_Open Binaries Folder"
 							  IsEnabled="{Binding !IsBusy}"
-							  Command="{Binding OpenExpectedFolderCommand}" />
-
-					<!--<MenuItem Header="_Check Dependencies"
-							  Command="{Binding RefreshDependencyCheckCommand}" />-->
+							  Command="{Binding OpenExpectedFolderCommand}"
+							  ToolTip.Tip="Open local FFmpeg binaries folder" />
 				</MenuItem>
 
 				<!-- HELP -->
 				<MenuItem Header="_Help">
 					<MenuItem Header="_Check for Updates"
 							  IsEnabled="{Binding !IsBusy}"
-							  Command="{Binding CheckForUpdatesCommand}" />
+							  Command="{Binding CheckForUpdatesCommand}"
+							  ToolTip.Tip="Check GitHub for newer application releases" />
 
 					<Separator />
 
 					<MenuItem Header="_About"
 							  IsEnabled="{Binding !IsBusy}"
-							  Command="{Binding ShowAboutCommand}" />
+							  Command="{Binding ShowAboutCommand}"
+							  ToolTip.Tip="Display application version and encoding tips" />
 				</MenuItem>
 
 			</Menu>
@@ -203,6 +217,7 @@
 					<Button Command="{Binding BrowseFolderCommand}"
 							IsEnabled="{Binding !IsBusy}"
 							CommandParameter="{Binding $parent[Window]}"
+							ToolTip.Tip="Open a folder containing videos to process"
 							Background="Transparent" BorderThickness="0" Padding="10,5" Cursor="Hand" Height="40">
 						<StackPanel Orientation="Horizontal" Spacing="8">
 							<Image Width="18" Height="18">
@@ -218,6 +233,7 @@
 
 					<Button Command="{Binding ToggleSelectAllCommand}"
 							IsEnabled="{Binding !IsBusy}"
+							ToolTip.Tip="Toggle selection checkbox for all videos"
 							Background="Transparent" BorderThickness="0" Padding="10,5" Cursor="Hand" Height="40">
 						<StackPanel Orientation="Horizontal" Spacing="8">
 							<Image Width="18" Height="18" VerticalAlignment="Center">
@@ -237,6 +253,7 @@
 
 					<Button Command="{Binding RefreshFolderCommand}"
 							IsEnabled="{Binding !IsBusy}"
+							ToolTip.Tip="Rescan folder and refresh video list"
 							Background="Transparent" BorderThickness="0" Padding="10,5" Cursor="Hand" Height="40">
 						<StackPanel Orientation="Horizontal" Spacing="8">
 							<Image Width="16" Height="16" VerticalAlignment="Center">
@@ -253,7 +270,7 @@
 
 					<Button Command="{Binding ShowLogsCommand}"
 							CommandParameter="{Binding $parent[Window]}"
-							ToolTip.Tip="View real-time processing logs"
+							ToolTip.Tip="View real-time application processing logs"
 							Background="Transparent" BorderThickness="0" Padding="10,5" Cursor="Hand" Height="40">
 						<StackPanel Orientation="Horizontal" Spacing="8">
 							<Image Width="16" Height="16" VerticalAlignment="Center">
@@ -333,6 +350,7 @@
 								 Text="{Binding SearchText}"
 								 IsEnabled="{Binding !IsBusy}"
 								 Watermark="🔍 Search by file or folder name..."
+								 ToolTip.Tip="Filter loaded video list by file or folder name"
 								 Margin="5"
 								 Background="{DynamicResource InputBackground}"
 								 Foreground="{DynamicResource MainText}"
@@ -355,9 +373,15 @@
 									<Setter Property="ContextMenu">
 										<Setter.Value>
 											<ContextMenu>
+												<MenuItem Header="Reset Status to Ready"
+														  Command="{Binding $parent[DataGrid].DataContext.ResetVideoStatusCommand}"
+														  CommandParameter="{Binding}"
+														  ToolTip.Tip="Reset this video's completed status back to Ready so it can be re-processed" />
+												<Separator />
 												<MenuItem Header="Open Folder in Explorer"
 														  Command="{Binding $parent[DataGrid].DataContext.OpenFileFolderCommand}"
-														  CommandParameter="{Binding}" />
+														  CommandParameter="{Binding}"
+														  ToolTip.Tip="Open containing folder in File Explorer and select file" />
 											</ContextMenu>
 										</Setter.Value>
 									</Setter>
@@ -641,19 +665,19 @@
 					</Style>
 				</TabControl.Styles>
 
-				<TabItem Header="OPTIMIZE (COMPRESS)" IsEnabled="{Binding !IsBusy}" Cursor="Hand">
+				<TabItem Header="OPTIMIZE (COMPRESS)" IsEnabled="{Binding !IsBusy}" Cursor="Hand" ToolTip.Tip="Re-encode and compress video file size using CRF quality control, resolution, and framerate presets">
 					<Views:CompressionView/>
 				</TabItem>
 
-				<TabItem Header="CONVERT (INSTANT)" IsEnabled="{Binding !IsBusy}" Cursor="Hand">
+				<TabItem Header="CONVERT (INSTANT)" IsEnabled="{Binding !IsBusy}" Cursor="Hand" ToolTip.Tip="Instantly convert video container format (.mp4, .mkv, .mov) via 1:1 stream copy without re-encoding">
 					<Views:ConversionView/>
 				</TabItem>
 
-				<TabItem Header="SPLIT (INSTANT)" IsEnabled="{Binding !IsBusy}" Cursor="Hand">
+				<TabItem Header="SPLIT (INSTANT)" IsEnabled="{Binding !IsBusy}" Cursor="Hand" ToolTip.Tip="Instantly split video into target size chunks at keyframes without quality loss">
 					<Views:SplitView/>
 				</TabItem>
 
-				<TabItem Header="MERGE (SMART BATCH)" IsEnabled="{Binding !IsBusy}" Cursor="Hand">
+				<TabItem Header="MERGE (SMART BATCH)" IsEnabled="{Binding !IsBusy}" Cursor="Hand" ToolTip.Tip="Batch merge multiple video segments into single continuous files per group">
 					<Views:MergeView/>
 				</TabItem>
 				
