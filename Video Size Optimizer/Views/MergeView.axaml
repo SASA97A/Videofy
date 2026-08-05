@@ -48,18 +48,34 @@
 						</StackPanel>
 
 						<CheckBox IsChecked="{Binding MergeForceReencode}"
-								  Content="Force Re-encode"
 								  IsEnabled="{Binding !IsBusy}"
-								  FontSize="12"
-								  Foreground="{DynamicResource MainText}"
-								  Cursor="Hand"/>
+								  Cursor="Hand" Padding="6,0">
+							<StackPanel Orientation="Horizontal" Spacing="6">
+								<TextBlock Text="Force Re-encode" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource MainText}"/>
+								<Border Background="{DynamicResource InputBackground}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="10" Width="16" Height="16" ToolTip.Tip="Forces full video re-encoding using the selected encoder, even if input videos have matching codecs and resolutions. Useful for ensuring uniform encoding or fixing stream sync issues.">
+									<TextBlock Text="?" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource SubtextColor}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+								</Border>
+							</StackPanel>
+						</CheckBox>
+
+						<Button Command="{Binding OpenGroupManagerCommand}"
+								CommandParameter="{Binding $parent[Window]}"
+								Content="Group Manager..."
+								IsEnabled="{Binding !IsBusy}"
+								Background="{DynamicResource InputBackground}"
+								BorderBrush="{DynamicResource BorderColor}"
+								BorderThickness="1"
+								CornerRadius="4"
+								Padding="10,4"
+								FontSize="12"
+								Cursor="Hand"/>
 					</StackPanel>
 
 					<!-- Merge Info Banner -->
 					<Border Background="#122438" BorderBrush="#1E4976" BorderThickness="1" CornerRadius="4" Padding="10,6" Margin="0,4,0,0">
 						<StackPanel Spacing="2">
 							<TextBlock Text="ℹ Smart Group Merging" Foreground="{DynamicResource InfoColor}" FontSize="11" FontWeight="Bold"/>
-							<TextBlock Text="Right-click videos to add them to a merge group. Groups with 2+ videos will be merged into a single video (lossless copy when identical, smart dynamic canvas padding when mixed)."
+							<TextBlock Text="Use the Group Assign column in the table to group videos to merge (Group 1, Group 2, etc.), or click Group Manager for advanced reordering. Each group with 2+ videos will be merged into a single output file stored at the folder location of the first video in that group's sequence. (Lossless copy when streams match, smart dynamic canvas padding when mixed)."
 									   Foreground="{DynamicResource SecondaryText}" FontSize="11" TextWrapping="Wrap"/>
 						</StackPanel>
 					</Border>
