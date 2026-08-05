@@ -451,13 +451,13 @@
 									<DataGridTemplateColumn.CellTemplate>
 										<DataTemplate>
 											<Border IsVisible="{Binding HasGroup}"
-													Background="{DynamicResource SystemAccentColor}"
+													Background="{Binding GroupBadgeBackground}"
 													CornerRadius="4"
 													Padding="6,2"
 													HorizontalAlignment="Center"
 													VerticalAlignment="Center">
 												<TextBlock Text="{Binding GroupOrderDisplay}"
-														   Foreground="Black"
+														   Foreground="{Binding GroupBadgeForeground}"
 														   FontWeight="Bold"
 														   FontSize="11"/>
 											</Border>

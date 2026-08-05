@@ -34,8 +34,8 @@
 							<DataTemplate x:DataType="model:VideoFile">
 								<Border Background="{DynamicResource InputBackground}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="4" Padding="10,6" Margin="0,3">
 									<Grid ColumnDefinitions="Auto, *, Auto">
-										<Border Grid.Column="0" Background="{DynamicResource SystemAccentColor}" CornerRadius="3" Padding="6,2" Margin="0,0,10,0" VerticalAlignment="Center">
-											<TextBlock Text="{Binding SequenceNumber, StringFormat='#{0}'}" Foreground="Black" FontWeight="Bold" FontSize="11"/>
+										<Border Grid.Column="0" Background="{Binding GroupBadgeBackground}" CornerRadius="3" Padding="6,2" Margin="0,0,10,0" VerticalAlignment="Center">
+											<TextBlock Text="{Binding SequenceNumber, StringFormat='#{0}'}" Foreground="{Binding GroupBadgeForeground}" FontWeight="Bold" FontSize="11"/>
 										</Border>
 										
 										<TextBlock Grid.Column="1" Text="{Binding FileName}" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource MainText}"/>
