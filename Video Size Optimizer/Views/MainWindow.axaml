@@ -657,6 +657,10 @@
 					<Views:MergeView/>
 				</TabItem>
 				
+				<TabItem Header="REPAIR (STREAM FIX)" IsEnabled="{Binding !IsBusy}" Cursor="Hand">
+					<Views:RepairView/>
+				</TabItem>
+				
 			</TabControl>
 		</Border>	
 		

@@ -32,6 +32,8 @@ public partial class MainWindowViewModel : ViewModelBase
     private bool _isUpdatingGroupIndex;
     [ObservableProperty] private AppSettings _globalSettings = new();
     [ObservableProperty] private string _conversionTargetFormat = AppConstants.OriginalFormat;
+    [ObservableProperty] private string _repairSelectedEncoder = "Standard (Slow, Best Quality)";
+    [ObservableProperty] private string _repairTargetFormat = ".mp4";
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasFormatWarning))]
     [NotifyPropertyChangedFor(nameof(FormatWarningNotice))]
@@ -166,6 +168,10 @@ public partial class MainWindowViewModel : ViewModelBase
                         if (!AvailableEncoders.Contains(SelectedEncoder))
                         {
                             SelectedEncoder = AvailableEncoders.First();
+                        }
+                        if (!AvailableEncoders.Contains(RepairSelectedEncoder))
+                        {
+                            RepairSelectedEncoder = AvailableEncoders.First();
                         }
 
                         await _settingsService.SaveSettingsAsync(GlobalSettings);
@@ -523,7 +529,16 @@ public partial class MainWindowViewModel : ViewModelBase
         LogService.Instance.Section("Batch Start");
 
         LogService.Instance.Log($"Videos selected: {selectedVideos.Count}");
-        LogService.Instance.Log($"Mode: {(SelectedTabIndex == 0 ? "Encode" : SelectedTabIndex == 1 ? "Stream Copy" : SelectedTabIndex == 3 ? "Merge" : "Split")}");
+        string modeName = SelectedTabIndex switch
+        {
+            0 => "Encode",
+            1 => "Stream Copy",
+            2 => "Split",
+            3 => "Merge",
+            4 => "Stream Repair",
+            _ => "Unknown"
+        };
+        LogService.Instance.Log($"Mode: {modeName}");
         LogService.Instance.Log($"Encoder preset: {SelectedEncoder}");
         LogService.Instance.Log($"Default format: {GlobalSettings.DefaultOutputFormat}");
         LogService.Instance.Log($"Strip metadata: {StripMetadata}");
@@ -772,6 +787,22 @@ public partial class MainWindowViewModel : ViewModelBase
 
 
                     }
+                    else if (SelectedTabIndex == 4)
+                    {
+                        finalOutputPath = _fileService.GenerateRepairOutputPath(video.FilePath, RepairTargetFormat);
+
+                        if (!AppConstants.EncoderMap.TryGetValue(RepairSelectedEncoder, out string? repairEncoderValue))
+                            repairEncoderValue = "libx264";
+
+                        StatusMessage = "Repairing Stream...";
+                        await _ffmpegService.RepairVideoAsync(video.FilePath, finalOutputPath, repairEncoderValue, trimArgs, p);
+
+                        video.IsCompleted = true;
+                        video.Progress = 100;
+                        completedCount++;
+
+                        LogService.Instance.Log($"Stream repair completed for {video.FileName} -> {finalOutputPath}");
+                    }
 
                     else
                     {                      
@@ -855,7 +886,7 @@ public partial class MainWindowViewModel : ViewModelBase
                                 DisplayedVideos[index] = video;
                             }
 
-                            if (SelectedTabIndex != 1 && GlobalSettings.DeleteOriginalAfterCompression && File.Exists(finalOutputPath) && !video.IsSplitEnabled)
+                            if (SelectedTabIndex == 0 && GlobalSettings.DeleteOriginalAfterCompression && File.Exists(finalOutputPath) && !video.IsSplitEnabled)
                             {
                                 try
                                 {
