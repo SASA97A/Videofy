@@ -358,25 +358,6 @@
 												<MenuItem Header="Open Folder in Explorer"
 														  Command="{Binding $parent[DataGrid].DataContext.OpenFileFolderCommand}"
 														  CommandParameter="{Binding}" />
-												
-												<!--<MenuItem Header="Remove from List"
-														  Foreground="{DynamicResource DangerColor}"
-														  Command="{Binding $parent[DataGrid].DataContext.RemoveVideoCommand}"
-														  CommandParameter="{Binding}" />-->
-												<MenuItem Header="{Binding $parent[DataGrid].DataContext.MergeMenuHeader}" IsVisible="{Binding $parent[DataGrid].DataContext.IsMergeTabActive}">
-													<MenuItem Header="Add to New Group" Command="{Binding $parent[DataGrid].DataContext.AddToNewGroupCommand}"/>
-													<MenuItem Header="Add to Existing Group" IsEnabled="{Binding $parent[DataGrid].DataContext.HasExistingGroups}" ItemsSource="{Binding $parent[DataGrid].DataContext.ExistingGroups}">
-														<MenuItem.ItemTemplate>
-															<DataTemplate x:DataType="vm:GroupOption">
-																<MenuItem Header="{Binding Name}" Command="{Binding $parent[DataGrid].DataContext.AssignToGroupCommand}" CommandParameter="{Binding Id}"/>
-															</DataTemplate>
-														</MenuItem.ItemTemplate>
-													</MenuItem>
-													<Separator/>
-													<MenuItem Header="Remove from Group" Command="{Binding $parent[DataGrid].DataContext.RemoveFromGroupCommand}"/>
-												</MenuItem>
-												
-												<MenuItem Header="Show Group Manager..." IsVisible="{Binding $parent[DataGrid].DataContext.IsMergeTabActive}" Command="{Binding $parent[DataGrid].DataContext.OpenGroupManagerCommand}" CommandParameter="{Binding $parent[Window]}"/>
 											</ContextMenu>
 										</Setter.Value>
 									</Setter>
@@ -384,7 +365,7 @@
 							</DataGrid.Styles>
 
 							<DataGrid.Columns>
-								<DataGridTemplateColumn Width="120" CanUserResize="False">
+								<DataGridTemplateColumn Width="120" CanUserResize="False" IsVisible="{Binding IsSelectedColumnVisible}">
 									<DataGridTemplateColumn.Header>
 										<TextBlock Text="Selected" HorizontalAlignment="Center" />
 									</DataGridTemplateColumn.Header>
