@@ -196,22 +196,36 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     public void ResetSelectedStatus()
     {
-        var targets = Videos.Where(v => v.IsSelected).ToList();
-        if (targets.Count == 0 && Videos.Count > 0)
+        ResetVideoStatus(null);
+    }
+
+    [RelayCommand]
+    public void ResetVideoStatus(VideoFile? video)
+    {
+        var targets = new List<VideoFile>();
+        if (video != null)
         {
-            targets = Videos.ToList();
+            targets.Add(video);
+        }
+        else
+        {
+            targets = Videos.Where(v => v.IsSelected).ToList();
+            if (targets.Count == 0 && Videos.Count > 0)
+            {
+                targets = Videos.ToList();
+            }
         }
 
-        foreach (var video in targets)
+        foreach (var v in targets)
         {
-            video.IsCompleted = false;
-            video.IsProcessing = false;
-            video.Progress = 0;
+            v.IsCompleted = false;
+            v.IsProcessing = false;
+            v.Progress = 0;
 
-            var index = DisplayedVideos.IndexOf(video);
+            var index = DisplayedVideos.IndexOf(v);
             if (index != -1)
             {
-                DisplayedVideos[index] = video;
+                DisplayedVideos[index] = v;
             }
         }
 
