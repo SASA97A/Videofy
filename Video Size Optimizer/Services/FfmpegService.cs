@@ -15,6 +15,7 @@ using Video_Size_Optimizer.Utils;
 public struct ConversionProgress
 {
     public double Percentage;
+    public double CurrentSeconds;
     public string Speed; // e.g., "1.2x"
     public string Fps;   // e.g., "45"
 }
@@ -291,7 +292,7 @@ public class FfmpegService
         }
     }
 
-    private async Task RunFfmpegProcessAsync(string args, IProgress<ConversionProgress>? progress)
+    private async Task RunFfmpegProcessAsync(string args, IProgress<ConversionProgress>? progress, double? knownTotalDuration = null)
     {
         if (!File.Exists(_ffmpegPath)) throw new FileNotFoundException("FFmpeg not found", _ffmpegPath);
 
@@ -309,7 +310,7 @@ public class FfmpegService
                 }
             };
 
-            double totalDuration = 0;
+            double totalDuration = knownTotalDuration ?? 0;
             _currentProcess.Start();
 
             using (var reader = _currentProcess.StandardError)
@@ -335,6 +336,7 @@ public class FfmpegService
                         progress.Report(new ConversionProgress
                         {
                             Percentage = Math.Clamp((currentSeconds / totalDuration) * 100, 0, 100),
+                            CurrentSeconds = currentSeconds,
                             Speed = speedMatch.Success ? speedMatch.Groups[1].Value : "0x",
                             Fps = fpsMatch.Success ? fpsMatch.Groups[1].Value : "0"
                         });
@@ -474,6 +476,7 @@ public class FfmpegService
 
         bool isCompatible = CheckMergeCompatibility(metadataList);
         string chapterFile = GenerateChapterFile(metadataList);
+        double groupTotalDuration = metadataList.Sum(m => m.Duration);
 
         try
         {
@@ -493,7 +496,7 @@ public class FfmpegService
                 var copyArgs = $"-y -f concat -safe 0 -i \"{listFile}\" -i \"{chapterFile}\" -map_metadata 1 -c copy \"{outputPath}\"";
                 try
                 {
-                    await RunFfmpegProcessAsync(copyArgs, progress);
+                    await RunFfmpegProcessAsync(copyArgs, progress, groupTotalDuration);
                 }
                 finally
                 {
@@ -545,7 +548,7 @@ public class FfmpegService
                     codecArgs = $"-c:v {encoder} -crf 18";
 
                 var args = $"-y {string.Join(" ", inputArgs)} -filter_complex \"{fullFiltergraph}\" -map \"[vout]\" -map \"[aout]\" -map_metadata {metadataList.Count} {codecArgs} -c:a aac -b:a 192k \"{outputPath}\"";
-                await RunFfmpegProcessAsync(args, progress);
+                await RunFfmpegProcessAsync(args, progress, groupTotalDuration);
             }
         }
         finally

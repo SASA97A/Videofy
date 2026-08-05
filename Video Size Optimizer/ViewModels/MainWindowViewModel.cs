@@ -608,9 +608,19 @@ public partial class MainWindowViewModel : ViewModelBase
                     var metaList = new List<VideoMetadata>();
                     foreach (var v in groupFiles)
                     {
-                        v.IsProcessing = true;
                         metaList.Add(await _ffprobeService.GetVideoMetadataAsync(v.FilePath));
                     }
+
+                    var fileIntervals = new List<(double startSec, double endSec, double duration)>();
+                    double accumulatedSec = 0;
+                    for (int i = 0; i < groupFiles.Count; i++)
+                    {
+                        double dur = metaList[i].Duration;
+                        fileIntervals.Add((accumulatedSec, accumulatedSec + dur, dur));
+                        accumulatedSec += dur;
+                    }
+
+                    groupFiles[0].IsProcessing = true;
 
                     string firstFilePath = groupFiles[0].FilePath;
                     string outputExt = MergeTargetFormat;
@@ -619,7 +629,33 @@ public partial class MainWindowViewModel : ViewModelBase
 
                     var p = new Progress<ConversionProgress>(cp =>
                     {
-                        foreach (var v in groupFiles) v.UpdateProgress(cp.Percentage, cp.Speed, cp.Fps);
+                        double currentSec = cp.CurrentSeconds;
+
+                        for (int i = 0; i < groupFiles.Count; i++)
+                        {
+                            var v = groupFiles[i];
+                            var (startSec, endSec, dur) = fileIntervals[i];
+
+                            if (currentSec >= endSec)
+                            {
+                                v.Progress = 100;
+                                v.IsCompleted = true;
+                                v.IsProcessing = false;
+                            }
+                            else if (currentSec < startSec)
+                            {
+                                v.Progress = 0;
+                                v.IsCompleted = false;
+                                v.IsProcessing = false;
+                            }
+                            else
+                            {
+                                double filePct = dur > 0 ? ((currentSec - startSec) / dur) * 100 : 100;
+                                v.UpdateProgress(Math.Clamp(filePct, 0, 100), cp.Speed, cp.Fps);
+                                v.IsProcessing = true;
+                                v.IsCompleted = false;
+                            }
+                        }
                         CurrentSpeed = cp.Speed;
                     });
 
