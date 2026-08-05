@@ -33,7 +33,8 @@
 									  Background="{DynamicResource InputBackground}"
 									  BorderBrush="{DynamicResource BorderColor}"
 									  Width="120" FontSize="12" FontWeight="Bold"
-									  Cursor="Hand"/>
+									  Cursor="Hand"
+									  ToolTip.Tip="Select target container format for instant 1:1 stream copy without re-encoding"/>
 						</StackPanel>
 
 						<TextBlock Text="Fast container conversion without re-encoding video data."
@@ -62,7 +63,7 @@
 					Padding="15,10"
 					VerticalAlignment="Stretch">
 				<StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-					<Button Command="{Binding TogglePauseCommand}" IsVisible="{Binding IsBusy}" Width="42" Height="42" Background="{DynamicResource InputBackground}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="6" Cursor="Hand">
+					<Button Command="{Binding TogglePauseCommand}" IsVisible="{Binding IsBusy}" Width="42" Height="42" Background="{DynamicResource InputBackground}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="6" Cursor="Hand" ToolTip.Tip="Pause or Resume Processing">
 						<Panel>
 							<Image Width="16" Height="16" IsVisible="{Binding !IsPaused}">
 								<Image.Source>
@@ -79,7 +80,8 @@
 					<Button Command="{Binding HandleActionCommand}" Content="{Binding ActionButtonText}"
 							Padding="24,0" Height="42" VerticalContentAlignment="Center" Cursor="Hand"
 							Background="{Binding ActionButtonColor}" Foreground="{DynamicResource TertiaryBackground}"
-							FontWeight="Black" FontSize="13" CornerRadius="6"/>
+							FontWeight="Black" FontSize="13" CornerRadius="6"
+							ToolTip.Tip="Start instant container conversion or stop processing"/>
 				</StackPanel>
 			</Border>
 		</Grid>

@@ -33,7 +33,8 @@
 									  Background="{DynamicResource InputBackground}"
 									  BorderBrush="{DynamicResource BorderColor}"
 									  Width="170" FontSize="12"
-									  Cursor="Hand"/>
+									  Cursor="Hand"
+									  ToolTip.Tip="Select video encoder to use if re-encoding is required during video concatenation"/>
 						</StackPanel>
 
 						<StackPanel Orientation="Horizontal" Spacing="8">
@@ -44,12 +45,14 @@
 									  Background="{DynamicResource InputBackground}"
 									  BorderBrush="{DynamicResource BorderColor}"
 									  Width="120" FontSize="12" FontWeight="Bold"
-									  Cursor="Hand"/>
+									  Cursor="Hand"
+									  ToolTip.Tip="Select output container format for merged video file"/>
 						</StackPanel>
 
 						<CheckBox IsChecked="{Binding MergeForceReencode}"
 								  IsEnabled="{Binding !IsBusy}"
-								  Cursor="Hand" Padding="6,0">
+								  Cursor="Hand" Padding="6,0"
+								  ToolTip.Tip="Force full video re-encoding using the selected encoder, even when input video streams match">
 							<StackPanel Orientation="Horizontal" Spacing="6">
 								<TextBlock Text="Force Re-encode" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource MainText}"/>
 								<Border Background="{DynamicResource InputBackground}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="10" Width="16" Height="16" ToolTip.Tip="Forces full video re-encoding using the selected encoder, even if input videos have matching codecs and resolutions. Useful for ensuring uniform encoding or fixing stream sync issues.">
@@ -68,7 +71,8 @@
 								CornerRadius="4"
 								Padding="10,4"
 								FontSize="12"
-								Cursor="Hand"/>
+								Cursor="Hand"
+								ToolTip.Tip="Open Merge Group Manager dialog to reorder videos and manage group assignments"/>
 					</StackPanel>
 
 					<!-- Merge Info Banner -->
@@ -91,7 +95,7 @@
 					Padding="15,10"
 					VerticalAlignment="Stretch">
 				<StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-					<Button Command="{Binding TogglePauseCommand}" IsVisible="{Binding IsBusy}" Width="42" Height="42" Background="{DynamicResource InputBackground}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="6" Cursor="Hand">
+					<Button Command="{Binding TogglePauseCommand}" IsVisible="{Binding IsBusy}" Width="42" Height="42" Background="{DynamicResource InputBackground}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="6" Cursor="Hand" ToolTip.Tip="Pause or Resume Processing">
 						<Panel>
 							<Image Width="16" Height="16" IsVisible="{Binding !IsPaused}">
 								<Image.Source>
@@ -108,7 +112,8 @@
 					<Button Command="{Binding HandleActionCommand}" Content="{Binding ActionButtonText}"
 							Padding="24,0" Height="42" VerticalContentAlignment="Center" Cursor="Hand"
 							Background="{Binding ActionButtonColor}" Foreground="{DynamicResource TertiaryBackground}"
-							FontWeight="Black" FontSize="13" CornerRadius="6"/>
+							FontWeight="Black" FontSize="13" CornerRadius="6"
+							ToolTip.Tip="Start batch video merge or stop processing"/>
 				</StackPanel>
 			</Border>
 		</Grid>

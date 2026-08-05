@@ -40,7 +40,8 @@
 										   FontSize="13"
 										   FontWeight="Bold"
 										   Foreground="{DynamicResource MainText}"
-										   VerticalContentAlignment="Center"/>
+										   VerticalContentAlignment="Center"
+										   ToolTip.Tip="Target size in MB per split chunk segment (approximate keyframe boundary cut)"/>
 						</StackPanel>
 
 						<TextBlock Text="Splitting size is approximate (~10% buffer)."
@@ -69,7 +70,7 @@
 					Padding="15,10"
 					VerticalAlignment="Stretch">
 				<StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-					<Button Command="{Binding TogglePauseCommand}" IsVisible="{Binding IsBusy}" Width="42" Height="42" Background="{DynamicResource InputBackground}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="6" Cursor="Hand">
+					<Button Command="{Binding TogglePauseCommand}" IsVisible="{Binding IsBusy}" Width="42" Height="42" Background="{DynamicResource InputBackground}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="6" Cursor="Hand" ToolTip.Tip="Pause or Resume Processing">
 						<Panel>
 							<Image Width="16" Height="16" IsVisible="{Binding !IsPaused}">
 								<Image.Source>
@@ -86,7 +87,8 @@
 					<Button Command="{Binding HandleActionCommand}" Content="{Binding ActionButtonText}"
 							Padding="24,0" Height="42" VerticalContentAlignment="Center" Cursor="Hand"
 							Background="{Binding ActionButtonColor}" Foreground="{DynamicResource TertiaryBackground}"
-							FontWeight="Black" FontSize="13" CornerRadius="6"/>
+							FontWeight="Black" FontSize="13" CornerRadius="6"
+							ToolTip.Tip="Start splitting video into segment chunks or stop processing"/>
 				</StackPanel>
 			</Border>
 		</Grid>

@@ -25,25 +25,25 @@
 						<!-- Encoder -->
 						<StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Spacing="6" Margin="0,0,15,6">
 							<TextBlock Text="Encoder:" VerticalAlignment="Center" Foreground="{DynamicResource SecondaryText}" FontSize="12" Width="60"/>
-							<ComboBox ItemsSource="{Binding AvailableEncoders}" SelectedItem="{Binding SelectedEncoder}" IsEnabled="{Binding !IsBusy}" Background="{DynamicResource InputBackground}" BorderBrush="{DynamicResource BorderColor}" FontSize="12" Width="170" Cursor="Hand"/>
+							<ComboBox ItemsSource="{Binding AvailableEncoders}" SelectedItem="{Binding SelectedEncoder}" IsEnabled="{Binding !IsBusy}" Background="{DynamicResource InputBackground}" BorderBrush="{DynamicResource BorderColor}" FontSize="12" Width="170" Cursor="Hand" ToolTip.Tip="Select video encoder (Standard CPU x265 or detected GPU hardware encoders: NVENC, AMF, QSV)"/>
 						</StackPanel>
 
 						<!-- Output Format -->
 						<StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="6" Margin="0,0,0,6">
 							<TextBlock Text="Format:" VerticalAlignment="Center" Foreground="{DynamicResource SecondaryText}" FontSize="12" Width="55"/>
-							<ComboBox ItemsSource="{Binding OutputFormats}" SelectedItem="{Binding SelectedOutputFormat}" IsEnabled="{Binding !IsBusy}" Background="{DynamicResource InputBackground}" BorderBrush="{DynamicResource BorderColor}" FontSize="12" Width="110" Cursor="Hand"/>
+							<ComboBox ItemsSource="{Binding OutputFormats}" SelectedItem="{Binding SelectedOutputFormat}" IsEnabled="{Binding !IsBusy}" Background="{DynamicResource InputBackground}" BorderBrush="{DynamicResource BorderColor}" FontSize="12" Width="110" Cursor="Hand" ToolTip.Tip="Select output video container format (.mp4, .mkv, .mov, .webm, .avi, etc.)"/>
 						</StackPanel>
 
 						<!-- Target Res -->
 						<StackPanel Grid.Row="1" Grid.Column="0" Orientation="Horizontal" Spacing="6" Margin="0,0,15,0">
 							<TextBlock Text="Target Res:" VerticalAlignment="Center" Foreground="{DynamicResource SecondaryText}" FontSize="12" Width="60"/>
-							<ComboBox ItemsSource="{Binding ResolutionOptions}" SelectedItem="{Binding SelectedResolution}" IsEnabled="{Binding !IsBusy}" Background="{DynamicResource InputBackground}" BorderBrush="{DynamicResource BorderColor}" FontSize="12" Width="170" Cursor="Hand"/>
+							<ComboBox ItemsSource="{Binding ResolutionOptions}" SelectedItem="{Binding SelectedResolution}" IsEnabled="{Binding !IsBusy}" Background="{DynamicResource InputBackground}" BorderBrush="{DynamicResource BorderColor}" FontSize="12" Width="170" Cursor="Hand" ToolTip.Tip="Select target max resolution (Original, 4K, 1440p, 1080p, 720p, etc.). Video will not upscale if source is smaller"/>
 						</StackPanel>
 
 						<!-- Max FPS -->
 						<StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Spacing="6">
 							<TextBlock Text="Max FPS:" VerticalAlignment="Center" Foreground="{DynamicResource SecondaryText}" FontSize="12" Width="55"/>
-							<ComboBox ItemsSource="{Binding FpsOptions}" SelectedItem="{Binding SelectedFps}" IsEnabled="{Binding !IsBusy}" Background="{DynamicResource InputBackground}" BorderBrush="{DynamicResource BorderColor}" FontSize="12" Width="110" Cursor="Hand"/>
+							<ComboBox ItemsSource="{Binding FpsOptions}" SelectedItem="{Binding SelectedFps}" IsEnabled="{Binding !IsBusy}" Background="{DynamicResource InputBackground}" BorderBrush="{DynamicResource BorderColor}" FontSize="12" Width="110" Cursor="Hand" ToolTip.Tip="Select max framerate cap (Original, 60, 30, 24 FPS)"/>
 						</StackPanel>
 					</Grid>
 
@@ -89,7 +89,7 @@
 
 					<Grid ColumnDefinitions="*, Auto" Margin="0,6,0,0">
 						<StackPanel Grid.Column="0" VerticalAlignment="Center">
-							<Slider Value="{Binding CrfValue}" Minimum="1" Maximum="35" IsEnabled="{Binding !IsBusy}" IsSnapToTickEnabled="True" TickFrequency="1" VerticalAlignment="Center" Cursor="Hand"/>
+							<Slider Value="{Binding CrfValue}" Minimum="1" Maximum="35" IsEnabled="{Binding !IsBusy}" IsSnapToTickEnabled="True" TickFrequency="1" VerticalAlignment="Center" Cursor="Hand" ToolTip.Tip="Adjust Constant Rate Factor (CRF). Lower values = higher quality (larger file); higher values = smaller size (more compression)"/>
 							<Grid Margin="0,-4,0,0">
 								<TextBlock Text="Smaller File Size" Foreground="{DynamicResource SecondaryText}" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Left"/>
 								<TextBlock Text="Higher Quality" Foreground="{DynamicResource SecondaryText}" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Right"/>
@@ -130,7 +130,8 @@
 					<Button Command="{Binding HandleActionCommand}" Content="{Binding ActionButtonText}"
 							Padding="24,0" Height="42" VerticalContentAlignment="Center" Cursor="Hand"
 							Background="{Binding ActionButtonColor}" Foreground="{DynamicResource TertiaryBackground}"
-							FontWeight="Black" FontSize="13" CornerRadius="6"/>
+							FontWeight="Black" FontSize="13" CornerRadius="6"
+							ToolTip.Tip="Start batch optimization process or stop current operation"/>
 				</StackPanel>
 			</Border>
 		</Grid>
