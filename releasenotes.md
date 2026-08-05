@@ -7,9 +7,13 @@
 - **Smart Video Merge Tab:** Introduced batch merge capabilities allowing sequential concatenation of multiple groups of videos. Supports dynamic group assignments and sequence ordering directly from the grid context menu or the dedicated Group Manager Window.
 - **Group Assign ComboBox:** Integrates a context-aware dropdown inside the main grid to assign groups directly to rows when the `MERGE` tab is active, replacing the compression override settings column.
 - **Merge Tab Encoder Selection:** The Merge tab now includes its own dedicated encoder dropdown, allowing users to select GPU-accelerated encoders (NVIDIA NVENC, AMD AMF, Intel QSV) or CPU encoding independently from the compression tab. This removes the CPU-only limitation when re-encoding merged videos.
+- **Dedicated Group Manager Button:** Added a dedicated **Group Manager...** button directly in the Merge tab toolbar for quick access to group reordering and management.
+- **Force Re-encode Tooltip:** Added an informative tooltip explaining Force Re-encode vs. lossless stream copy concatenation.
 
 ## UI Enhancements
-- **Dynamic Column Visibility:** The "Group Assign" and "Group" columns are now only visible when the MERGE tab is active. The "Override" settings column is shown only in the OPTIMIZE and CONVERT tabs. This keeps the grid clean and contextually relevant to the selected workflow.
+- **Dynamic Column Visibility:** The "Group Assign" and "Group" columns are visible only when the MERGE tab is active, and the "Selected" checkbox column is automatically hidden in the MERGE tab. The "Override" settings column is shown only in the OPTIMIZE and CONVERT tabs.
+- **Streamlined Context Menu:** Removed grouping options from the DataGrid row right-click context menu in favor of the dedicated Group Assign column and Group Manager window.
+- **Clearer Merge Guidance:** Updated the Merge tab instruction banner to provide explicit grouping instructions and clarify that output merged files are saved to the folder location of the first video in the group sequence.
 
 ## Fixes & Improvements
 - **Log Viewer Wrapping Fix:** Resolved an issue where long log lines were clipped horizontally when the log window was resized. Long log entries now wrap properly while maintaining vertical alignment with the start of the message text.
