@@ -16,7 +16,7 @@
 				<TextBlock Text="Encoder Settings" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource SystemAccentColor}"/>
 
 				<StackPanel Spacing="5">
-					<CheckBox IsChecked="{Binding DeleteOriginal}" Cursor="Hand" Content="Delete original file after successful compression" FontSize="13" Foreground="{DynamicResource MainText}"/>
+					<CheckBox IsChecked="{Binding DeleteOriginal}" Cursor="Hand" Content="Delete original file after successful compression" FontSize="13" Foreground="{DynamicResource MainText}" ToolTip.Tip="Automatically delete the source video file after successful compression (Warning: Cannot be undone!)"/>
 					<StackPanel Orientation="Horizontal" Spacing="6" Margin="32,0,0,0">
 						<Image Width="14" Height="14" VerticalAlignment="Center">
 							<Image.Source>
@@ -36,7 +36,8 @@
 							  Cursor="Hand"
 							  Content="Allow processing of already optimized videos"
 							  FontSize="13"
-							  Foreground="{DynamicResource MainText}"/>
+							  Foreground="{DynamicResource MainText}"
+							  ToolTip.Tip="Allow Videofy to re-process files containing output tags like '-CRF' or '-Target'"/>
 					<TextBlock Text="Allows re-compressing files containing '-CRF' or '-Target'"
 							   FontSize="12" Foreground="{DynamicResource SecondaryText}" Margin="32,0,0,0"/>
 				</StackPanel>
@@ -46,7 +47,8 @@
 							  Cursor="Hand"
 							  Content="Enable Bitrate Ceiling (Safety Cap)"
 							  FontSize="13"
-							  Foreground="{DynamicResource MainText}"/>
+							  Foreground="{DynamicResource MainText}"
+							  ToolTip.Tip="Caps output bitrate to prevent file size expansion on noisy or high-entropy videos"/>
 					<TextBlock Text="Ensures the output file never exceeds the original bitrate. Useful for grainy or noisy videos where CRF might otherwise increase the file size."
 							   FontSize="12"
 							   Foreground="{DynamicResource SecondaryText}"
@@ -54,7 +56,7 @@
 							   TextWrapping="Wrap"/>
 				</StackPanel>
 
-				<CheckBox IsChecked="{Binding PreventSleep}" Cursor="Hand" Content="Prevent system sleep during processing" FontSize="13" Foreground="{DynamicResource MainText}"/>
+				<CheckBox IsChecked="{Binding PreventSleep}" Cursor="Hand" Content="Prevent system sleep during processing" FontSize="13" Foreground="{DynamicResource MainText}" ToolTip.Tip="Prevent computer from going to sleep while a batch encoding job is active"/>
 				
 				<StackPanel Spacing="5">
 					<StackPanel Orientation="Horizontal" Spacing="10">
