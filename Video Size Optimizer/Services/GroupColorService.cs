@@ -23,7 +23,7 @@ public static class GroupColorService
         (Brush.Parse("#CDDC39"), Brush.Parse("#000000")), // G15: Acid Lime
         (Brush.Parse("#0288D1"), Brush.Parse("#FFFFFF")), // G16: Sky Blue
         (Brush.Parse("#1B5E20"), Brush.Parse("#FFFFFF")), // G17: Dark Jungle Pine
-        (Brush.Parse("#F50057"), Brush.Parse("#FFFFFF")), // G18: Ruby Crimson Pink
+        (Brush.Parse("#26A69A"), Brush.Parse("#000000")), // G18: Seafoam Mint Green
         (Brush.Parse("#4A148C"), Brush.Parse("#FFFFFF")), // G19: Deep Imperial Purple
         (Brush.Parse("#1DE9B6"), Brush.Parse("#000000")), // G20: Turquoise Mint
         (Brush.Parse("#FF6D00"), Brush.Parse("#000000")), // G21: Flame Orange
