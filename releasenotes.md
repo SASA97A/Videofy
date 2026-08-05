@@ -12,6 +12,7 @@
 - **Reset Status to Ready:** Added a dedicated **Reset Status** action allowing users to reset completed videos back to `Ready` (0% progress) so they can be re-processed across any tab. Accessible via top bar button (`↺ Reset Status`), Edit menu (`Reset Status to Ready`), and DataGrid right-click context menu (`Reset Status to Ready`).
 
 ## UI Enhancements
+- **Integrated Custom Title Bar:** Replaced OS native window title bar with a custom cross-platform title bar combining App Branding, integrated Menu Bar (`File`, `Edit`, `View`, `Tools`, `Help`), window drag area, and `FluentIcons` vector window control buttons (Minimize, Maximize/Restore, Close).
 - **Dynamic Column Visibility:** The "Group Assign" and "Group" columns are visible only when the MERGE tab is active, and the "Selected" checkbox column is automatically hidden in the MERGE tab. The "Override" settings column is shown only in the OPTIMIZE and CONVERT tabs.
 - **Multi-Group Badge Coloring:** Group badges now display 30 distinct, WCAG AA compliant contrast colors across groups 1 through 30+, refined for wide hue separation and instant visual recognition across all merge groups.
 - **Streamlined Context Menu:** Removed grouping options from the DataGrid row right-click context menu in favor of the dedicated Group Assign column and Group Manager window.
