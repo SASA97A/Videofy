@@ -12,7 +12,7 @@
 
 ## UI Enhancements
 - **Dynamic Column Visibility:** The "Group Assign" and "Group" columns are visible only when the MERGE tab is active, and the "Selected" checkbox column is automatically hidden in the MERGE tab. The "Override" settings column is shown only in the OPTIMIZE and CONVERT tabs.
-- **Multi-Group Badge Coloring:** Group badges now display distinct, WCAG AA compliant contrast colors for groups 1 through 30+, providing instant visual recognition between different merge groups.
+- **Multi-Group Badge Coloring:** Group badges now display 30 distinct, WCAG AA compliant contrast colors across groups 1 through 30+, refined for wide hue separation and instant visual recognition across all merge groups.
 - **Streamlined Context Menu:** Removed grouping options from the DataGrid row right-click context menu in favor of the dedicated Group Assign column and Group Manager window.
 - **Clearer Merge Guidance:** Updated the Merge tab instruction banner to provide explicit grouping instructions and clarify that output merged files are saved to the folder location of the first video in the group sequence.
 
