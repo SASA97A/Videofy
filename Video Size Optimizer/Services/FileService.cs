@@ -46,11 +46,6 @@ public class FileService
         return BuildFinalPath(inputPath, $"-Target{targetMb}MB", ResolveOutputExtension(inputPath, extension));
     }
 
-    public string GenerateRepairOutputPath(string inputPath, string extension)
-    {
-        return BuildFinalPath(inputPath, "_repaired", ResolveOutputExtension(inputPath, extension));
-    }
-
     private string ResolveOutputExtension(string inputPath, string requestedFormat)
     {
         if (string.IsNullOrWhiteSpace(requestedFormat) || requestedFormat == AppConstants.OriginalFormat)

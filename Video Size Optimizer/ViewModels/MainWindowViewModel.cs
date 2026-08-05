@@ -32,8 +32,6 @@ public partial class MainWindowViewModel : ViewModelBase
     private bool _isUpdatingGroupIndex;
     [ObservableProperty] private AppSettings _globalSettings = new();
     [ObservableProperty] private string _conversionTargetFormat = AppConstants.OriginalFormat;
-    [ObservableProperty] private string _repairSelectedEncoder = "Standard (Slow, Best Quality)";
-    [ObservableProperty] private string _repairTargetFormat = ".mp4";
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasFormatWarning))]
     [NotifyPropertyChangedFor(nameof(FormatWarningNotice))]
@@ -169,10 +167,6 @@ public partial class MainWindowViewModel : ViewModelBase
                         {
                             SelectedEncoder = AvailableEncoders.First();
                         }
-                        if (!AvailableEncoders.Contains(RepairSelectedEncoder))
-                        {
-                            RepairSelectedEncoder = AvailableEncoders.First();
-                        }
 
                         await _settingsService.SaveSettingsAsync(GlobalSettings);
                         LogService.Instance.Log($"Hardware detection complete. Supported hardware encoders: {string.Join(", ", detectedEncoders)}", LogLevel.Success, "Hardware");
@@ -196,6 +190,32 @@ public partial class MainWindowViewModel : ViewModelBase
                 });
             });
         }
+    }
+
+    // Reset completed/processing status of videos
+    [RelayCommand]
+    public void ResetSelectedStatus()
+    {
+        var targets = Videos.Where(v => v.IsSelected).ToList();
+        if (targets.Count == 0 && Videos.Count > 0)
+        {
+            targets = Videos.ToList();
+        }
+
+        foreach (var video in targets)
+        {
+            video.IsCompleted = false;
+            video.IsProcessing = false;
+            video.Progress = 0;
+
+            var index = DisplayedVideos.IndexOf(video);
+            if (index != -1)
+            {
+                DisplayedVideos[index] = video;
+            }
+        }
+
+        LogService.Instance.Log($"Reset status for {targets.Count} video(s) to Ready.", LogLevel.Info, "Main");
     }
 
     // Check for updates
@@ -535,7 +555,6 @@ public partial class MainWindowViewModel : ViewModelBase
             1 => "Stream Copy",
             2 => "Split",
             3 => "Merge",
-            4 => "Stream Repair",
             _ => "Unknown"
         };
         LogService.Instance.Log($"Mode: {modeName}");
@@ -787,23 +806,6 @@ public partial class MainWindowViewModel : ViewModelBase
 
 
                     }
-                    else if (SelectedTabIndex == 4)
-                    {
-                        finalOutputPath = _fileService.GenerateRepairOutputPath(video.FilePath, RepairTargetFormat);
-
-                        if (!AppConstants.EncoderMap.TryGetValue(RepairSelectedEncoder, out string? repairEncoderValue))
-                            repairEncoderValue = "libx264";
-
-                        StatusMessage = "Repairing Stream...";
-                        await _ffmpegService.RepairVideoAsync(video.FilePath, finalOutputPath, repairEncoderValue, trimArgs, p);
-
-                        video.IsCompleted = true;
-                        video.Progress = 100;
-                        completedCount++;
-
-                        LogService.Instance.Log($"Stream repair completed for {video.FileName} -> {finalOutputPath}");
-                    }
-
                     else
                     {                      
 

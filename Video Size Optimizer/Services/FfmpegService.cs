@@ -291,50 +291,6 @@ public class FfmpegService
         }
     }
 
-    // Repair & Remux Stream
-    public async Task RepairVideoAsync(string input, string output, string encoder, string trimArgs, IProgress<ConversionProgress>? progress = null)
-    {
-        try
-        {
-            string vopts;
-            if (encoder.Contains("nvenc"))
-            {
-                vopts = "-preset p5 -cq 20 -b:v 0";
-            }
-            else if (encoder.Contains("amf"))
-            {
-                vopts = "-rc vbr_peak -qp_i 20 -qp_p 20 -quality quality";
-            }
-            else if (encoder.Contains("qsv"))
-            {
-                vopts = "-preset veryfast -global_quality 20";
-            }
-            else
-            {
-                vopts = "-preset slow -crf 18";
-            }
-
-            string extension = Path.GetExtension(output).ToLowerInvariant();
-            bool isMkv = extension == ".mkv";
-            string subCodec = isMkv ? "-c:s copy" : "-c:s mov_text";
-
-            string repairFlags = "-fflags +genpts+discardcorrupt -err_detect ignore_err -analyzeduration 200M -probesize 200M";
-            string streamMaps = "-map 0:v:0 -map 0:a? -map 0:s?";
-            string videoEncoderArgs = $"-c:v {encoder} {vopts} -pix_fmt yuv420p";
-            string audioEncoderArgs = "-c:a aac -b:a 192k -ar 48000 -af aresample=async=1000";
-            string timingFlags = "-fps_mode cfr -movflags +faststart -max_interleave_delta 0 -avoid_negative_ts make_zero";
-
-            var args = $"-hide_banner -y {repairFlags} {trimArgs} -i \"{input}\" {streamMaps} {videoEncoderArgs} {audioEncoderArgs} {subCodec} {timingFlags} \"{output}\"";
-
-            await RunFfmpegProcessAsync(args, progress);
-        }
-        catch (Exception ex)
-        {
-            LogService.Instance.Log($"Stream repair failed. Input={input} | Output={output} | Error: {ex.Message}", LogLevel.Error, "FFMPEG");
-            throw;
-        }
-    }
-
     private async Task RunFfmpegProcessAsync(string args, IProgress<ConversionProgress>? progress)
     {
         if (!File.Exists(_ffmpegPath)) throw new FileNotFoundException("FFmpeg not found", _ffmpegPath);
