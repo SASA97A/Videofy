@@ -65,6 +65,7 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         OnPropertyChanged(nameof(IsMergeTabActive));
         OnPropertyChanged(nameof(IsOverrideVisible));
+        OnPropertyChanged(nameof(IsSelectedColumnVisible));
     }
 
     [ObservableProperty] private int crfValue = 28;
@@ -1392,6 +1393,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public bool IsMergeTabActive => SelectedTabIndex == 3;
     public bool IsOverrideVisible => SelectedTabIndex == 0 || SelectedTabIndex == 1;
+    public bool IsSelectedColumnVisible => SelectedTabIndex != 3;
     public ObservableCollection<GroupOption> ExistingGroups { get; } = new();
     public bool HasExistingGroups => ExistingGroups.Count > 0;
 
