@@ -365,7 +365,7 @@
 							</DataGrid.Styles>
 
 							<DataGrid.Columns>
-								<DataGridTemplateColumn Width="120" CanUserResize="False" IsVisible="{Binding IsSelectedColumnVisible}">
+								<DataGridTemplateColumn Width="120" SortMemberPath="IsSelected" CanUserResize="False" IsVisible="{Binding IsSelectedColumnVisible}">
 									<DataGridTemplateColumn.Header>
 										<TextBlock Text="Selected" HorizontalAlignment="Center" />
 									</DataGridTemplateColumn.Header>
@@ -434,7 +434,7 @@
 									</DataGridTemplateColumn.CellTemplate>
 								</DataGridTemplateColumn>
 
-								<DataGridTemplateColumn Header="Group Assign" Width="140" IsVisible="{Binding IsMergeTabActive}">
+								<DataGridTemplateColumn Header="Group Assign" Width="140" SortMemberPath="GroupSortKey" IsVisible="{Binding IsMergeTabActive}">
 									<DataGridTemplateColumn.CellTemplate>
 										<DataTemplate>
 											<ComboBox ItemsSource="{Binding $parent[DataGrid].((vm:MainWindowViewModel)DataContext).GroupIndexChoices}"
@@ -447,7 +447,7 @@
 									</DataGridTemplateColumn.CellTemplate>
 								</DataGridTemplateColumn>
 
-								<DataGridTemplateColumn Header="Group" Width="100" CanUserResize="False" IsVisible="{Binding IsMergeTabActive}">
+								<DataGridTemplateColumn Header="Group" Width="100" SortMemberPath="GroupSortKey" CanUserResize="False" IsVisible="{Binding IsMergeTabActive}">
 									<DataGridTemplateColumn.CellTemplate>
 										<DataTemplate>
 											<Border IsVisible="{Binding HasGroup}"
@@ -465,7 +465,7 @@
 									</DataGridTemplateColumn.CellTemplate>
 								</DataGridTemplateColumn>
 
-								<DataGridTemplateColumn Header="Status" Width="150" CanUserResize="False">
+								<DataGridTemplateColumn Header="Status" Width="150" SortMemberPath="StatusSortKey" CanUserResize="False">
 									<DataGridTemplateColumn.CellTemplate>
 										<DataTemplate>
 											<Grid Margin="10,0">
@@ -515,7 +515,7 @@
 								</DataGridTemplateColumn>
 
 
-								<DataGridTemplateColumn Header="Override" Width="110" IsVisible="{Binding IsOverrideVisible}">
+								<DataGridTemplateColumn Header="Override" Width="110" SortMemberPath="HasCustomSettings" IsVisible="{Binding IsOverrideVisible}">
 									<DataTemplate>
 										<Button
 												Background="Transparent"

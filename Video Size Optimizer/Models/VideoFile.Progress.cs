@@ -16,6 +16,16 @@ namespace Video_Size_Optimizer.Models
                                   FileName.Contains("-Target", StringComparison.OrdinalIgnoreCase))
                                   && !IsProcessing && !IsCompleted;
         public bool IsReady => !IsProcessing && !IsCompleted && !IsInvalid;
+        public int StatusSortKey
+        {
+            get
+            {
+                if (IsCompleted) return 2;
+                if (IsProcessing) return 1;
+                if (IsInvalid) return 3;
+                return 0; // Ready
+            }
+        }
         partial void OnProgressChanged(double value) => OnPropertyChanged(nameof(ShowIndeterminate));
         partial void OnIsProcessingChanged(bool value) => RefreshStatusProperties();
         partial void OnIsCompletedChanged(bool value) => RefreshStatusProperties();
@@ -25,6 +35,7 @@ namespace Video_Size_Optimizer.Models
             OnPropertyChanged(nameof(IsInvalid));
             OnPropertyChanged(nameof(IsReady));
             OnPropertyChanged(nameof(ShowIndeterminate));
+            OnPropertyChanged(nameof(StatusSortKey));
         }
 
         public void UpdateProgress(double percentage, string speed, string fps)

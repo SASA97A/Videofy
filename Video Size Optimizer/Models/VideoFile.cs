@@ -36,14 +36,17 @@ public partial class VideoFile : ObservableObject
     [NotifyPropertyChangedFor(nameof(GroupOrderDisplay))]
     [NotifyPropertyChangedFor(nameof(GroupBadgeBackground))]
     [NotifyPropertyChangedFor(nameof(GroupBadgeForeground))]
+    [NotifyPropertyChangedFor(nameof(GroupSortKey))]
     private int _groupIndexUi = 0;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(GroupOrderDisplay))]
+    [NotifyPropertyChangedFor(nameof(GroupSortKey))]
     private int _sequenceNumber = 1;
 
     public bool HasGroup => GroupNumber.HasValue;
     public string GroupOrderDisplay => HasGroup ? $"G{GroupNumber} - #{SequenceNumber}" : string.Empty;
+    public int GroupSortKey => GroupIndexUi * 1000 + SequenceNumber;
     public IBrush GroupBadgeBackground => GroupColorService.GetGroupColor(GroupNumber).Background;
     public IBrush GroupBadgeForeground => GroupColorService.GetGroupColor(GroupNumber).Foreground;
 
