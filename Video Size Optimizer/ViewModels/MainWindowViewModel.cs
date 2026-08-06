@@ -608,7 +608,12 @@ public partial class MainWindowViewModel : ViewModelBase
                     var metaList = new List<VideoMetadata>();
                     foreach (var v in groupFiles)
                     {
-                        metaList.Add(await _ffprobeService.GetVideoMetadataAsync(v.FilePath));
+                        var meta = await _ffprobeService.GetVideoMetadataAsync(v.FilePath);
+                        if (meta.Duration > 0)
+                        {
+                            v.DurationSeconds = meta.Duration;
+                        }
+                        metaList.Add(meta);
                     }
 
                     var fileIntervals = new List<(double startSec, double endSec, double duration)>();

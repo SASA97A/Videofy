@@ -26,3 +26,4 @@
 - **BOM-less FFmpeg I/O:** Temp metadata and concat list files are written in UTF-8 without BOM, resolving the immediate FFmpeg crash `-541478725` (`AVERROR_INVALIDDATA`).
 - **Consistent FFmpeg Codec Flag:** Normalized video codec flag from `-vcodec` to `-c:v` across all encoder paths for consistency with FFmpeg's modern syntax.
 - **Mid-Work Cancellation Status Fix:** Fixed an issue where stopping batch processing mid-work or encountering an error would leave files prematurely marked as `Completed`. Cancelled or failed items now cleanly reset to `Ready` status with `0%` progress.
+- **Merge Tab Sequential Progress & Timer Fix:** Resolved an issue where batch video merging prematurely filled progress bars to 100% on the first video segment and displayed 0 remaining time. Video duration is now properly loaded during group probing, allowing progress bars and ETA countdown timers to accurately track each file segment sequentially.
