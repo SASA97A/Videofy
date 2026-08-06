@@ -667,7 +667,51 @@ public partial class MainWindowViewModel : ViewModelBase
                     if (!AppConstants.EncoderMap.TryGetValue(MergeSelectedEncoder, out string? encoderValue))
                         encoderValue = "libx264";
 
-                    await _ffmpegService.MergeVideosAsync(metaList, finalPath, MergeForceReencode, encoderValue, p);
+                    bool mergeSuccess = false;
+                    try
+                    {
+                        await _ffmpegService.MergeVideosAsync(metaList, finalPath, MergeForceReencode, encoderValue, p);
+                        mergeSuccess = IsBusy;
+                    }
+                    catch (Exception ex)
+                    {
+                        LogService.Instance.Log($"Group {groupId} merge failed or was cancelled | {ex.Message}", LogLevel.Warning, "MERGE");
+                    }
+
+                    if (!mergeSuccess || !IsBusy)
+                    {
+                        if (File.Exists(finalPath))
+                        {
+                            try
+                            {
+                                File.Delete(finalPath);
+                                LogService.Instance.Log($"Cleaned up partial merged file: {finalPath}", LogLevel.Info, "MERGE");
+                            }
+                            catch (Exception ex)
+                            {
+                                LogService.Instance.Log($"Failed to delete partial merged file {finalPath} | {ex.Message}", LogLevel.Error, "MERGE");
+                            }
+                        }
+
+                        foreach (var v in groupFiles)
+                        {
+                            v.IsCompleted = false;
+                            v.IsProcessing = false;
+                            v.Progress = 0;
+                            v.Eta = "";
+                        }
+
+                        if (!IsBusy)
+                        {
+                            LogService.Instance.Log($"Group {groupId} merge cancelled by user.", LogLevel.Warning, "MERGE");
+                            break;
+                        }
+                        else
+                        {
+                            LogService.Instance.Log($"Group {groupId} merge failed.", LogLevel.Error, "MERGE");
+                            continue;
+                        }
+                    }
 
                     foreach (var v in groupFiles)
                     {
