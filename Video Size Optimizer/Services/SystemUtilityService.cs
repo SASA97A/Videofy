@@ -279,5 +279,81 @@ namespace Video_Size_Optimizer
             }
         }
 
+        public async Task SendDesktopNotificationAsync(string title, string message)
+        {
+            await Task.Run(() =>
+            {
+                try
+                {
+                    bool isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+                    bool isMac = RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
+                    bool isLinux = RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
+
+                    if (isWindows)
+                    {
+                        string script = $"[reflection.assembly]::loadwithpartialname('System.Windows.Forms'); $n = new-object System.Windows.Forms.NotifyIcon; $n.Icon = [System.Drawing.SystemIcons]::Information; $n.Visible = $true; $n.ShowBalloonTip(5000, '{title.Replace("'", "''")}', '{message.Replace("'", "''").Replace("\n", " ")}', [System.Windows.Forms.ToolTipIcon]::Info)";
+                        Process.Start(new ProcessStartInfo
+                        {
+                            FileName = "powershell",
+                            Arguments = $"-NoProfile -ExecutionPolicy Bypass -Command \"{script}\"",
+                            CreateNoWindow = true,
+                            UseShellExecute = false
+                        });
+                    }
+                    else if (isMac)
+                    {
+                        string cleanMsg = message.Replace("\"", "\\\"").Replace("\n", " ");
+                        string cleanTitle = title.Replace("\"", "\\\"");
+                        Process.Start("osascript", $"-e \"display notification \\\"{cleanMsg}\\\" with title \\\"{cleanTitle}\\\"\"");
+                    }
+                    else if (isLinux)
+                    {
+                        string cleanMsg = message.Replace("\"", "\\\"").Replace("\n", " ");
+                        string cleanTitle = title.Replace("\"", "\\\"");
+                        Process.Start("notify-send", $"\"{cleanTitle}\" \"{cleanMsg}\"");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LogService.Instance.Log($"Desktop notification error: {ex.Message}", LogLevel.Error, "SysUtil");
+                }
+            });
+        }
+
+        public async Task PlayCompletionSoundAsync()
+        {
+            await Task.Run(() =>
+            {
+                try
+                {
+                    bool isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+                    bool isMac = RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
+                    bool isLinux = RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
+
+                    if (isWindows)
+                    {
+                        Process.Start(new ProcessStartInfo
+                        {
+                            FileName = "powershell",
+                            Arguments = "-NoProfile -ExecutionPolicy Bypass -Command \"[System.Media.SystemSounds]::Asterisk.Play()\"",
+                            CreateNoWindow = true,
+                            UseShellExecute = false
+                        });
+                    }
+                    else if (isMac)
+                    {
+                        Process.Start("afplay", "/System/Library/Sounds/Glass.aiff");
+                    }
+                    else if (isLinux)
+                    {
+                        Process.Start("paplay", "/usr/share/sounds/freedesktop/stereo/complete.oga");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LogService.Instance.Log($"Audio chime error: {ex.Message}", LogLevel.Error, "SysUtil");
+                }
+            });
+        }
     }
 }
