@@ -291,11 +291,24 @@ namespace Video_Size_Optimizer
 
                     if (isWindows)
                     {
-                        string script = $"[reflection.assembly]::loadwithpartialname('System.Windows.Forms'); $n = new-object System.Windows.Forms.NotifyIcon; $n.Icon = [System.Drawing.SystemIcons]::Information; $n.Visible = $true; $n.ShowBalloonTip(5000, '{title.Replace("'", "''")}', '{message.Replace("'", "''").Replace("\n", " ")}', [System.Windows.Forms.ToolTipIcon]::Info)";
+                        string cleanTitle = title.Replace("'", "''");
+                        string cleanMsg = message.Replace("'", "''").Replace("\r\n", " ").Replace("\n", " ");
+                        
+                        string psScript = @"
+[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
+[Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType = WindowsRuntime] | Out-Null
+$xml = New-Object Windows.Data.Xml.Dom.XmlDocument
+$xml.LoadXml('<toast><visual><binding template=""ToastGeneric""><text>" + cleanTitle + @"</text><text>" + cleanMsg + @"</text></binding></visual></toast>')
+$toast = [Windows.UI.Notifications.ToastNotification]::new($xml)
+[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('Videofy').Show($toast)
+";
+                        byte[] scriptBytes = System.Text.Encoding.Unicode.GetBytes(psScript);
+                        string base64Script = Convert.ToBase64String(scriptBytes);
+
                         Process.Start(new ProcessStartInfo
                         {
                             FileName = "powershell",
-                            Arguments = $"-NoProfile -ExecutionPolicy Bypass -Command \"{script}\"",
+                            Arguments = $"-NoProfile -ExecutionPolicy Bypass -EncodedCommand {base64Script}",
                             CreateNoWindow = true,
                             UseShellExecute = false
                         });
@@ -332,10 +345,13 @@ namespace Video_Size_Optimizer
 
                     if (isWindows)
                     {
+                        string soundScript = "[System.Media.SystemSounds]::Asterisk.Play()";
+                        byte[] soundBytes = System.Text.Encoding.Unicode.GetBytes(soundScript);
+                        string base64Sound = Convert.ToBase64String(soundBytes);
                         Process.Start(new ProcessStartInfo
                         {
                             FileName = "powershell",
-                            Arguments = "-NoProfile -ExecutionPolicy Bypass -Command \"[System.Media.SystemSounds]::Asterisk.Play()\"",
+                            Arguments = $"-NoProfile -ExecutionPolicy Bypass -EncodedCommand {base64Sound}",
                             CreateNoWindow = true,
                             UseShellExecute = false
                         });
