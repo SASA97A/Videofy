@@ -6,83 +6,95 @@
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="Video_Size_Optimizer.Views.SettingsWindow"
 		x:DataType="vm:SettingsViewModel"
-        Title="Global Settings" Width="420" Height="670"
+        Title="Global Settings" Width="440" Height="700"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource MainBackground}" Foreground="{DynamicResource MainText}">
 
 	<Grid RowDefinitions="*, Auto">
 		<ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
 			<StackPanel Margin="20" Spacing="20">
-				<TextBlock Text="Encoder Settings" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource SystemAccentColor}"/>
+				<!-- Encoder Settings Category Box -->
+				<StackPanel Spacing="8">
+					<TextBlock Text="Encoder Settings" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource SystemAccentColor}"/>
 
-				<StackPanel Spacing="5">
-					<CheckBox IsChecked="{Binding DeleteOriginal}" Cursor="Hand" Content="Delete original file after successful compression" FontSize="13" Foreground="{DynamicResource MainText}" ToolTip.Tip="Automatically delete the source video file after successful compression (Warning: Cannot be undone!)"/>
-					<StackPanel Orientation="Horizontal" Spacing="6" Margin="32,0,0,0">
-						<Image Width="14" Height="14" VerticalAlignment="Center">
-							<Image.Source>
-								<SvgImage Source="/Assets/warning.svg"/>
-							</Image.Source>
-						</Image>
-						<TextBlock Text="Warning: This action cannot be undone."
-								   FontSize="12"
-								   Foreground="{DynamicResource DangerColor}"
-								   FontWeight="SemiBold"
-								   VerticalAlignment="Center"/>
-					</StackPanel>
-				</StackPanel>
+					<Border Background="{DynamicResource SecondaryBackground}"
+							BorderBrush="{DynamicResource BorderColor}"
+							BorderThickness="1"
+							CornerRadius="6"
+							Padding="14,12">
+						<StackPanel Spacing="12">
+							<StackPanel Spacing="5">
+								<CheckBox IsChecked="{Binding DeleteOriginal}" Cursor="Hand" Content="Delete original file after successful compression" FontSize="13" Foreground="{DynamicResource MainText}" ToolTip.Tip="Automatically delete the source video file after successful compression (Warning: Cannot be undone!)"/>
+								<StackPanel Orientation="Horizontal" Spacing="6" Margin="32,0,0,0">
+									<Image Width="14" Height="14" VerticalAlignment="Center">
+										<Image.Source>
+											<SvgImage Source="/Assets/warning.svg"/>
+										</Image.Source>
+									</Image>
+									<TextBlock Text="Warning: This action cannot be undone."
+											   FontSize="12"
+											   Foreground="{DynamicResource DangerColor}"
+											   FontWeight="SemiBold"
+											   VerticalAlignment="Center"/>
+								</StackPanel>
+							</StackPanel>
 
-				<StackPanel Spacing="5">
-					<CheckBox IsChecked="{Binding ProcessAlreadyOptimized}"
-							  Cursor="Hand"
-							  Content="Allow processing of already optimized videos"
-							  FontSize="13"
-							  Foreground="{DynamicResource MainText}"
-							  ToolTip.Tip="Allow Videofy to re-process files containing output tags like '-CRF' or '-Target'"/>
-					<TextBlock Text="Allows re-compressing files containing '-CRF' or '-Target'"
-							   FontSize="12" Foreground="{DynamicResource SecondaryText}" Margin="32,0,0,0"/>
-				</StackPanel>
+							<StackPanel Spacing="5">
+								<CheckBox IsChecked="{Binding ProcessAlreadyOptimized}"
+										  Cursor="Hand"
+										  Content="Allow processing of already optimized videos"
+										  FontSize="13"
+										  Foreground="{DynamicResource MainText}"
+										  ToolTip.Tip="Allow Videofy to re-process files containing output tags like '-CRF' or '-Target'"/>
+								<TextBlock Text="Allows re-compressing files containing '-CRF' or '-Target'"
+										   FontSize="12" Foreground="{DynamicResource SecondaryText}" Margin="32,0,0,0"/>
+							</StackPanel>
 
-				<StackPanel Spacing="5">
-					<CheckBox IsChecked="{Binding PreventUpsampling}"
-							  Cursor="Hand"
-							  Content="Enable Bitrate Ceiling (Safety Cap)"
-							  FontSize="13"
-							  Foreground="{DynamicResource MainText}"
-							  ToolTip.Tip="Caps output bitrate to prevent file size expansion on noisy or high-entropy videos"/>
-					<TextBlock Text="Ensures the output file never exceeds the original bitrate. Useful for grainy or noisy videos where CRF might otherwise increase the file size."
-							   FontSize="12"
-							   Foreground="{DynamicResource SecondaryText}"
-							   Margin="32,0,0,0"
-							   TextWrapping="Wrap"/>
-				</StackPanel>
+							<StackPanel Spacing="5">
+								<CheckBox IsChecked="{Binding PreventUpsampling}"
+										  Cursor="Hand"
+										  Content="Enable Bitrate Ceiling (Safety Cap)"
+										  FontSize="13"
+										  Foreground="{DynamicResource MainText}"
+										  ToolTip.Tip="Caps output bitrate to prevent file size expansion on noisy or high-entropy videos"/>
+								<TextBlock Text="Ensures output bitrate never exceeds original bitrate."
+										   FontSize="12"
+										   Foreground="{DynamicResource SecondaryText}"
+										   Margin="32,0,0,0"
+										   TextWrapping="Wrap"/>
+							</StackPanel>
 
-				<CheckBox IsChecked="{Binding PreventSleep}" Cursor="Hand" Content="Prevent system sleep during processing" FontSize="13" Foreground="{DynamicResource MainText}" ToolTip.Tip="Prevent computer from going to sleep while a batch encoding job is active"/>
-				
-				<StackPanel Spacing="5">
-					<StackPanel Orientation="Horizontal" Spacing="10">
-						<TextBlock Text="Pause if disk space is below:" FontSize="13" Foreground="{DynamicResource MainText}"/>
-						<TextBlock Text="{Binding LowDiskBufferGb, StringFormat='{}{0} GB'}"
-								   Foreground="{DynamicResource SystemAccentColor}" FontWeight="Bold" FontSize="13"/>
-					</StackPanel>
-					<Border Padding="10,0,10,0">
-						<Slider Value="{Binding LowDiskBufferGb}" Minimum="2" Maximum="80"
-								TickFrequency="1" IsSnapToTickEnabled="True" Cursor="Hand"/>
+							<CheckBox IsChecked="{Binding PreventSleep}" Cursor="Hand" Content="Prevent system sleep during processing" FontSize="13" Foreground="{DynamicResource MainText}" ToolTip.Tip="Prevent computer from going to sleep while a batch encoding job is active"/>
+
+							<StackPanel Spacing="5">
+								<StackPanel Orientation="Horizontal" Spacing="10">
+									<TextBlock Text="Pause if disk space is below:" FontSize="13" Foreground="{DynamicResource MainText}"/>
+									<TextBlock Text="{Binding LowDiskBufferGb, StringFormat='{}{0} GB'}"
+											   Foreground="{DynamicResource SystemAccentColor}" FontWeight="Bold" FontSize="13"/>
+								</StackPanel>
+								<Border Padding="10,0,10,0">
+									<Slider Value="{Binding LowDiskBufferGb}" Minimum="2" Maximum="80"
+											TickFrequency="1" IsSnapToTickEnabled="True" Cursor="Hand"/>
+								</Border>
+							</StackPanel>
+
+							<StackPanel Spacing="6">
+								<TextBlock Text="Default Output Format:" FontSize="13" Foreground="{DynamicResource MainText}"/>
+								<ComboBox ItemsSource="{Binding OutputFormats}"
+										  SelectedItem="{Binding SelectedFormat}"
+										  Background="{DynamicResource InputBackground}"
+										  BorderBrush="{DynamicResource BorderColor}"
+										  Width="150" FontSize="13" Cursor="Hand"/>
+							</StackPanel>
+						</StackPanel>
 					</Border>
 				</StackPanel>
 
-				<StackPanel Spacing="6">
-					<TextBlock Text="Default Output Format:" FontSize="13" Foreground="{DynamicResource MainText}"/>
-					<ComboBox ItemsSource="{Binding OutputFormats}"
-							  SelectedItem="{Binding SelectedFormat}"
-							  Background="{DynamicResource InputBackground}"
-							  BorderBrush="{DynamicResource BorderColor}"
-							  Width="150" FontSize="13" Cursor="Hand"/>
-				</StackPanel>
-
-				<StackPanel Spacing="5" Margin="0,10,0,0">
-					<Grid ColumnDefinitions="*, Auto" Margin="5,0,0,10">
+				<!-- Hardware Acceleration Category Box -->
+				<StackPanel Spacing="8">
+					<Grid ColumnDefinitions="*, Auto" Margin="2,0,0,0">
 						<TextBlock Text="Hardware Acceleration"
-								   FontSize="18"
+								   FontSize="16"
 								   FontWeight="Bold"
 								   Foreground="{DynamicResource SystemAccentColor}"
 								   VerticalAlignment="Center"/>
@@ -102,7 +114,7 @@
 							BorderBrush="{DynamicResource BorderColor}"
 							BorderThickness="1"
 							CornerRadius="6"
-							Padding="14,10">
+							Padding="14,12">
 
 						<StackPanel Spacing="6">
 							<TextBlock Text="Enable specific hardware encoders for your GPU:"
@@ -117,9 +129,9 @@
 												  IsChecked="{Binding IsIncluded}"
 												  IsEnabled="{Binding IsSupported}"
 												  FontSize="12.5"
-												  Foreground="{DynamicResource MainText}"
-												  Margin="0,3"
-												  Cursor="Hand"/>
+												  Margin="0,2"
+												  Cursor="Hand"
+												  Foreground="{DynamicResource MainText}"/>
 									</DataTemplate>
 								</ItemsControl.ItemTemplate>
 							</ItemsControl>
@@ -127,68 +139,87 @@
 					</Border>
 				</StackPanel>
 
-				<StackPanel Spacing="5" Margin="0,10,0,0">
-					<TextBlock Text="Misc" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource SystemAccentColor}" Margin="0,0,0,5"/>
+				<!-- Notification & Dialog Settings Category Box -->
+				<StackPanel Spacing="8">
+					<TextBlock Text="Notification &amp; Dialog Settings" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource SystemAccentColor}"/>
 
-					<CheckBox IsChecked="{Binding AutoCheckUpdates}"
-							  Cursor="Hand"
-							  Content="Automatically check for updates on startup"
-							  FontSize="13"
-							  Foreground="{DynamicResource MainText}"/>
+					<Border Background="{DynamicResource SecondaryBackground}"
+							BorderBrush="{DynamicResource BorderColor}"
+							BorderThickness="1"
+							CornerRadius="6"
+							Padding="14,12">
+						<StackPanel Spacing="10">
+							<CheckBox IsChecked="{Binding ModalCompletionMessages}"
+									  Cursor="Hand"
+									  Content="Block app input &amp; keep Task Completion messages on top"
+									  FontSize="13"
+									  Foreground="{DynamicResource MainText}"
+									  ToolTip.Tip="When enabled, batch finished &amp; task completion popups stay on top and disable app window interaction until dismissed."/>
 
-					<TextBlock Text="Additional Input Formats" FontSize="13" Foreground="{DynamicResource MainText}" Margin="0,5,0,0"/>
+							<CheckBox IsChecked="{Binding ModalErrorMessages}"
+									  Cursor="Hand"
+									  Content="Block app input &amp; keep Error &amp; Warning messages on top"
+									  FontSize="13"
+									  Foreground="{DynamicResource MainText}"
+									  ToolTip.Tip="When enabled, error and warning popups stay on top and disable app window interaction until dismissed."/>
 
-					<TextBox Text="{Binding CustomExtensions}"
-							 Watermark="e.g. .mxf, .raw (comma separated)"
-							 FontSize="12"
-							 Background="{DynamicResource InputBackground}"
-							 BorderBrush="{DynamicResource BorderColor}"
-							 Foreground="{DynamicResource MainText}">
-						<ToolTip.Tip>
-							<StackPanel Spacing="2">
-								<TextBlock Text="Videofy will attempt to read these formats when opening folders." FontWeight="SemiBold"/>
-								<TextBlock Text="Note: Processing success depends on your local FFmpeg capabilities." Foreground="{DynamicResource WarningColor}" FontSize="12"/>
+							<CheckBox IsChecked="{Binding ModalInfoMessages}"
+									  Cursor="Hand"
+									  Content="Block app input &amp; keep Informational messages on top"
+									  FontSize="13"
+									  Foreground="{DynamicResource MainText}"
+									  ToolTip.Tip="When enabled, informational and about popups stay on top and disable app window interaction until dismissed."/>
+						</StackPanel>
+					</Border>
+				</StackPanel>
+
+				<!-- Misc & Advanced Category Box -->
+				<StackPanel Spacing="8">
+					<TextBlock Text="Misc &amp; Advanced" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource SystemAccentColor}"/>
+
+					<Border Background="{DynamicResource SecondaryBackground}"
+							BorderBrush="{DynamicResource BorderColor}"
+							BorderThickness="1"
+							CornerRadius="6"
+							Padding="14,12">
+						<StackPanel Spacing="12">
+							<CheckBox IsChecked="{Binding AutoCheckUpdates}"
+									  Cursor="Hand"
+									  Content="Automatically check for updates on startup"
+									  FontSize="13"
+									  Foreground="{DynamicResource MainText}"/>
+
+							<StackPanel Spacing="4">
+								<TextBlock Text="Additional Input Formats:" FontSize="13" Foreground="{DynamicResource MainText}"/>
+								<TextBox Text="{Binding CustomExtensions}"
+										 Watermark="e.g. .mxf, .raw (comma separated)"
+										 FontSize="12"
+										 Background="{DynamicResource InputBackground}"
+										 BorderBrush="{DynamicResource BorderColor}"
+										 Foreground="{DynamicResource MainText}">
+									<ToolTip.Tip>
+										<StackPanel Spacing="2">
+											<TextBlock Text="Videofy will attempt to read these formats when opening folders." FontWeight="SemiBold"/>
+											<TextBlock Text="Note: Processing success depends on your local FFmpeg capabilities." Foreground="{DynamicResource WarningColor}" FontSize="12"/>
+										</StackPanel>
+									</ToolTip.Tip>
+								</TextBox>
 							</StackPanel>
-						</ToolTip.Tip>
-					</TextBox>
-				</StackPanel>
 
-				<StackPanel Spacing="5">
-					<CheckBox IsChecked="{Binding UseSoftwareRendering}"
-							  Cursor="Hand"
-							  Content="Disable UI Hardware Acceleration"
-							  FontSize="13"
-							  Foreground="{DynamicResource MainText}"/>
-					<TextBlock Text="Turn this on if you experience flickering, invisible tooltips, or UI lag. Requires settings to be saved then an application restart to take effect."
-							   FontSize="12"
-							   Foreground="{DynamicResource WarningColor}"
-							   Margin="32,0,0,0"
-							   TextWrapping="Wrap"/>
-				</StackPanel>
-
-				<StackPanel Spacing="5" Margin="0,10,0,0">
-					<TextBlock Text="Notification &amp; Dialog Settings" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource SystemAccentColor}" Margin="0,0,0,5"/>
-
-					<CheckBox IsChecked="{Binding ModalCompletionMessages}"
-							  Cursor="Hand"
-							  Content="Block app input &amp; keep Task Completion messages on top"
-							  FontSize="13"
-							  Foreground="{DynamicResource MainText}"
-							  ToolTip.Tip="When enabled, batch finished &amp; task completion popups stay on top and disable app window interaction until dismissed."/>
-
-					<CheckBox IsChecked="{Binding ModalErrorMessages}"
-							  Cursor="Hand"
-							  Content="Block app input &amp; keep Error &amp; Warning messages on top"
-							  FontSize="13"
-							  Foreground="{DynamicResource MainText}"
-							  ToolTip.Tip="When enabled, error and warning popups stay on top and disable app window interaction until dismissed."/>
-
-					<CheckBox IsChecked="{Binding ModalInfoMessages}"
-							  Cursor="Hand"
-							  Content="Block app input &amp; keep Informational messages on top"
-							  FontSize="13"
-							  Foreground="{DynamicResource MainText}"
-							  ToolTip.Tip="When enabled, informational and about popups stay on top and disable app window interaction until dismissed."/>
+							<StackPanel Spacing="4">
+								<CheckBox IsChecked="{Binding UseSoftwareRendering}"
+										  Cursor="Hand"
+										  Content="Disable UI Hardware Acceleration"
+										  FontSize="13"
+										  Foreground="{DynamicResource MainText}"/>
+								<TextBlock Text="Turn this on if you experience flickering, invisible tooltips, or UI lag. Requires settings to be saved then an application restart."
+										   FontSize="12"
+										   Foreground="{DynamicResource WarningColor}"
+										   Margin="32,0,0,0"
+										   TextWrapping="Wrap"/>
+							</StackPanel>
+						</StackPanel>
+					</Border>
 				</StackPanel>
 			</StackPanel>
 		</ScrollViewer>
