@@ -30,6 +30,8 @@ namespace Video_Size_Optimizer.ViewModels
         [ObservableProperty] private bool _modalCompletionMessages;
         [ObservableProperty] private bool _modalErrorMessages;
         [ObservableProperty] private bool _modalInfoMessages;
+        [ObservableProperty] private bool _playSoundOnCompletion;
+        [ObservableProperty] private bool _sendDesktopNotification;
 
         public List<string> OutputFormats => AppConstants.AvailableFormats;
 
@@ -47,6 +49,8 @@ namespace Video_Size_Optimizer.ViewModels
             ModalCompletionMessages = currentSettings.ModalCompletionMessages;
             ModalErrorMessages = currentSettings.ModalErrorMessages;
             ModalInfoMessages = currentSettings.ModalInfoMessages;
+            PlaySoundOnCompletion = currentSettings.PlaySoundOnCompletion;
+            SendDesktopNotification = currentSettings.SendDesktopNotification;
 
             foreach (var name in AppConstants.HardwareEncoderNames)
             {
@@ -102,7 +106,9 @@ namespace Video_Size_Optimizer.ViewModels
                 AutoCheckUpdatesOnStartup = AutoCheckUpdates,
                 ModalCompletionMessages = ModalCompletionMessages,
                 ModalErrorMessages = ModalErrorMessages,
-                ModalInfoMessages = ModalInfoMessages
+                ModalInfoMessages = ModalInfoMessages,
+                PlaySoundOnCompletion = PlaySoundOnCompletion,
+                SendDesktopNotification = SendDesktopNotification
             };
         }
 

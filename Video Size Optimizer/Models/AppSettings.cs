@@ -21,5 +21,7 @@ namespace Video_Size_Optimizer.Models
         public bool ModalCompletionMessages { get; set; } = true;
         public bool ModalErrorMessages { get; set; } = true;
         public bool ModalInfoMessages { get; set; } = true;
+        public bool PlaySoundOnCompletion { get; set; } = true;
+        public bool SendDesktopNotification { get; set; } = true;
     }
 }
