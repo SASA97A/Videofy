@@ -294,13 +294,48 @@ namespace Video_Size_Optimizer
                         string cleanTitle = title.Replace("'", "''");
                         string cleanMsg = message.Replace("'", "''").Replace("\r\n", " ").Replace("\n", " ");
                         
-                        string psScript = @"
-[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
-[Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType = WindowsRuntime] | Out-Null
-$xml = New-Object Windows.Data.Xml.Dom.XmlDocument
-$xml.LoadXml('<toast><visual><binding template=""ToastGeneric""><text>" + cleanTitle + @"</text><text>" + cleanMsg + @"</text></binding></visual></toast>')
-$toast = [Windows.UI.Notifications.ToastNotification]::new($xml)
-[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('Videofy').Show($toast)
+                        string psScript = $@"
+$shortcutPath = ""$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Videofy.lnk""
+if (-not (Test-Path $shortcutPath)) {{
+    try {{
+        $shell = New-Object -ComObject WScript.Shell
+        $shortcut = $shell.CreateShortcut($shortcutPath)
+        $shortcut.TargetPath = ""$([System.Diagnostics.Process]::GetCurrentProcess().MainModule?.FileName ?? '')""
+        $shortcut.Save()
+    }} catch {{ }}
+}}
+
+try {{
+    [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
+    [Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType = WindowsRuntime] | Out-Null
+    $xml = New-Object Windows.Data.Xml.Dom.XmlDocument
+    $xml.LoadXml('<toast><visual><binding template=""ToastGeneric""><text>{cleanTitle}</text><text>{cleanMsg}</text></binding></visual></toast>')
+    $toast = [Windows.UI.Notifications.ToastNotification]::new($xml)
+    [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('Videofy').Show($toast)
+}} catch {{ }}
+
+try {{
+    Add-Type -AssemblyName System.Windows.Forms
+    Add-Type -AssemblyName System.Drawing
+    $icon = [System.Drawing.SystemIcons]::Information
+    $notify = New-Object System.Windows.Forms.NotifyIcon
+    $notify.Icon = $icon
+    $notify.Visible = $true
+    $notify.BalloonTipTitle = '{cleanTitle}'
+    $notify.BalloonTipText = '{cleanMsg}'
+    $notify.BalloonTipIcon = [System.Windows.Forms.ToolTipIcon]::Info
+    $notify.ShowBalloonTip(5000)
+
+    $timer = New-Object System.Windows.Forms.Timer
+    $timer.Interval = 4000
+    $timer.add_Tick({{
+        $notify.Visible = $false
+        $notify.Dispose()
+        [System.Windows.Forms.Application]::Exit()
+    }})
+    $timer.Start()
+    [System.Windows.Forms.Application]::Run()
+}} catch {{ }}
 ";
                         byte[] scriptBytes = System.Text.Encoding.Unicode.GetBytes(psScript);
                         string base64Script = Convert.ToBase64String(scriptBytes);
