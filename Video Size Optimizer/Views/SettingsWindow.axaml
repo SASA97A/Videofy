@@ -165,6 +165,31 @@
 							   Margin="32,0,0,0"
 							   TextWrapping="Wrap"/>
 				</StackPanel>
+
+				<StackPanel Spacing="5" Margin="0,10,0,0">
+					<TextBlock Text="Notification &amp; Dialog Settings" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource SystemAccentColor}" Margin="0,0,0,5"/>
+
+					<CheckBox IsChecked="{Binding ModalCompletionMessages}"
+							  Cursor="Hand"
+							  Content="Block app input &amp; keep Task Completion messages on top"
+							  FontSize="13"
+							  Foreground="{DynamicResource MainText}"
+							  ToolTip.Tip="When enabled, batch finished &amp; task completion popups stay on top and disable app window interaction until dismissed."/>
+
+					<CheckBox IsChecked="{Binding ModalErrorMessages}"
+							  Cursor="Hand"
+							  Content="Block app input &amp; keep Error &amp; Warning messages on top"
+							  FontSize="13"
+							  Foreground="{DynamicResource MainText}"
+							  ToolTip.Tip="When enabled, error and warning popups stay on top and disable app window interaction until dismissed."/>
+
+					<CheckBox IsChecked="{Binding ModalInfoMessages}"
+							  Cursor="Hand"
+							  Content="Block app input &amp; keep Informational messages on top"
+							  FontSize="13"
+							  Foreground="{DynamicResource MainText}"
+							  ToolTip.Tip="When enabled, informational and about popups stay on top and disable app window interaction until dismissed."/>
+				</StackPanel>
 			</StackPanel>
 		</ScrollViewer>
 		
