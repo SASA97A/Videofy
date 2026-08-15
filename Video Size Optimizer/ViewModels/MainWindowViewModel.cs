@@ -1027,6 +1027,18 @@ public partial class MainWindowViewModel : ViewModelBase
                 LogService.Instance.Log($"Videos processed: {completedCount}");
                 LogService.Instance.Log($"Space saved: {sizeDisplay}", LogLevel.Success);
 
+                if (GlobalSettings.SendDesktopNotification)
+                {
+                    _ = _systemService.SendDesktopNotificationAsync(
+                        "Task Completed - Videofy",
+                        $"Successfully processed {completedCount} video(s).\nTotal space saved: {sizeDisplay}");
+                }
+
+                if (GlobalSettings.PlaySoundOnCompletion)
+                {
+                    _ = _systemService.PlayCompletionSoundAsync();
+                }
+
                 await _messageService.ShowSuccessAsync("Task Completed",
                        $"Successfully processed {completedCount} videos.\n\nTotal space saved: {sizeDisplay}");
                }
