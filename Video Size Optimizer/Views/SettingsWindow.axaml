@@ -139,9 +139,36 @@
 					</Border>
 				</StackPanel>
 
-				<!-- Notification & Dialog Settings Category Box -->
+				<!-- Desktop & System Notifications Category Box -->
 				<StackPanel Spacing="8">
-					<TextBlock Text="Notification &amp; Dialog Settings" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource SystemAccentColor}"/>
+					<TextBlock Text="Desktop &amp; System Notifications" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource SystemAccentColor}"/>
+
+					<Border Background="{DynamicResource SecondaryBackground}"
+							BorderBrush="{DynamicResource BorderColor}"
+							BorderThickness="1"
+							CornerRadius="6"
+							Padding="14,12">
+						<StackPanel Spacing="10">
+							<CheckBox IsChecked="{Binding SendDesktopNotification}"
+									  Cursor="Hand"
+									  Content="Send OS desktop notification when batch processing completes"
+									  FontSize="13"
+									  Foreground="{DynamicResource MainText}"
+									  ToolTip.Tip="When enabled, sends a native desktop notification showing processed videos count and space saved."/>
+
+							<CheckBox IsChecked="{Binding PlaySoundOnCompletion}"
+									  Cursor="Hand"
+									  Content="Play audio chime when batch processing completes"
+									  FontSize="13"
+									  Foreground="{DynamicResource MainText}"
+									  ToolTip.Tip="When enabled, plays a system audio sound when all queued videos complete processing."/>
+						</StackPanel>
+					</Border>
+				</StackPanel>
+
+				<!-- Message Box Modality Category Box -->
+				<StackPanel Spacing="8">
+					<TextBlock Text="Message Box Modality" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource SystemAccentColor}"/>
 
 					<Border Background="{DynamicResource SecondaryBackground}"
 							BorderBrush="{DynamicResource BorderColor}"
@@ -169,20 +196,6 @@
 									  FontSize="13"
 									  Foreground="{DynamicResource MainText}"
 									  ToolTip.Tip="When enabled, informational and about popups stay on top and disable app window interaction until dismissed."/>
-
-							<CheckBox IsChecked="{Binding SendDesktopNotification}"
-									  Cursor="Hand"
-									  Content="Send OS desktop notification when batch processing completes"
-									  FontSize="13"
-									  Foreground="{DynamicResource MainText}"
-									  ToolTip.Tip="When enabled, sends a native desktop notification showing processed videos count and space saved."/>
-
-							<CheckBox IsChecked="{Binding PlaySoundOnCompletion}"
-									  Cursor="Hand"
-									  Content="Play audio chime when batch processing completes"
-									  FontSize="13"
-									  Foreground="{DynamicResource MainText}"
-									  ToolTip.Tip="When enabled, plays a system audio sound when all queued videos complete processing."/>
 						</StackPanel>
 					</Border>
 				</StackPanel>
