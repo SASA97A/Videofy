@@ -285,6 +285,8 @@ namespace Video_Size_Optimizer
             {
                 try
                 {
+                    LogService.Instance.Log($"Triggering OS notification: {title} - {message}", LogLevel.Info, "SysUtil");
+
                     bool isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
                     bool isMac = RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
                     bool isLinux = RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
@@ -342,10 +344,10 @@ try {{
 
                         Process.Start(new ProcessStartInfo
                         {
-                            FileName = "powershell",
-                            Arguments = $"-NoProfile -ExecutionPolicy Bypass -EncodedCommand {base64Script}",
-                            CreateNoWindow = true,
-                            UseShellExecute = false
+                            FileName = "powershell.exe",
+                            Arguments = $"-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -EncodedCommand {base64Script}",
+                            UseShellExecute = true,
+                            WindowStyle = ProcessWindowStyle.Hidden
                         });
                     }
                     else if (isMac)
@@ -374,6 +376,8 @@ try {{
             {
                 try
                 {
+                    LogService.Instance.Log("Triggering completion audio chime...", LogLevel.Info, "SysUtil");
+
                     bool isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
                     bool isMac = RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
                     bool isLinux = RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
@@ -385,10 +389,10 @@ try {{
                         string base64Sound = Convert.ToBase64String(soundBytes);
                         Process.Start(new ProcessStartInfo
                         {
-                            FileName = "powershell",
-                            Arguments = $"-NoProfile -ExecutionPolicy Bypass -EncodedCommand {base64Sound}",
-                            CreateNoWindow = true,
-                            UseShellExecute = false
+                            FileName = "powershell.exe",
+                            Arguments = $"-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -EncodedCommand {base64Sound}",
+                            UseShellExecute = true,
+                            WindowStyle = ProcessWindowStyle.Hidden
                         });
                     }
                     else if (isMac)
