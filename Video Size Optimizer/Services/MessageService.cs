@@ -1,6 +1,7 @@
 ﻿using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Media;
 using MsBox.Avalonia;
 using MsBox.Avalonia.Dto;
 using MsBox.Avalonia.Enums;
@@ -22,10 +23,23 @@ namespace Video_Size_Optimizer
             return null;
         }
 
+        private MessageBoxStandardParams CreateParams(string title, string message, ButtonEnum buttons, Icon icon)
+        {
+            return new MessageBoxStandardParams
+            {
+                ContentTitle = title,
+                ContentMessage = message + "  ",
+                ButtonDefinitions = buttons,
+                Icon = icon,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner
+            };
+        }
+
         public async Task ShowInfoAsync(string title, string message)
         {
             var settings = _settingsService.LoadSettings();
-            var box = MessageBoxManager.GetMessageBoxStandard(title, message + "  ", ButtonEnum.Ok, Icon.Info);
+            var parameters = CreateParams(title, message, ButtonEnum.Ok, Icon.Info);
+            var box = MessageBoxManager.GetMessageBoxStandard(parameters);
             var mainWindow = GetMainWindow();
             if (settings.ModalInfoMessages && mainWindow != null)
             {
@@ -40,7 +54,8 @@ namespace Video_Size_Optimizer
         public async Task ShowErrorAsync(string title, string message)
         {
             var settings = _settingsService.LoadSettings();
-            var box = MessageBoxManager.GetMessageBoxStandard(title, message + "  ", ButtonEnum.Ok, Icon.Error);
+            var parameters = CreateParams(title, message, ButtonEnum.Ok, Icon.Error);
+            var box = MessageBoxManager.GetMessageBoxStandard(parameters);
             var mainWindow = GetMainWindow();
             if (settings.ModalErrorMessages && mainWindow != null)
             {
@@ -55,7 +70,8 @@ namespace Video_Size_Optimizer
         public async Task ShowSuccessAsync(string title, string message)
         {
             var settings = _settingsService.LoadSettings();
-            var box = MessageBoxManager.GetMessageBoxStandard(title, message + "  ", ButtonEnum.Ok, Icon.Success);
+            var parameters = CreateParams(title, message, ButtonEnum.Ok, Icon.Success);
+            var box = MessageBoxManager.GetMessageBoxStandard(parameters);
             var mainWindow = GetMainWindow();
             if (settings.ModalCompletionMessages && mainWindow != null)
             {
@@ -69,6 +85,7 @@ namespace Video_Size_Optimizer
 
         public async Task<ButtonResult> ShowCustomAsync(MessageBoxStandardParams parameters)
         {
+            parameters.WindowStartupLocation = WindowStartupLocation.CenterOwner;
             var box = MessageBoxManager.GetMessageBoxStandard(parameters);
             var mainWindow = GetMainWindow();
             if (mainWindow != null)
@@ -80,7 +97,8 @@ namespace Video_Size_Optimizer
 
         public async Task<bool> ShowYesNoAsync(string title, string message)
         {
-            var box = MessageBoxManager.GetMessageBoxStandard(title, message + "  ", ButtonEnum.YesNo, Icon.Question);
+            var parameters = CreateParams(title, message, ButtonEnum.YesNo, Icon.Question);
+            var box = MessageBoxManager.GetMessageBoxStandard(parameters);
             var mainWindow = GetMainWindow();
             ButtonResult result;
             if (mainWindow != null)
