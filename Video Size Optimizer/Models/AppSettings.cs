@@ -18,5 +18,8 @@ namespace Video_Size_Optimizer.Models
         public bool AutoCheckUpdatesOnStartup { get; set; } = true;
         public List<string> SupportedHardwareEncoders { get; set; } = new();
         public bool HasDetectedHardware { get; set; } = false;
+        public bool ModalCompletionMessages { get; set; } = true;
+        public bool ModalErrorMessages { get; set; } = true;
+        public bool ModalInfoMessages { get; set; } = true;
     }
 }

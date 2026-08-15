@@ -27,6 +27,9 @@ namespace Video_Size_Optimizer.ViewModels
         [ObservableProperty] private bool _preventUpsampling;
         [ObservableProperty] private bool _useSoftwareRendering;
         [ObservableProperty] private bool _autoCheckUpdates;
+        [ObservableProperty] private bool _modalCompletionMessages;
+        [ObservableProperty] private bool _modalErrorMessages;
+        [ObservableProperty] private bool _modalInfoMessages;
 
         public List<string> OutputFormats => AppConstants.AvailableFormats;
 
@@ -41,6 +44,9 @@ namespace Video_Size_Optimizer.ViewModels
             PreventUpsampling = currentSettings.PreventUpsampling;
             UseSoftwareRendering = currentSettings.UseSoftwareRendering;
             AutoCheckUpdates = currentSettings.AutoCheckUpdatesOnStartup;
+            ModalCompletionMessages = currentSettings.ModalCompletionMessages;
+            ModalErrorMessages = currentSettings.ModalErrorMessages;
+            ModalInfoMessages = currentSettings.ModalInfoMessages;
 
             foreach (var name in AppConstants.HardwareEncoderNames)
             {
@@ -93,7 +99,10 @@ namespace Video_Size_Optimizer.ViewModels
                 CustomExtensions = CustomExtensions,
                 PreventUpsampling = PreventUpsampling,
                 UseSoftwareRendering = UseSoftwareRendering,
-                AutoCheckUpdatesOnStartup = AutoCheckUpdates
+                AutoCheckUpdatesOnStartup = AutoCheckUpdates,
+                ModalCompletionMessages = ModalCompletionMessages,
+                ModalErrorMessages = ModalErrorMessages,
+                ModalInfoMessages = ModalInfoMessages
             };
         }
 
