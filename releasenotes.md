@@ -1,6 +1,7 @@
 # Release Notes - Videofy v1.4.3
 
 ## New Features
+- **Cross-Platform OS Desktop Notifications & Audio Chimes:** Videofy now sends native desktop notifications and plays audio chimes upon batch completion on Windows, macOS, and Linux, displaying the total number of processed videos and disk space saved.
 - **Notification & Dialog Modality Settings:** Added user-configurable settings in Global Settings ("Notification & Dialog Settings") to control whether Task Completion, Error & Warning, and Informational popups stay locked on top of the app window and disable background app interaction, preventing completion messages from disappearing or getting minimized behind the main window.
 - **GPU Hardware Auto-Detection:** Videofy now automatically scans and detects compatible GPU hardware encoders on your system during application startup and within the settings menu.
 - **Cross-Platform Support:** Compatible with NVIDIA NVENC, AMD AMF, and Intel QSV across Windows, macOS, and Linux.
