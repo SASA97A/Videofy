@@ -295,17 +295,19 @@ namespace Video_Size_Optimizer
                     {
                         string cleanTitle = title.Replace("'", "''");
                         string cleanMsg = message.Replace("'", "''").Replace("\r\n", " ").Replace("\n", " ");
-                        
+                        string currentExe = Process.GetCurrentProcess().MainModule?.FileName?.Replace("'", "''") ?? "";
+                        string currentDir = AppDomain.CurrentDomain.BaseDirectory.Replace("'", "''");
+
                         string psScript = $@"
 $shortcutPath = ""$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Videofy.lnk""
-if (-not (Test-Path $shortcutPath)) {{
-    try {{
-        $shell = New-Object -ComObject WScript.Shell
-        $shortcut = $shell.CreateShortcut($shortcutPath)
-        $shortcut.TargetPath = ""$([System.Diagnostics.Process]::GetCurrentProcess().MainModule?.FileName ?? '')""
-        $shortcut.Save()
-    }} catch {{ }}
-}}
+try {{
+    $shell = New-Object -ComObject WScript.Shell
+    $shortcut = $shell.CreateShortcut($shortcutPath)
+    $shortcut.TargetPath = '{currentExe}'
+    $shortcut.WorkingDirectory = '{currentDir}'
+    $shortcut.Description = 'Videofy Video Size Optimizer'
+    $shortcut.Save()
+}} catch {{ }}
 
 try {{
     [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
