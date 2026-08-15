@@ -19,6 +19,7 @@
 - **Streamlined Context Menu:** Removed grouping options from the DataGrid row right-click context menu in favor of the dedicated Group Assign column and Group Manager window.
 - **Clearer Merge Guidance:** Updated the Merge tab instruction banner to provide explicit grouping instructions and clarify that output merged files are saved to the folder location of the first video in the group sequence.
 - **Comprehensive UI Tooltips Audit:** Added detailed, explanatory hover tooltips and hand cursors to every control, button, menu item, slider, combo box, and tab header across all application screens (`MainWindow`, `CompressionView`, `ConversionView`, `SplitView`, `MergeView`, `SettingsWindow`, `RenameWindow`, `MergeGroupsWindow`, and `FileSettingsControl`).
+- **Theme-Consistent Message Boxes:** Message box dialogs now follow Videofy's dark theme palette (`#1E2228` secondary background and `#F8FAFC` main text) and automatically center over the active window.
 
 ## Fixes & Improvements
 - **Log Viewer Wrapping Fix:** Resolved an issue where long log lines were clipped horizontally when the log window was resized. Long log entries now wrap properly while maintaining vertical alignment with the start of the message text.
