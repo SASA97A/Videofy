@@ -1,6 +1,8 @@
+using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 using System.IO;
+using Video_Size_Optimizer.Services;
 using Video_Size_Optimizer.ViewModels;
 
 namespace Video_Size_Optimizer.Models;
@@ -21,6 +23,32 @@ public partial class VideoFile : ObservableObject
     [ObservableProperty] private string folderName = string.Empty;
     [ObservableProperty] private string fileSizeDisplay = "";
     [ObservableProperty] private bool isSelected;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasGroup))]
+    [NotifyPropertyChangedFor(nameof(GroupOrderDisplay))]
+    [NotifyPropertyChangedFor(nameof(GroupBadgeBackground))]
+    [NotifyPropertyChangedFor(nameof(GroupBadgeForeground))]
+    private int? _groupNumber = null;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasGroup))]
+    [NotifyPropertyChangedFor(nameof(GroupOrderDisplay))]
+    [NotifyPropertyChangedFor(nameof(GroupBadgeBackground))]
+    [NotifyPropertyChangedFor(nameof(GroupBadgeForeground))]
+    [NotifyPropertyChangedFor(nameof(GroupSortKey))]
+    private int _groupIndexUi = 0;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(GroupOrderDisplay))]
+    [NotifyPropertyChangedFor(nameof(GroupSortKey))]
+    private int _sequenceNumber = 1;
+
+    public bool HasGroup => GroupNumber.HasValue;
+    public string GroupOrderDisplay => HasGroup ? $"G{GroupNumber} - #{SequenceNumber}" : string.Empty;
+    public int GroupSortKey => GroupIndexUi * 1000 + SequenceNumber;
+    public IBrush GroupBadgeBackground => GroupColorService.GetGroupColor(GroupNumber).Background;
+    public IBrush GroupBadgeForeground => GroupColorService.GetGroupColor(GroupNumber).Foreground;
 
     public void UpdateStatusSize(double newSizeMb)
     {

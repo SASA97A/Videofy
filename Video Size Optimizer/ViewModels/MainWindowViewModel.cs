@@ -29,12 +29,15 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly HashSet<string> _trackedFolders = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _trackedSingleFiles = new(StringComparer.OrdinalIgnoreCase);
     private Views.LogWindow? _logWindow;
+    private bool _isUpdatingGroupIndex;
     [ObservableProperty] private AppSettings _globalSettings = new();
     [ObservableProperty] private string _conversionTargetFormat = AppConstants.OriginalFormat;
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasFormatWarning))]
     [NotifyPropertyChangedFor(nameof(FormatWarningNotice))]
     private string _selectedOutputFormat = AppConstants.OriginalFormat;
+
+    [ObservableProperty] private VideoFile? _selectedVideo;
 
     public bool HasFormatWarning => SelectedOutputFormat.Equals(".mp4", StringComparison.OrdinalIgnoreCase) || SelectedOutputFormat.Equals(".mov", StringComparison.OrdinalIgnoreCase) || SelectedOutputFormat.Equals(".m4v", StringComparison.OrdinalIgnoreCase);
 
@@ -54,7 +57,16 @@ public partial class MainWindowViewModel : ViewModelBase
     public List<string> AvailableEncoders => GlobalSettings.EnabledEncoders;
     public List<string> ResolutionOptions => AppConstants.AvailableResolutionNames;
     public List<string> OutputFormats => AppConstants.AvailableFormats;
+    public string MergeMenuHeader => Videos.Any(v => v.IsSelected) ? "Assign Checked Items to Merge Group" : "Assign to Merge Group";
+    public List<string> MergeOutputFormats => AppConstants.AvailableFormats.Where(f => f != AppConstants.OriginalFormat).ToList();
+    public List<string> GroupIndexChoices { get; } = new() { "None" };
     partial void OnCrfValueChanged(int value) => OnPropertyChanged(nameof(CrfDescription));
+    partial void OnSelectedTabIndexChanged(int value)
+    {
+        OnPropertyChanged(nameof(IsMergeTabActive));
+        OnPropertyChanged(nameof(IsOverrideVisible));
+        OnPropertyChanged(nameof(IsSelectedColumnVisible));
+    }
 
     [ObservableProperty] private int crfValue = 28;
     [ObservableProperty] private string statusMessage = "Ready";
@@ -93,6 +105,10 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public MainWindowViewModel()
     {
+        for (int i = 1; i <= 30; i++)
+        {
+            GroupIndexChoices.Add($"Group {i}");
+        }
 
         LogService.Instance.Section("Application Session Started");
         LogService.Instance.Log("MainWindowViewModel initialized.");
@@ -129,6 +145,40 @@ public partial class MainWindowViewModel : ViewModelBase
         SelectedOutputFormat = GlobalSettings.DefaultOutputFormat;
         LogService.Instance.Log("Global settings loaded.");
 
+        if (!GlobalSettings.HasDetectedHardware && DependencyChecker.CheckBinaries(out _))
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    LogService.Instance.Log("Running initial hardware detection...", LogLevel.Info, "Hardware");
+                    var detectedEncoders = await _ffmpegService.DetectSupportedHardwareEncodersAsync();
+                    
+                    await Dispatcher.UIThread.InvokeAsync(async () =>
+                    {
+                        GlobalSettings.SupportedHardwareEncoders = detectedEncoders;
+                        var enabled = new List<string> { "Standard (Slow, Best Quality)" };
+                        enabled.AddRange(detectedEncoders);
+                        GlobalSettings.EnabledEncoders = enabled;
+                        GlobalSettings.HasDetectedHardware = true;
+
+                        OnPropertyChanged(nameof(AvailableEncoders));
+                        if (!AvailableEncoders.Contains(SelectedEncoder))
+                        {
+                            SelectedEncoder = AvailableEncoders.First();
+                        }
+
+                        await _settingsService.SaveSettingsAsync(GlobalSettings);
+                        LogService.Instance.Log($"Hardware detection complete. Supported hardware encoders: {string.Join(", ", detectedEncoders)}", LogLevel.Success, "Hardware");
+                    });
+                }
+                catch (Exception ex)
+                {
+                    LogService.Instance.Log($"Initial hardware detection failed: {ex.Message}", LogLevel.Error, "Hardware");
+                }
+            });
+        }
+
         if (GlobalSettings.AutoCheckUpdatesOnStartup)
         {
             _ = Task.Run(async () =>
@@ -140,6 +190,46 @@ public partial class MainWindowViewModel : ViewModelBase
                 });
             });
         }
+    }
+
+    // Reset completed/processing status of videos
+    [RelayCommand]
+    public void ResetSelectedStatus()
+    {
+        ResetVideoStatus(null);
+    }
+
+    [RelayCommand]
+    public void ResetVideoStatus(VideoFile? video)
+    {
+        var targets = new List<VideoFile>();
+        if (video != null)
+        {
+            targets.Add(video);
+        }
+        else
+        {
+            targets = Videos.Where(v => v.IsSelected).ToList();
+            if (targets.Count == 0 && Videos.Count > 0)
+            {
+                targets = Videos.ToList();
+            }
+        }
+
+        foreach (var v in targets)
+        {
+            v.IsCompleted = false;
+            v.IsProcessing = false;
+            v.Progress = 0;
+
+            var index = DisplayedVideos.IndexOf(v);
+            if (index != -1)
+            {
+                DisplayedVideos[index] = v;
+            }
+        }
+
+        LogService.Instance.Log($"Reset status for {targets.Count} video(s) to Ready.", LogLevel.Info, "Main");
     }
 
     // Check for updates
@@ -343,12 +433,73 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             RefreshStats();
         }
+        else if (e.PropertyName == nameof(VideoFile.GroupIndexUi))
+        {
+            if (sender is VideoFile video && !_isUpdatingGroupIndex)
+            {
+                _isUpdatingGroupIndex = true;
+                try
+                {
+                    int? oldGroup = video.GroupNumber;
+                    int? newGroup = video.GroupIndexUi == 0 ? null : video.GroupIndexUi;
+                    
+                    if (oldGroup != newGroup)
+                    {
+                        video.GroupNumber = newGroup;
+                        if (newGroup.HasValue)
+                        {
+                            int maxSeq = Videos
+                                .Where(v => v.GroupNumber == newGroup && v != video)
+                                .Select(v => v.SequenceNumber)
+                                .DefaultIfEmpty(0)
+                                .Max();
+                            video.SequenceNumber = maxSeq + 1;
+                        }
+                        
+                        if (oldGroup.HasValue)
+                        {
+                            ReNormalizeGroupSequence(oldGroup.Value);
+                        }
+                        if (newGroup.HasValue)
+                        {
+                            ReNormalizeGroupSequence(newGroup.Value);
+                        }
+                        
+                        RefreshExistingGroups();
+                    }
+                }
+                finally
+                {
+                    _isUpdatingGroupIndex = false;
+                }
+            }
+        }
+        else if (e.PropertyName == nameof(VideoFile.GroupNumber))
+        {
+            if (sender is VideoFile video && !_isUpdatingGroupIndex)
+            {
+                _isUpdatingGroupIndex = true;
+                try
+                {
+                    int expectedIndex = video.GroupNumber ?? 0;
+                    if (video.GroupIndexUi != expectedIndex)
+                    {
+                        video.GroupIndexUi = expectedIndex;
+                    }
+                }
+                finally
+                {
+                    _isUpdatingGroupIndex = false;
+                }
+            }
+        }
     }
 
     private void RefreshStats()
     {
         OnPropertyChanged(nameof(HasVideos));
         OnPropertyChanged(nameof(SelectionStatus));
+        OnPropertyChanged(nameof(MergeMenuHeader));
     }
 
     private async Task StartCompressionAsync()
@@ -367,7 +518,7 @@ public partial class MainWindowViewModel : ViewModelBase
             return true;
         }).ToList();      
 
-        if (selectedVideos.Count == 0)
+        if (SelectedTabIndex != 3 && selectedVideos.Count == 0)
         {
             LogService.Instance.Log("No videos selected. Batch aborted.");
             await _messageService.ShowInfoAsync("No Selection", AppConstants.NoSelectionMessage);
@@ -412,7 +563,15 @@ public partial class MainWindowViewModel : ViewModelBase
         LogService.Instance.Section("Batch Start");
 
         LogService.Instance.Log($"Videos selected: {selectedVideos.Count}");
-        LogService.Instance.Log($"Mode: {(SelectedTabIndex == 0 ? "Encode" : SelectedTabIndex == 1 ? "Stream Copy" : "Split")}");
+        string modeName = SelectedTabIndex switch
+        {
+            0 => "Encode",
+            1 => "Stream Copy",
+            2 => "Split",
+            3 => "Merge",
+            _ => "Unknown"
+        };
+        LogService.Instance.Log($"Mode: {modeName}");
         LogService.Instance.Log($"Encoder preset: {SelectedEncoder}");
         LogService.Instance.Log($"Default format: {GlobalSettings.DefaultOutputFormat}");
         LogService.Instance.Log($"Strip metadata: {StripMetadata}");
@@ -422,6 +581,150 @@ public partial class MainWindowViewModel : ViewModelBase
 
         try
         {
+            if (SelectedTabIndex == 3)
+            {
+                var singleVideoGroups = Videos.Where(v => v.HasGroup).GroupBy(v => v.GroupNumber!.Value).Where(g => g.Count() < 2).ToList();
+                foreach (var g in singleVideoGroups)
+                {
+                    LogService.Instance.Log($"Group {g.Key} has only 1 video and will be skipped.", LogLevel.Warning, "MERGE");
+                }
+
+                var activeGroups = Videos.Where(v => v.HasGroup).GroupBy(v => v.GroupNumber!.Value).Where(g => g.Count() >= 2).ToList();
+                if (activeGroups.Count == 0)
+                {
+                    LogService.Instance.Log("No valid merge groups found (groups must contain at least 2 videos). Batch aborted.", LogLevel.Warning, "MERGE");
+                    await _messageService.ShowInfoAsync("No Merge Groups", "Please assign at least 2 videos to a merge group before starting.");
+                    return;
+                }
+
+                foreach (var group in activeGroups)
+                {
+                    if (!IsBusy) break;
+
+                    int groupId = group.Key;
+                    var groupFiles = group.OrderBy(v => v.SequenceNumber).ToList();
+                    LogService.Instance.Section($"Merging Group {groupId} ({groupFiles.Count} videos)");
+
+                    var metaList = new List<VideoMetadata>();
+                    foreach (var v in groupFiles)
+                    {
+                        var meta = await _ffprobeService.GetVideoMetadataAsync(v.FilePath);
+                        if (meta.Duration > 0)
+                        {
+                            v.DurationSeconds = meta.Duration;
+                        }
+                        metaList.Add(meta);
+                    }
+
+                    var fileIntervals = new List<(double startSec, double endSec, double duration)>();
+                    double accumulatedSec = 0;
+                    for (int i = 0; i < groupFiles.Count; i++)
+                    {
+                        double dur = metaList[i].Duration;
+                        fileIntervals.Add((accumulatedSec, accumulatedSec + dur, dur));
+                        accumulatedSec += dur;
+                    }
+
+                    groupFiles[0].IsProcessing = true;
+
+                    string firstFilePath = groupFiles[0].FilePath;
+                    string outputExt = MergeTargetFormat;
+                    string finalPath = _fileService.GenerateOutputPath(firstFilePath, 0, outputExt);
+                    finalPath = finalPath.Replace($"-CRF0", $"_merged_Group{groupId}");
+
+                    var p = new Progress<ConversionProgress>(cp =>
+                    {
+                        double currentSec = cp.CurrentSeconds;
+
+                        for (int i = 0; i < groupFiles.Count; i++)
+                        {
+                            var v = groupFiles[i];
+                            var (startSec, endSec, dur) = fileIntervals[i];
+
+                            if (currentSec >= endSec)
+                            {
+                                v.Progress = 100;
+                                v.IsCompleted = true;
+                                v.IsProcessing = false;
+                            }
+                            else if (currentSec < startSec)
+                            {
+                                v.Progress = 0;
+                                v.IsCompleted = false;
+                                v.IsProcessing = false;
+                            }
+                            else
+                            {
+                                double filePct = dur > 0 ? ((currentSec - startSec) / dur) * 100 : 100;
+                                v.UpdateProgress(Math.Clamp(filePct, 0, 100), cp.Speed, cp.Fps);
+                                v.IsProcessing = true;
+                                v.IsCompleted = false;
+                            }
+                        }
+                        CurrentSpeed = cp.Speed;
+                    });
+
+                    if (!AppConstants.EncoderMap.TryGetValue(MergeSelectedEncoder, out string? encoderValue))
+                        encoderValue = "libx264";
+
+                    bool mergeSuccess = false;
+                    try
+                    {
+                        await _ffmpegService.MergeVideosAsync(metaList, finalPath, MergeForceReencode, encoderValue, p);
+                        mergeSuccess = IsBusy;
+                    }
+                    catch (Exception ex)
+                    {
+                        LogService.Instance.Log($"Group {groupId} merge failed or was cancelled | {ex.Message}", LogLevel.Warning, "MERGE");
+                    }
+
+                    if (!mergeSuccess || !IsBusy)
+                    {
+                        if (File.Exists(finalPath))
+                        {
+                            try
+                            {
+                                File.Delete(finalPath);
+                                LogService.Instance.Log($"Cleaned up partial merged file: {finalPath}", LogLevel.Info, "MERGE");
+                            }
+                            catch (Exception ex)
+                            {
+                                LogService.Instance.Log($"Failed to delete partial merged file {finalPath} | {ex.Message}", LogLevel.Error, "MERGE");
+                            }
+                        }
+
+                        foreach (var v in groupFiles)
+                        {
+                            v.IsCompleted = false;
+                            v.IsProcessing = false;
+                            v.Progress = 0;
+                            v.Eta = "";
+                        }
+
+                        if (!IsBusy)
+                        {
+                            LogService.Instance.Log($"Group {groupId} merge cancelled by user.", LogLevel.Warning, "MERGE");
+                            break;
+                        }
+                        else
+                        {
+                            LogService.Instance.Log($"Group {groupId} merge failed.", LogLevel.Error, "MERGE");
+                            continue;
+                        }
+                    }
+
+                    foreach (var v in groupFiles)
+                    {
+                        v.IsCompleted = true;
+                        v.Progress = 100;
+                        v.IsProcessing = false;
+                    }
+
+                    LogService.Instance.Log($"Group {groupId} merged successfully -> {finalPath}", LogLevel.Success, "MERGE");
+                }
+                return;
+            }
+
             foreach (var video in selectedVideos)
             {
                 if (!IsBusy)
@@ -602,7 +905,6 @@ public partial class MainWindowViewModel : ViewModelBase
 
 
                     }
-
                     else
                     {                      
 
@@ -685,7 +987,7 @@ public partial class MainWindowViewModel : ViewModelBase
                                 DisplayedVideos[index] = video;
                             }
 
-                            if (SelectedTabIndex != 1 && GlobalSettings.DeleteOriginalAfterCompression && File.Exists(finalOutputPath) && !video.IsSplitEnabled)
+                            if (SelectedTabIndex == 0 && GlobalSettings.DeleteOriginalAfterCompression && File.Exists(finalOutputPath) && !video.IsSplitEnabled)
                             {
                                 try
                                 {
@@ -724,6 +1026,18 @@ public partial class MainWindowViewModel : ViewModelBase
 
                 LogService.Instance.Log($"Videos processed: {completedCount}");
                 LogService.Instance.Log($"Space saved: {sizeDisplay}", LogLevel.Success);
+
+                if (GlobalSettings.SendDesktopNotification)
+                {
+                    _ = _systemService.SendDesktopNotificationAsync(
+                        "Task Completed - Videofy",
+                        $"Successfully processed {completedCount} video(s).\nTotal space saved: {sizeDisplay}");
+                }
+
+                if (GlobalSettings.PlaySoundOnCompletion)
+                {
+                    _ = _systemService.PlayCompletionSoundAsync();
+                }
 
                 await _messageService.ShowSuccessAsync("Task Completed",
                        $"Successfully processed {completedCount} videos.\n\nTotal space saved: {sizeDisplay}");
@@ -1217,4 +1531,198 @@ public partial class MainWindowViewModel : ViewModelBase
         _logWindow.Show(parent);
     }
 
+    [ObservableProperty] private string _mergeTargetFormat = ".mp4";
+    [ObservableProperty] private bool _mergeForceReencode = false;
+    [ObservableProperty] private string _mergeSelectedEncoder = "Standard (Slow, Best Quality)";
+
+    public bool IsMergeTabActive => SelectedTabIndex == 3;
+    public bool IsOverrideVisible => SelectedTabIndex == 0 || SelectedTabIndex == 1;
+    public bool IsSelectedColumnVisible => SelectedTabIndex != 3;
+    public ObservableCollection<GroupOption> ExistingGroups { get; } = new();
+    public bool HasExistingGroups => ExistingGroups.Count > 0;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SelectedGroupTitle))]
+    [NotifyPropertyChangedFor(nameof(SelectedGroupVideos))]
+    private GroupOption? _selectedGroupOption;
+
+    public string SelectedGroupTitle => SelectedGroupOption != null ? $"Items in {SelectedGroupOption.Name}" : "Select a group to inspect";
+
+    public IEnumerable<VideoFile> SelectedGroupVideos
+    {
+        get
+        {
+            if (SelectedGroupOption == null) return Enumerable.Empty<VideoFile>();
+            return Videos.Where(v => v.GroupNumber == SelectedGroupOption.Id).OrderBy(v => v.SequenceNumber);
+        }
+    }
+
+    public void RefreshExistingGroups()
+    {
+        var currentGroupIds = Videos.Where(v => v.HasGroup).Select(v => v.GroupNumber!.Value).Distinct().OrderBy(g => g).ToList();
+        
+        // Sync ExistingGroups collection
+        var toRemove = ExistingGroups.Where(g => !currentGroupIds.Contains(g.Id)).ToList();
+        foreach (var r in toRemove) ExistingGroups.Remove(r);
+
+        foreach (var id in currentGroupIds)
+        {
+            if (!ExistingGroups.Any(g => g.Id == id))
+            {
+                ExistingGroups.Add(new GroupOption { Id = id });
+            }
+        }
+
+        if (SelectedGroupOption == null || !currentGroupIds.Contains(SelectedGroupOption.Id))
+        {
+            SelectedGroupOption = ExistingGroups.FirstOrDefault();
+        }
+
+        OnPropertyChanged(nameof(SelectedGroupVideos));
+        OnPropertyChanged(nameof(HasExistingGroups));
+    }
+
+    private List<VideoFile> GetTargetVideos()
+    {
+        var checkedVideos = Videos.Where(v => v.IsSelected).ToList();
+        if (checkedVideos.Count > 0)
+        {
+            return checkedVideos;
+        }
+        if (SelectedVideo != null)
+        {
+            return new List<VideoFile> { SelectedVideo };
+        }
+        return new List<VideoFile>();
+    }
+
+    [RelayCommand]
+    public void AddToNewGroup()
+    {
+        var selected = GetTargetVideos();
+        if (selected.Count == 0) return;
+
+        int newId = 1;
+        var existingIds = Videos.Where(v => v.HasGroup).Select(v => v.GroupNumber!.Value).ToHashSet();
+        while (newId <= 30 && existingIds.Contains(newId))
+        {
+            newId++;
+        }
+        if (newId > 30) newId = 30;
+
+        foreach (var v in selected)
+        {
+            v.GroupIndexUi = newId;
+        }
+    }
+
+    [RelayCommand]
+    public void AssignToGroup(object? groupIdObj)
+    {
+        if (groupIdObj == null) return;
+        int groupId = 0;
+        if (groupIdObj is int idInt)
+        {
+            groupId = idInt;
+        }
+        else if (groupIdObj is string idStr && int.TryParse(idStr, out int parsedStr))
+        {
+            groupId = parsedStr;
+        }
+        else
+        {
+            try
+            {
+                groupId = Convert.ToInt32(groupIdObj);
+            }
+            catch
+            {
+                return;
+            }
+        }
+
+        if (groupId <= 0 || groupId > 30) return;
+
+        var selected = GetTargetVideos();
+        if (selected.Count == 0) return;
+
+        foreach (var v in selected)
+        {
+            v.GroupIndexUi = groupId;
+        }
+    }
+
+    [RelayCommand]
+    public void RemoveFromGroup()
+    {
+        var selected = GetTargetVideos();
+        foreach (var v in selected)
+        {
+            v.GroupIndexUi = 0;
+        }
+    }
+
+    [RelayCommand]
+    public async Task OpenGroupManager(Window owner)
+    {
+        RefreshExistingGroups();
+        var win = new Views.MergeGroupsWindow { DataContext = this };
+        await win.ShowDialog(owner);
+    }
+
+    private void ReNormalizeGroupSequence(int groupId)
+    {
+        int seq = 1;
+        foreach (var v in Videos.Where(v => v.GroupNumber == groupId).OrderBy(v => v.SequenceNumber))
+        {
+            v.SequenceNumber = seq++;
+        }
+    }
+
+    [RelayCommand]
+    public void MoveGroupVideoUp(VideoFile video)
+    {
+        if (video == null || !video.HasGroup) return;
+        var groupList = Videos.Where(v => v.GroupNumber == video.GroupNumber).OrderBy(v => v.SequenceNumber).ToList();
+        int idx = groupList.IndexOf(video);
+        if (idx > 0)
+        {
+            var prev = groupList[idx - 1];
+            int tmp = video.SequenceNumber;
+            video.SequenceNumber = prev.SequenceNumber;
+            prev.SequenceNumber = tmp;
+            ReNormalizeGroupSequence(video.GroupNumber!.Value);
+            OnPropertyChanged(nameof(SelectedGroupVideos));
+        }
+    }
+
+    [RelayCommand]
+    public void MoveGroupVideoDown(VideoFile video)
+    {
+        if (video == null || !video.HasGroup) return;
+        var groupList = Videos.Where(v => v.GroupNumber == video.GroupNumber).OrderBy(v => v.SequenceNumber).ToList();
+        int idx = groupList.IndexOf(video);
+        if (idx >= 0 && idx < groupList.Count - 1)
+        {
+            var next = groupList[idx + 1];
+            int tmp = video.SequenceNumber;
+            video.SequenceNumber = next.SequenceNumber;
+            next.SequenceNumber = tmp;
+            ReNormalizeGroupSequence(video.GroupNumber!.Value);
+            OnPropertyChanged(nameof(SelectedGroupVideos));
+        }
+    }
+
+    [RelayCommand]
+    public void RemoveGroupVideo(VideoFile video)
+    {
+        if (video == null) return;
+        video.GroupIndexUi = 0;
+    }
+}
+
+public partial class GroupOption : ObservableObject
+{
+    public int Id { get; set; }
+    public string Name => $"Group {Id}";
 }

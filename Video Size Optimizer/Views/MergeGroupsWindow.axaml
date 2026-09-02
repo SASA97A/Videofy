@@ -1,0 +1,59 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Video_Size_Optimizer.ViewModels"
+        xmlns:model="using:Video_Size_Optimizer.Models"
+        x:Class="Video_Size_Optimizer.Views.MergeGroupsWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="Merge Group Manager" Width="700" Height="450"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource MainBackground}" Foreground="{DynamicResource MainText}">
+
+	<Grid RowDefinitions="*, Auto" Margin="15">
+		<Grid Grid.Row="0" ColumnDefinitions="200, *">
+			<!-- Groups Left Panel -->
+			<Border Grid.Column="0" Background="{DynamicResource SecondaryBackground}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="6" Margin="0,0,10,0" Padding="10">
+				<DockPanel LastChildFill="True">
+					<TextBlock DockPanel.Dock="Top" Text="Groups" FontWeight="Bold" FontSize="14" Foreground="{DynamicResource SystemAccentColor}" Margin="0,0,0,10"/>
+					<ListBox ItemsSource="{Binding ExistingGroups}" SelectedItem="{Binding SelectedGroupOption}" Background="Transparent">
+						<ListBox.ItemTemplate>
+							<DataTemplate x:DataType="vm:GroupOption">
+								<TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold" Padding="6,4"/>
+							</DataTemplate>
+						</ListBox.ItemTemplate>
+					</ListBox>
+				</DockPanel>
+			</Border>
+
+			<!-- Group Contents Right Panel -->
+			<Border Grid.Column="1" Background="{DynamicResource SecondaryBackground}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="6" Padding="10">
+				<DockPanel LastChildFill="True">
+					<TextBlock DockPanel.Dock="Top" Text="{Binding SelectedGroupTitle}" FontWeight="Bold" FontSize="14" Foreground="{DynamicResource SystemAccentColor}" Margin="0,0,0,10"/>
+					
+					<ListBox ItemsSource="{Binding SelectedGroupVideos}" Background="Transparent">
+						<ListBox.ItemTemplate>
+							<DataTemplate x:DataType="model:VideoFile">
+								<Border Background="{DynamicResource InputBackground}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="4" Padding="10,6" Margin="0,3">
+									<Grid ColumnDefinitions="Auto, *, Auto">
+										<Border Grid.Column="0" Background="{Binding GroupBadgeBackground}" CornerRadius="3" Padding="6,2" Margin="0,0,10,0" VerticalAlignment="Center">
+											<TextBlock Text="{Binding SequenceNumber, StringFormat='#{0}'}" Foreground="{Binding GroupBadgeForeground}" FontWeight="Bold" FontSize="11"/>
+										</Border>
+										
+										<TextBlock Grid.Column="1" Text="{Binding FileName}" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource MainText}"/>
+										
+										<StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+											<Button Content="▲" Command="{Binding $parent[Window].DataContext.MoveGroupVideoUpCommand}" CommandParameter="{Binding}" Padding="8,2" FontSize="10" Cursor="Hand" ToolTip.Tip="Move video up in merge sequence order"/>
+											<Button Content="▼" Command="{Binding $parent[Window].DataContext.MoveGroupVideoDownCommand}" CommandParameter="{Binding}" Padding="8,2" FontSize="10" Cursor="Hand" ToolTip.Tip="Move video down in merge sequence order"/>
+											<Button Content="❌" Command="{Binding $parent[Window].DataContext.RemoveGroupVideoCommand}" CommandParameter="{Binding}" Padding="8,2" FontSize="10" Cursor="Hand" ToolTip.Tip="Remove video from this merge group"/>
+										</StackPanel>
+									</Grid>
+								</Border>
+							</DataTemplate>
+						</ListBox.ItemTemplate>
+					</ListBox>
+				</DockPanel>
+			</Border>
+		</Grid>
+
+		<Button Grid.Row="1" Content="Close" Click="OnCloseClick" HorizontalAlignment="Right" Margin="0,12,0,0" Background="{DynamicResource MainBackground}" Foreground="{DynamicResource MainText}" BorderBrush="{DynamicResource BorderColor}" Padding="20,6" Cursor="Hand" ToolTip.Tip="Close Merge Group Manager"/>
+	</Grid>
+</Window>

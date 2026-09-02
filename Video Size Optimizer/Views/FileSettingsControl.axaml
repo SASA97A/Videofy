@@ -50,7 +50,9 @@
 								Value="{Binding CustomTargetSizeMbSlider, Mode=TwoWay}"
 								TickFrequency="5"
 								IsSnapToTickEnabled="True"
-								VerticalAlignment="Center"/>
+								VerticalAlignment="Center"
+								Cursor="Hand"
+								ToolTip.Tip="Override target file size in MB for 2-pass encoding on this video"/>
 
 						<Border Grid.Column="1"
 								Background="{DynamicResource PrimaryColorHover}"
@@ -71,13 +73,17 @@
 		<ComboBox ItemsSource="{x:Static app:AppConstants.AvailableResolutionNames}"
                   SelectedItem="{Binding CustomResolution, Mode=TwoWay}"
 				  PlaceholderText="Use Global Setting"
-                  HorizontalAlignment="Stretch"/>
+                  HorizontalAlignment="Stretch"
+                  Cursor="Hand"
+                  ToolTip.Tip="Override resolution for this video file"/>
 
 		<TextBlock Text="FPS:" FontSize="12" Foreground="{DynamicResource SecondaryText}"/>
 		<ComboBox ItemsSource="{x:Static app:AppConstants.FpsOptions}"
                   SelectedItem="{Binding CustomFps, Mode=TwoWay}"
 				  PlaceholderText="Use Global Setting"
-                  HorizontalAlignment="Stretch"/>
+                  HorizontalAlignment="Stretch"
+                  Cursor="Hand"
+                  ToolTip.Tip="Override framerate cap for this video file"/>
 		
 		
 			
@@ -174,11 +180,13 @@
 
 			
 
-		<Button Content="Reset"
+		<Button Content="Reset Overrides"
                 Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).ClearCustomSettingsCommand}"
                 CommandParameter="{Binding}"
                 HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
-				Background="#443333" Margin="0,10,0,0" Height="40" VerticalContentAlignment="Center"/>
+				Background="#443333" Margin="0,10,0,0" Height="40" VerticalContentAlignment="Center"
+				Cursor="Hand"
+				ToolTip.Tip="Clear custom overrides and revert to global compression settings for this video"/>
 			</StackPanel>
 	
 

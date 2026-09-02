@@ -14,37 +14,40 @@
 		<TextBlock Text="Rename Mode:" FontSize="12" Foreground="{DynamicResource DimText}"/>
 		<ComboBox ItemsSource="{Binding RenameModes}"
                   SelectedIndex="{Binding RenameMode}"
-                  HorizontalAlignment="Stretch" Cursor="Hand"/>
+                  HorizontalAlignment="Stretch" Cursor="Hand"
+                  ToolTip.Tip="Select rename operation mode (Find &amp; Replace, Add Prefix/Suffix, Number Sequence, Trim Characters)"/>
 
 		<Separator Background="{DynamicResource InputBackground}"/>
 
 		<StackPanel Spacing="10" IsVisible="{Binding IsReplaceMode}">
-			<TextBox Text="{Binding FindText}" Watermark="Text to find..." />
-			<TextBox Text="{Binding ReplaceText}" Watermark="Replace with..." />
+			<TextBox Text="{Binding FindText}" Watermark="Text to find..." ToolTip.Tip="Text substring to search for in video filenames" />
+			<TextBox Text="{Binding ReplaceText}" Watermark="Replace with..." ToolTip.Tip="Replacement text to substitute" />
 		</StackPanel>
 
 		<StackPanel Spacing="10" IsVisible="{Binding IsAddMode}">
-			<TextBox Text="{Binding AddText}" Watermark="Text to add..." />
+			<TextBox Text="{Binding AddText}" Watermark="Text to add..." ToolTip.Tip="Text to insert into video filenames" />
 			<ComboBox ItemsSource="{Binding PositionModes}"
-					  SelectedIndex="{Binding PositionMode}" Cursor="Hand"/>
+					  SelectedIndex="{Binding PositionMode}" Cursor="Hand"
+					  ToolTip.Tip="Select insertion position (At Start / Prefix or At End / Suffix)"/>
 		</StackPanel>
 
 		<StackPanel Spacing="10" IsVisible="{Binding IsEnumerateMode}">
 			<TextBlock Text="Pattern (use # for number):" FontSize="11" Foreground="{DynamicResource DimText}"/>
-			<TextBox Text="{Binding EnumeratePattern}" Watermark="e.g. Episode_#" />
+			<TextBox Text="{Binding EnumeratePattern}" Watermark="e.g. Episode_#" ToolTip.Tip="Filename pattern template. Use # for sequential numbers (e.g. Video_#)" />
 
 			<TextBlock Text="Start Number:" FontSize="11" Foreground="{DynamicResource DimText}" Margin="0,5,0,0"/>
-			<NumericUpDown Value="{Binding StartNumber}" Minimum="0" Maximum="9999" FormatString="0" Cursor="Hand"/>
+			<NumericUpDown Value="{Binding StartNumber}" Minimum="0" Maximum="9999" FormatString="0" Cursor="Hand" ToolTip.Tip="Starting index number for sequence"/>
 		</StackPanel>
 
 		<StackPanel Spacing="10" IsVisible="{Binding IsTrimMode}">
 			<TextBlock Text="Direction:" FontSize="11" Foreground="{DynamicResource DimText}"/>
 			<ComboBox ItemsSource="{Binding TrimDirections}"
 					  SelectedIndex="{Binding TrimDirection}"
-					  HorizontalAlignment="Stretch" Cursor="Hand"/>
+					  HorizontalAlignment="Stretch" Cursor="Hand"
+					  ToolTip.Tip="Trim direction (Remove characters from start or end of filename)"/>
 
 			<TextBlock Text="Number of characters to remove:" FontSize="11" Foreground="{DynamicResource DimText}" Margin="0,5,0,0"/>
-			<NumericUpDown Value="{Binding TrimCount}" Minimum="0" Maximum="255" FormatString="0" Cursor="Hand"/>
+			<NumericUpDown Value="{Binding TrimCount}" Minimum="0" Maximum="255" FormatString="0" Cursor="Hand" ToolTip.Tip="Number of characters to delete"/>
 		</StackPanel>
 
 		<Border Background="#121212" CornerRadius="4" Padding="10">
@@ -55,9 +58,9 @@
 		</Border>
 
 		<StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
-			<Button Content="Cancel" Click="OnCancelClick" Background="Transparent" Cursor="Hand"/>
+			<Button Content="Cancel" Click="OnCancelClick" Background="Transparent" Cursor="Hand" ToolTip.Tip="Close dialog without applying changes"/>
 			<Button Content="Apply Rename" Click="OnApplyClick" IsEnabled="{Binding IsValid}"
-                    Background="{DynamicResource SystemAccentColor}" Foreground="{DynamicResource TertiaryBackground}" FontWeight="Bold" Cursor="Hand"/>
+                    Background="{DynamicResource SystemAccentColor}" Foreground="{DynamicResource TertiaryBackground}" FontWeight="Bold" Cursor="Hand" ToolTip.Tip="Apply batch rename to selected video files on disk"/>
 		</StackPanel>
 	</StackPanel>
 	

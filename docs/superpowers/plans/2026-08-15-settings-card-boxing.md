@@ -1,3 +1,34 @@
+# Settings Window Card Encapsulation Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Encapsulate each category in Global Settings (`SettingsWindow.axaml`) inside visual card boxes (`Border` containers with `SecondaryBackground`, `BorderColor`, and `CornerRadius="6"`).
+
+**Architecture:** Wrap the controls for Encoder Settings, Notification & Dialog Settings, and Misc & Advanced into `Border` card elements matching the Hardware Acceleration section. Update `releasenotes.md` and merge into `Version-1.4.3`.
+
+**Tech Stack:** Avalonia XAML, C#.
+
+## Global Constraints
+
+- Card styling: `Background="{DynamicResource SecondaryBackground}"`, `BorderBrush="{DynamicResource BorderColor}"`, `BorderThickness="1"`, `CornerRadius="6"`, `Padding="14,12"`.
+- Branch: `feature/settings-card-boxing` off `Version-1.4.3`.
+
+---
+
+### Task 1: Update SettingsWindow.axaml Layout
+
+**Files:**
+- Modify: `Video Size Optimizer/Views/SettingsWindow.axaml:16-196`
+
+**Interfaces:**
+- Consumes: XAML resources `SecondaryBackground`, `BorderColor`, `MainText`, `SystemAccentColor`.
+- Produces: Encapsulated card sections in `SettingsWindow.axaml`.
+
+- [ ] **Step 1: Update `SettingsWindow.axaml`**
+
+Refactor `Video Size Optimizer/Views/SettingsWindow.axaml` content inside the main `ScrollViewer` StackPanel:
+
+```xml
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -139,36 +170,9 @@
 					</Border>
 				</StackPanel>
 
-				<!-- Desktop & System Notifications Category Box -->
+				<!-- Notification & Dialog Settings Category Box -->
 				<StackPanel Spacing="8">
-					<TextBlock Text="Desktop &amp; System Notifications" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource SystemAccentColor}"/>
-
-					<Border Background="{DynamicResource SecondaryBackground}"
-							BorderBrush="{DynamicResource BorderColor}"
-							BorderThickness="1"
-							CornerRadius="6"
-							Padding="14,12">
-						<StackPanel Spacing="10">
-							<CheckBox IsChecked="{Binding SendDesktopNotification}"
-									  Cursor="Hand"
-									  Content="Send OS desktop notification when batch processing completes"
-									  FontSize="13"
-									  Foreground="{DynamicResource MainText}"
-									  ToolTip.Tip="When enabled, sends a native desktop notification showing processed videos count and space saved."/>
-
-							<CheckBox IsChecked="{Binding PlaySoundOnCompletion}"
-									  Cursor="Hand"
-									  Content="Play audio chime when batch processing completes"
-									  FontSize="13"
-									  Foreground="{DynamicResource MainText}"
-									  ToolTip.Tip="When enabled, plays a system audio sound when all queued videos complete processing."/>
-						</StackPanel>
-					</Border>
-				</StackPanel>
-
-				<!-- Message Box Modality Category Box -->
-				<StackPanel Spacing="8">
-					<TextBlock Text="Message Box Modality" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource SystemAccentColor}"/>
+					<TextBlock Text="Notification &amp; Dialog Settings" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource SystemAccentColor}"/>
 
 					<Border Background="{DynamicResource SecondaryBackground}"
 							BorderBrush="{DynamicResource BorderColor}"
@@ -259,3 +263,64 @@
 		</Border>
 	</Grid>
 </Window>
+```
+
+- [ ] **Step 2: Build project and verify XAML syntax**
+
+Run: `dotnet build "Video Size Optimizer/Video Size Optimizer.csproj"`
+Expected: Build succeeded with 0 Errors.
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add "Video Size Optimizer/Views/SettingsWindow.axaml"
+git commit -m "style: encapsulate settings categories into distinct visual card containers"
+```
+
+---
+
+### Task 2: Update Release Notes
+
+**Files:**
+- Modify: `releasenotes.md:14-17`
+
+**Interfaces:**
+- Consumes: Release notes structure.
+- Produces: Updated `releasenotes.md` under `## UI Enhancements`.
+
+- [ ] **Step 1: Edit `releasenotes.md`**
+
+Add the release entry under `## UI Enhancements`:
+
+```markdown
+- **Settings Card Layout Encapsulation:** Encapsulated all setting categories (Encoder Settings, Hardware Acceleration, Notification & Dialog Settings, Misc & Advanced) into distinct visual card containers (`Border` cards with rounded corners and subtle borders) for improved contrast, organization, and visual accessibility.
+```
+
+- [ ] **Step 2: Commit**
+
+```bash
+git add releasenotes.md
+git commit -m "docs: add settings card encapsulation entry to release notes"
+```
+
+---
+
+### Task 3: Final Verification & Merge
+
+- [ ] **Step 1: Perform full Release build**
+
+Run: `dotnet build "Video Size Optimizer/Video Size Optimizer.csproj" --configuration Release`
+Expected: Build succeeded with 0 Errors.
+
+- [ ] **Step 2: Checkout Version-1.4.3 and merge feature branch**
+
+```bash
+git checkout Version-1.4.3
+git merge feature/settings-card-boxing
+git branch -d feature/settings-card-boxing
+```
+
+- [ ] **Step 3: Verify clean build on Version-1.4.3**
+
+Run: `dotnet build "Video Size Optimizer/Video Size Optimizer.csproj" --configuration Release`
+Expected: Build succeeded with 0 Errors.

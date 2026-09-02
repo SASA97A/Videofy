@@ -279,5 +279,211 @@ namespace Video_Size_Optimizer
             }
         }
 
+        public async Task SendDesktopNotificationAsync(string title, string message)
+        {
+            await Task.Run(() =>
+            {
+                try
+                {
+                    LogService.Instance.Log($"Triggering OS notification: {title} - {message}", LogLevel.Info, "SysUtil");
+
+                    bool isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+                    bool isMac = RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
+                    bool isLinux = RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
+
+                    if (isWindows)
+                    {
+                        string cleanTitle = title.Replace("'", "''");
+                        string cleanMsg = message.Replace("'", "''").Replace("\r\n", " ").Replace("\n", " ");
+                        string currentExe = Process.GetCurrentProcess().MainModule?.FileName?.Replace("'", "''") ?? "";
+                        string currentDir = AppDomain.CurrentDomain.BaseDirectory.Replace("'", "''");
+
+                        string psScript = $@"
+$shortcutPath = ""$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Videofy.lnk""
+if (-not (Test-Path $shortcutPath)) {{
+    try {{
+        $shell = New-Object -ComObject WScript.Shell
+        $shortcut = $shell.CreateShortcut($shortcutPath)
+        $shortcut.TargetPath = '{currentExe}'
+        $shortcut.WorkingDirectory = '{currentDir}'
+        $shortcut.Description = 'Videofy Video Size Optimizer'
+        $shortcut.Save()
+    }} catch {{ }}
+}}
+
+$code = @'
+using System;
+using System.Runtime.InteropServices;
+
+public class ShellPropertySetter
+{{
+    [Guid(""886D8EEB-8CF2-4446-8D02-CDA11DC9F099""), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    public interface IPropertyStore
+    {{
+        uint GetCount();
+        void GetAt(uint iProp, out PROPERTYKEY pkey);
+        void GetValue(ref PROPERTYKEY key, out PROPVARIANT pv);
+        void SetValue(ref PROPERTYKEY key, ref PROPVARIANT pv);
+        void Commit();
+    }}
+
+    [StructLayout(LayoutKind.Sequential, Pack = 4)]
+    public struct PROPERTYKEY
+    {{
+        public Guid fmtid;
+        public uint pid;
+    }}
+
+    [StructLayout(LayoutKind.Explicit)]
+    public struct PROPVARIANT
+    {{
+        [FieldOffset(0)] public ushort vt;
+        [FieldOffset(8)] public IntPtr pwszVal;
+    }}
+
+    [DllImport(""shell32.dll"", CharSet = CharSet.Unicode, SetLastError = true)]
+    public static extern int SHGetPropertyStoreFromParsingName(
+        string pszPath,
+        IntPtr pbc,
+        uint flags,
+        ref Guid riid,
+        out IPropertyStore ppv);
+
+    public static void SetAppId(string shortcutPath, string appId)
+    {{
+        try {{
+            Guid iid = new Guid(""886D8EEB-8CF2-4446-8D02-CDA11DC9F099"");
+            IPropertyStore store;
+            int hr = SHGetPropertyStoreFromParsingName(shortcutPath, IntPtr.Zero, 2, ref iid, out store);
+            if (hr == 0 && store != null)
+            {{
+                PROPERTYKEY key = new PROPERTYKEY
+                {{
+                    fmtid = new Guid(""9F4C2855-9F79-4B39-A8D0-E1D42DE1D5F3""),
+                    pid = 5
+                }};
+                PROPVARIANT pv = new PROPVARIANT
+                {{
+                    vt = 31,
+                    pwszVal = Marshal.StringToCoTaskMemUni(appId)
+                }};
+                store.SetValue(ref key, ref pv);
+                store.Commit();
+            }}
+        }} catch {{ }}
+    }}
+}}
+'@
+
+try {{
+    if (-not ([System.Management.Automation.PSTypeName]'ShellPropertySetter').Type) {{
+        Add-Type -TypeDefinition $code
+    }}
+    [ShellPropertySetter]::SetAppId($shortcutPath, ""Videofy"")
+}} catch {{ }}
+
+try {{
+    [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
+    [Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType = WindowsRuntime] | Out-Null
+    $xml = New-Object Windows.Data.Xml.Dom.XmlDocument
+    $xml.LoadXml('<toast><visual><binding template=""ToastGeneric""><text>{cleanTitle}</text><text>{cleanMsg}</text></binding></visual></toast>')
+    $toast = [Windows.UI.Notifications.ToastNotification]::new($xml)
+    [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('Videofy').Show($toast)
+}} catch {{ }}
+
+try {{
+    Add-Type -AssemblyName System.Windows.Forms
+    Add-Type -AssemblyName System.Drawing
+    $icon = [System.Drawing.SystemIcons]::Information
+    $notify = New-Object System.Windows.Forms.NotifyIcon
+    $notify.Icon = $icon
+    $notify.Visible = $true
+    $notify.BalloonTipTitle = '{cleanTitle}'
+    $notify.BalloonTipText = '{cleanMsg}'
+    $notify.BalloonTipIcon = [System.Windows.Forms.ToolTipIcon]::Info
+    $notify.ShowBalloonTip(5000)
+
+    $timer = New-Object System.Windows.Forms.Timer
+    $timer.Interval = 4000
+    $timer.add_Tick({{
+        $notify.Visible = $false
+        $notify.Dispose()
+        [System.Windows.Forms.Application]::Exit()
+    }})
+    $timer.Start()
+    [System.Windows.Forms.Application]::Run()
+}} catch {{ }}
+";
+                        byte[] scriptBytes = System.Text.Encoding.Unicode.GetBytes(psScript);
+                        string base64Script = Convert.ToBase64String(scriptBytes);
+
+                        Process.Start(new ProcessStartInfo
+                        {
+                            FileName = "powershell.exe",
+                            Arguments = $"-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -EncodedCommand {base64Script}",
+                            UseShellExecute = true,
+                            WindowStyle = ProcessWindowStyle.Hidden
+                        });
+                    }
+                    else if (isMac)
+                    {
+                        string cleanMsg = message.Replace("\"", "\\\"").Replace("\n", " ");
+                        string cleanTitle = title.Replace("\"", "\\\"");
+                        Process.Start("osascript", $"-e \"display notification \\\"{cleanMsg}\\\" with title \\\"{cleanTitle}\\\"\"");
+                    }
+                    else if (isLinux)
+                    {
+                        string cleanMsg = message.Replace("\"", "\\\"").Replace("\n", " ");
+                        string cleanTitle = title.Replace("\"", "\\\"");
+                        Process.Start("notify-send", $"\"{cleanTitle}\" \"{cleanMsg}\"");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LogService.Instance.Log($"Desktop notification error: {ex.Message}", LogLevel.Error, "SysUtil");
+                }
+            });
+        }
+
+        public async Task PlayCompletionSoundAsync()
+        {
+            await Task.Run(() =>
+            {
+                try
+                {
+                    LogService.Instance.Log("Triggering completion audio chime...", LogLevel.Info, "SysUtil");
+
+                    bool isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+                    bool isMac = RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
+                    bool isLinux = RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
+
+                    if (isWindows)
+                    {
+                        string soundScript = "[System.Media.SystemSounds]::Asterisk.Play()";
+                        byte[] soundBytes = System.Text.Encoding.Unicode.GetBytes(soundScript);
+                        string base64Sound = Convert.ToBase64String(soundBytes);
+                        Process.Start(new ProcessStartInfo
+                        {
+                            FileName = "powershell.exe",
+                            Arguments = $"-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -EncodedCommand {base64Sound}",
+                            UseShellExecute = true,
+                            WindowStyle = ProcessWindowStyle.Hidden
+                        });
+                    }
+                    else if (isMac)
+                    {
+                        Process.Start("afplay", "/System/Library/Sounds/Glass.aiff");
+                    }
+                    else if (isLinux)
+                    {
+                        Process.Start("paplay", "/usr/share/sounds/freedesktop/stereo/complete.oga");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LogService.Instance.Log($"Audio chime error: {ex.Message}", LogLevel.Error, "SysUtil");
+                }
+            });
+        }
     }
 }

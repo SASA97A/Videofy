@@ -4,6 +4,7 @@
         xmlns:model="using:Video_Size_Optimizer.Models"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:ic="using:FluentIcons.Avalonia"
 		MinWidth="1100" MinHeight="600"
         x:Class="Video_Size_Optimizer.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
@@ -12,6 +13,9 @@
         Icon="/Assets/app.ico"
         Title="Videofy - Video Size Optimizer"
 		Background="{DynamicResource MainBackground}"
+		ExtendClientAreaToDecorationsHint="True"
+		ExtendClientAreaChromeHints="NoChrome"
+		ExtendClientAreaTitleBarHeightHint="38"
 		DragDrop.AllowDrop="True"
 		DragDrop.DragEnter="OnDragEnter"
 		DragDrop.DragLeave="OnDragLeave"
@@ -121,88 +125,177 @@
 
 	<Grid RowDefinitions="Auto, *, Auto, Auto" Margin="20,20,20,0">
 
-		<StackPanel Grid.Row="0" Margin="-20,-20,-20,20">
-			<Menu Background="{DynamicResource SecondaryBackground}">
-				<MenuItem Header="_File">
-					<MenuItem Header="_Open Folder..."
-							  IsEnabled="{Binding !IsBusy}"
-							  Command="{Binding BrowseFolderCommand}"
-							  CommandParameter="{Binding $parent[Window]}" />
+		<StackPanel Grid.Row="0" Margin="-20,-20,-20,15">
+			<!-- Integrated Custom Title Bar -->
+			<Border Height="38"
+					Background="{DynamicResource SecondaryBackground}"
+					BorderBrush="{DynamicResource BorderColor}"
+					BorderThickness="0,0,0,1">
+				<Grid ColumnDefinitions="Auto, *, Auto">
 
-					<MenuItem Header="_Refresh Folder"
-							  IsEnabled="{Binding !IsBusy}"
-							  Command="{Binding RefreshFolderCommand}" />
+					<!-- Column 0: Main Menu -->
+					<Menu Grid.Column="0" Background="Transparent" VerticalAlignment="Center" Margin="5,0,0,0">
+						<MenuItem Header="_File">
+							<MenuItem Header="_Open Folder..."
+									  IsEnabled="{Binding !IsBusy}"
+									  Command="{Binding BrowseFolderCommand}"
+									  CommandParameter="{Binding $parent[Window]}"
+									  ToolTip.Tip="Select a folder containing video files to optimize" />
 
-					<Separator />
+							<MenuItem Header="_Refresh Folder"
+									  IsEnabled="{Binding !IsBusy}"
+									  Command="{Binding RefreshFolderCommand}"
+									  ToolTip.Tip="Rescan the current folder and refresh video list" />
 
-					<MenuItem Header="_Exit"
-							  Click="OnExitClick" />
-				</MenuItem>
+							<Separator />
 
-				<!-- EDIT -->
-				<MenuItem Header="_Edit"
-						  IsEnabled="{Binding HasVideos}">
-					<MenuItem Header="_Select All"
-							  IsEnabled="{Binding !IsBusy}"
-							  Command="{Binding SelectAllCommand}" />
+							<MenuItem Header="_Exit"
+									  Click="OnExitClick"
+									  ToolTip.Tip="Close application" />
+						</MenuItem>
 
-					<MenuItem Header="_Deselect All"
-							  IsEnabled="{Binding !IsBusy}"
-							  Command="{Binding DeselectAllCommand}" />
+						<!-- EDIT -->
+						<MenuItem Header="_Edit"
+								  IsEnabled="{Binding HasVideos}">
+							<MenuItem Header="_Select All"
+									  IsEnabled="{Binding !IsBusy}"
+									  Command="{Binding SelectAllCommand}"
+									  ToolTip.Tip="Check all videos in the list for processing" />
 
-					<Separator />
+							<MenuItem Header="_Deselect All"
+									  IsEnabled="{Binding !IsBusy}"
+									  Command="{Binding DeselectAllCommand}"
+									  ToolTip.Tip="Uncheck all videos in the list" />
 
-					<MenuItem Header="_Batch Rename"
-							  IsEnabled="{Binding !IsBusy}"
-							  Command="{Binding OpenRenameWindowCommand}"
-							  CommandParameter="{Binding $parent[Window]}" />
-				</MenuItem>
+							<MenuItem Header="_Reset Status to Ready"
+									  IsEnabled="{Binding !IsBusy}"
+									  Command="{Binding ResetSelectedStatusCommand}"
+									  ToolTip.Tip="Reset completed status of selected videos back to Ready" />
 
-				<!-- VIEW -->
-				<MenuItem Header="_View">
-					<MenuItem Header="_Show Logs"
-							  Command="{Binding ShowLogsCommand}"
-							  CommandParameter="{Binding $parent[Window]}" />
+							<Separator />
 
-					<MenuItem Header="_Open Log File"
-							  Command="{Binding OpenLogFileCommand}" />
-				</MenuItem>
+							<MenuItem Header="_Batch Rename"
+									  IsEnabled="{Binding !IsBusy}"
+									  Command="{Binding OpenRenameWindowCommand}"
+									  CommandParameter="{Binding $parent[Window]}"
+									  ToolTip.Tip="Batch rename loaded video files using flexible pattern tags" />
+						</MenuItem>
 
-				<!-- TOOLS -->
-				<MenuItem Header="_Tools">
-					<MenuItem Header="_Application Settings"
-							  IsEnabled="{Binding !IsBusy}"
-							  Command="{Binding OpenSettingsCommand}"
-							  CommandParameter="{Binding $parent[Window]}" />
+						<!-- VIEW -->
+						<MenuItem Header="_View">
+							<MenuItem Header="_Show Logs"
+									  Command="{Binding ShowLogsCommand}"
+									  CommandParameter="{Binding $parent[Window]}"
+									  ToolTip.Tip="Open real-time log viewer window" />
 
-					<MenuItem Header="_Open Binaries Folder"
-							  IsEnabled="{Binding !IsBusy}"
-							  Command="{Binding OpenExpectedFolderCommand}" />
+							<MenuItem Header="_Open Log File"
+									  Command="{Binding OpenLogFileCommand}"
+									  ToolTip.Tip="Open application log text file in default editor" />
+						</MenuItem>
 
-					<!--<MenuItem Header="_Check Dependencies"
-							  Command="{Binding RefreshDependencyCheckCommand}" />-->
-				</MenuItem>
+						<!-- TOOLS -->
+						<MenuItem Header="_Tools">
+							<MenuItem Header="_Application Settings"
+									  IsEnabled="{Binding !IsBusy}"
+									  Command="{Binding OpenSettingsCommand}"
+									  CommandParameter="{Binding $parent[Window]}"
+									  ToolTip.Tip="Open global settings and hardware preferences" />
 
-				<!-- HELP -->
-				<MenuItem Header="_Help">
-					<MenuItem Header="_Check for Updates"
-							  IsEnabled="{Binding !IsBusy}"
-							  Command="{Binding CheckForUpdatesCommand}" />
+							<MenuItem Header="_Open Binaries Folder"
+									  IsEnabled="{Binding !IsBusy}"
+									  Command="{Binding OpenExpectedFolderCommand}"
+									  ToolTip.Tip="Open local FFmpeg binaries folder" />
+						</MenuItem>
 
-					<Separator />
+						<!-- HELP -->
+						<MenuItem Header="_Help">
+							<MenuItem Header="_Check for Updates"
+									  IsEnabled="{Binding !IsBusy}"
+									  Command="{Binding CheckForUpdatesCommand}"
+									  ToolTip.Tip="Check GitHub for newer application releases" />
 
-					<MenuItem Header="_About"
-							  IsEnabled="{Binding !IsBusy}"
-							  Command="{Binding ShowAboutCommand}" />
-				</MenuItem>
+							<Separator />
 
-			</Menu>
+							<MenuItem Header="_About"
+									  IsEnabled="{Binding !IsBusy}"
+									  Command="{Binding ShowAboutCommand}"
+									  ToolTip.Tip="Display application version and encoding tips" />
+						</MenuItem>
+					</Menu>
+
+					<!-- Column 1: Drag Handle & Centered Title -->
+					<Border Grid.Column="1" Background="Transparent" PointerPressed="OnTitleBarPointerPressed">
+						<TextBlock Text="Videofy - Video Size Optimizer"
+								   FontSize="11"
+								   Foreground="{DynamicResource SecondaryText}"
+								   HorizontalAlignment="Center"
+								   VerticalAlignment="Center"
+								   Opacity="0.6"/>
+					</Border>
+
+					<!-- Column 2: Window Action Buttons (Minimize, Maximize/Restore, Close) -->
+					<StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Stretch">
+						<Button Width="46"
+								Background="Transparent"
+								BorderThickness="0"
+								Click="OnMinimizeClick"
+								ToolTip.Tip="Minimize"
+								Cursor="Hand"
+								VerticalAlignment="Stretch"
+								VerticalContentAlignment="Center"
+								HorizontalContentAlignment="Center">
+							<Button.Styles>
+								<Style Selector="Button:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+									<Setter Property="Background" Value="#2BFFFFFF"/>
+								</Style>
+							</Button.Styles>
+							<ic:SymbolIcon Symbol="Subtract" FontSize="12" Foreground="{DynamicResource MainText}"/>
+						</Button>
+
+						<Button Width="46"
+								Background="Transparent"
+								BorderThickness="0"
+								Click="OnMaximizeRestoreClick"
+								ToolTip.Tip="Maximize / Restore"
+								Cursor="Hand"
+								VerticalAlignment="Stretch"
+								VerticalContentAlignment="Center"
+								HorizontalContentAlignment="Center">
+							<Button.Styles>
+								<Style Selector="Button:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+									<Setter Property="Background" Value="#2BFFFFFF"/>
+								</Style>
+							</Button.Styles>
+							<ic:SymbolIcon Symbol="Square" FontSize="12" Foreground="{DynamicResource MainText}"/>
+						</Button>
+
+						<Button Width="46"
+								Background="Transparent"
+								BorderThickness="0"
+								Click="OnCloseClick"
+								ToolTip.Tip="Close"
+								Cursor="Hand"
+								VerticalAlignment="Stretch"
+								VerticalContentAlignment="Center"
+								HorizontalContentAlignment="Center">
+							<Button.Styles>
+								<Style Selector="Button:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+									<Setter Property="Background" Value="#E81123"/>
+									<Setter Property="TextBlock.Foreground" Value="#FFFFFF"/>
+								</Style>
+							</Button.Styles>
+							<ic:SymbolIcon Symbol="Dismiss" FontSize="12" Foreground="{DynamicResource MainText}"/>
+						</Button>
+					</StackPanel>
+				</Grid>
+			</Border>
 
 			<Border Background="{DynamicResource InputBackground}" Height="50" BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,0,1">
 				<StackPanel Orientation="Horizontal" Margin="20,0" Spacing="10">
 					<Button Command="{Binding BrowseFolderCommand}"
 							IsEnabled="{Binding !IsBusy}"
 							CommandParameter="{Binding $parent[Window]}"
+							ToolTip.Tip="Open a folder containing videos to process"
 							Background="Transparent" BorderThickness="0" Padding="10,5" Cursor="Hand" Height="40">
 						<StackPanel Orientation="Horizontal" Spacing="8">
 							<Image Width="18" Height="18">
@@ -218,6 +311,7 @@
 
 					<Button Command="{Binding ToggleSelectAllCommand}"
 							IsEnabled="{Binding !IsBusy}"
+							ToolTip.Tip="Toggle selection checkbox for all videos"
 							Background="Transparent" BorderThickness="0" Padding="10,5" Cursor="Hand" Height="40">
 						<StackPanel Orientation="Horizontal" Spacing="8">
 							<Image Width="18" Height="18" VerticalAlignment="Center">
@@ -237,6 +331,7 @@
 
 					<Button Command="{Binding RefreshFolderCommand}"
 							IsEnabled="{Binding !IsBusy}"
+							ToolTip.Tip="Rescan folder and refresh video list"
 							Background="Transparent" BorderThickness="0" Padding="10,5" Cursor="Hand" Height="40">
 						<StackPanel Orientation="Horizontal" Spacing="8">
 							<Image Width="16" Height="16" VerticalAlignment="Center">
@@ -253,7 +348,7 @@
 
 					<Button Command="{Binding ShowLogsCommand}"
 							CommandParameter="{Binding $parent[Window]}"
-							ToolTip.Tip="View real-time processing logs"
+							ToolTip.Tip="View real-time application processing logs"
 							Background="Transparent" BorderThickness="0" Padding="10,5" Cursor="Hand" Height="40">
 						<StackPanel Orientation="Horizontal" Spacing="8">
 							<Image Width="16" Height="16" VerticalAlignment="Center">
@@ -333,6 +428,7 @@
 								 Text="{Binding SearchText}"
 								 IsEnabled="{Binding !IsBusy}"
 								 Watermark="🔍 Search by file or folder name..."
+								 ToolTip.Tip="Filter loaded video list by file or folder name"
 								 Margin="5"
 								 Background="{DynamicResource InputBackground}"
 								 Foreground="{DynamicResource MainText}"
@@ -340,6 +436,7 @@
 								 VerticalContentAlignment="Center"/>
 
 						<DataGrid ItemsSource="{Binding DisplayedVideos}"
+								  SelectedItem="{Binding SelectedVideo}"
 								  IsReadOnly="{Binding IsBusy}"
 								  AutoGenerateColumns="False"
 								  CanUserSortColumns="True"
@@ -354,14 +451,15 @@
 									<Setter Property="ContextMenu">
 										<Setter.Value>
 											<ContextMenu>
+												<MenuItem Header="Reset Status to Ready"
+														  Command="{Binding $parent[DataGrid].DataContext.ResetVideoStatusCommand}"
+														  CommandParameter="{Binding}"
+														  ToolTip.Tip="Reset this video's completed status back to Ready so it can be re-processed" />
+												<Separator />
 												<MenuItem Header="Open Folder in Explorer"
 														  Command="{Binding $parent[DataGrid].DataContext.OpenFileFolderCommand}"
-														  CommandParameter="{Binding}" />
-												
-												<!--<MenuItem Header="Remove from List"
-														  Foreground="{DynamicResource DangerColor}"
-														  Command="{Binding $parent[DataGrid].DataContext.RemoveVideoCommand}"
-														  CommandParameter="{Binding}" />-->
+														  CommandParameter="{Binding}"
+														  ToolTip.Tip="Open containing folder in File Explorer and select file" />
 											</ContextMenu>
 										</Setter.Value>
 									</Setter>
@@ -369,7 +467,7 @@
 							</DataGrid.Styles>
 
 							<DataGrid.Columns>
-								<DataGridTemplateColumn Width="120" CanUserResize="False">
+								<DataGridTemplateColumn Width="120" SortMemberPath="IsSelected" CanUserResize="False" IsVisible="{Binding IsSelectedColumnVisible}">
 									<DataGridTemplateColumn.Header>
 										<TextBlock Text="Selected" HorizontalAlignment="Center" />
 									</DataGridTemplateColumn.Header>
@@ -438,7 +536,38 @@
 									</DataGridTemplateColumn.CellTemplate>
 								</DataGridTemplateColumn>
 
-								<DataGridTemplateColumn Header="Status" Width="150" CanUserResize="False">
+								<DataGridTemplateColumn Header="Group Assign" Width="140" SortMemberPath="GroupSortKey" IsVisible="{Binding IsMergeTabActive}">
+									<DataGridTemplateColumn.CellTemplate>
+										<DataTemplate>
+											<ComboBox ItemsSource="{Binding $parent[DataGrid].((vm:MainWindowViewModel)DataContext).GroupIndexChoices}"
+													  SelectedIndex="{Binding GroupIndexUi, Mode=TwoWay}"
+													  IsEnabled="{Binding !$parent[DataGrid].((vm:MainWindowViewModel)DataContext).IsBusy}"
+													  HorizontalAlignment="Stretch"
+													  VerticalAlignment="Center"
+													  Margin="5,0"/>
+										</DataTemplate>
+									</DataGridTemplateColumn.CellTemplate>
+								</DataGridTemplateColumn>
+
+								<DataGridTemplateColumn Header="Group" Width="100" SortMemberPath="GroupSortKey" CanUserResize="False" IsVisible="{Binding IsMergeTabActive}">
+									<DataGridTemplateColumn.CellTemplate>
+										<DataTemplate>
+											<Border IsVisible="{Binding HasGroup}"
+													Background="{Binding GroupBadgeBackground}"
+													CornerRadius="4"
+													Padding="6,2"
+													HorizontalAlignment="Center"
+													VerticalAlignment="Center">
+												<TextBlock Text="{Binding GroupOrderDisplay}"
+														   Foreground="{Binding GroupBadgeForeground}"
+														   FontWeight="Bold"
+														   FontSize="11"/>
+											</Border>
+										</DataTemplate>
+									</DataGridTemplateColumn.CellTemplate>
+								</DataGridTemplateColumn>
+
+								<DataGridTemplateColumn Header="Status" Width="150" SortMemberPath="StatusSortKey" CanUserResize="False">
 									<DataGridTemplateColumn.CellTemplate>
 										<DataTemplate>
 											<Grid Margin="10,0">
@@ -488,7 +617,7 @@
 								</DataGridTemplateColumn>
 
 
-								<DataGridTemplateColumn Header="Override" Width="110">
+								<DataGridTemplateColumn Header="Override" Width="110" SortMemberPath="HasCustomSettings" IsVisible="{Binding IsOverrideVisible}">
 									<DataTemplate>
 										<Button
 												Background="Transparent"
@@ -496,7 +625,7 @@
 												HorizontalAlignment="Center"
 												Tag="{Binding HasCustomSize}"
 												Cursor="Hand"
-												IsEnabled="{Binding !$parent[DataGrid].DataContext.IsBusy}">
+												IsEnabled="{Binding !$parent[DataGrid].((vm:MainWindowViewModel)DataContext).IsBusy}">
 											<Button.Styles>
 												<Style Selector="Image">
 													<Setter Property="Opacity" Value="0.4"/>
@@ -614,16 +743,20 @@
 					</Style>
 				</TabControl.Styles>
 
-				<TabItem Header="OPTIMIZE (COMPRESS)" IsEnabled="{Binding !IsBusy}" Cursor="Hand">
+				<TabItem Header="OPTIMIZE (COMPRESS)" IsEnabled="{Binding !IsBusy}" Cursor="Hand" ToolTip.Tip="Re-encode and compress video file size using CRF quality control, resolution, and framerate presets">
 					<Views:CompressionView/>
 				</TabItem>
 
-				<TabItem Header="CONVERT (INSTANT)" IsEnabled="{Binding !IsBusy}" Cursor="Hand">
+				<TabItem Header="CONVERT (INSTANT)" IsEnabled="{Binding !IsBusy}" Cursor="Hand" ToolTip.Tip="Instantly convert video container format (.mp4, .mkv, .mov) via 1:1 stream copy without re-encoding">
 					<Views:ConversionView/>
 				</TabItem>
 
-				<TabItem Header="SPLIT (INSTANT)" IsEnabled="{Binding !IsBusy}" Cursor="Hand">
+				<TabItem Header="SPLIT (INSTANT)" IsEnabled="{Binding !IsBusy}" Cursor="Hand" ToolTip.Tip="Instantly split video into target size chunks at keyframes without quality loss">
 					<Views:SplitView/>
+				</TabItem>
+
+				<TabItem Header="MERGE (SMART BATCH)" IsEnabled="{Binding !IsBusy}" Cursor="Hand" ToolTip.Tip="Batch merge multiple video segments into single continuous files per group">
+					<Views:MergeView/>
 				</TabItem>
 				
 			</TabControl>
