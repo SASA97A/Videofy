@@ -1,5 +1,6 @@
 ﻿using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Platform;
 using Avalonia.Threading;
 using System;
 using System.Collections.Generic;
@@ -307,9 +308,13 @@ namespace Video_Size_Optimizer
                     }
                     else if (isLinux)
                     {
-                        string cleanMsg = message.Replace("\"", "\\\"").Replace("\n", " ");
-                        string cleanTitle = title.Replace("\"", "\\\"");
-                        Process.Start("notify-send", $"\"{cleanTitle}\" \"{cleanMsg}\"");
+                        var psi = new ProcessStartInfo("notify-send") { UseShellExecute = false };
+                        psi.ArgumentList.Add("--app-name=Videofy");
+                        string? iconPath = GetLinuxNotificationIconPath();
+                        if (iconPath != null) psi.ArgumentList.Add($"--icon={iconPath}");
+                        psi.ArgumentList.Add(title);
+                        psi.ArgumentList.Add(message);
+                        Process.Start(psi);
                     }
                 }
                 catch (Exception ex)
@@ -317,6 +322,29 @@ namespace Video_Size_Optimizer
                     LogService.Instance.Log($"Desktop notification error: {ex.Message}", LogLevel.Error, "SysUtil");
                 }
             });
+        }
+
+        // notify-send needs the icon as a file on disk, so copy the embedded app.png out once.
+        private static string? GetLinuxNotificationIconPath()
+        {
+            try
+            {
+                string folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Videofy");
+                string iconPath = Path.Combine(folder, "app.png");
+                if (!File.Exists(iconPath))
+                {
+                    Directory.CreateDirectory(folder);
+                    using var source = AssetLoader.Open(new Uri("avares://Videofy/Assets/app.png"));
+                    using var target = File.Create(iconPath);
+                    source.CopyTo(target);
+                }
+                return iconPath;
+            }
+            catch (Exception ex)
+            {
+                LogService.Instance.Log($"Could not prepare notification icon: {ex.Message}", LogLevel.Warning, "SysUtil");
+                return null;
+            }
         }
 
         private static IntPtr GetMainWindowHandle()

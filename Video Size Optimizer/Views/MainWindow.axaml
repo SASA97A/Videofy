@@ -206,6 +206,11 @@
 									  IsEnabled="{Binding !IsBusy}"
 									  Command="{Binding OpenExpectedFolderCommand}"
 									  ToolTip.Tip="Open local FFmpeg binaries folder" />
+
+							<!-- TEMPORARY: notification test. Comment out once verified on Windows and Linux. -->
+							<MenuItem Header="Test _Notification (temporary)"
+									  Command="{Binding TestNotificationCommand}"
+									  ToolTip.Tip="Send a sample desktop notification" />
 						</MenuItem>
 
 						<!-- HELP -->
