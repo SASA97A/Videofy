@@ -428,7 +428,7 @@
 						<TextBox DockPanel.Dock="Top"
 								 Text="{Binding SearchText}"
 								 IsEnabled="{Binding !IsBusy}"
-								 Watermark="🔍 Search by file or folder name..."
+								 PlaceholderText="🔍 Search by file or folder name..."
 								 ToolTip.Tip="Filter loaded video list by file or folder name"
 								 Margin="5"
 								 Background="{DynamicResource InputBackground}"

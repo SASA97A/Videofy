@@ -20,12 +20,12 @@
 		<Separator Background="{DynamicResource InputBackground}"/>
 
 		<StackPanel Spacing="10" IsVisible="{Binding IsReplaceMode}">
-			<TextBox Text="{Binding FindText}" Watermark="Text to find..." ToolTip.Tip="Text substring to search for in video filenames" />
-			<TextBox Text="{Binding ReplaceText}" Watermark="Replace with..." ToolTip.Tip="Replacement text to substitute" />
+			<TextBox Text="{Binding FindText}" PlaceholderText="Text to find..." ToolTip.Tip="Text substring to search for in video filenames" />
+			<TextBox Text="{Binding ReplaceText}" PlaceholderText="Replace with..." ToolTip.Tip="Replacement text to substitute" />
 		</StackPanel>
 
 		<StackPanel Spacing="10" IsVisible="{Binding IsAddMode}">
-			<TextBox Text="{Binding AddText}" Watermark="Text to add..." ToolTip.Tip="Text to insert into video filenames" />
+			<TextBox Text="{Binding AddText}" PlaceholderText="Text to add..." ToolTip.Tip="Text to insert into video filenames" />
 			<ComboBox ItemsSource="{Binding PositionModes}"
 					  SelectedIndex="{Binding PositionMode}" Cursor="Hand"
 					  ToolTip.Tip="Select insertion position (At Start / Prefix or At End / Suffix)"/>
@@ -33,7 +33,7 @@
 
 		<StackPanel Spacing="10" IsVisible="{Binding IsEnumerateMode}">
 			<TextBlock Text="Pattern (use # for number):" FontSize="11" Foreground="{DynamicResource DimText}"/>
-			<TextBox Text="{Binding EnumeratePattern}" Watermark="e.g. Episode_#" ToolTip.Tip="Filename pattern template. Use # for sequential numbers (e.g. Video_#)" />
+			<TextBox Text="{Binding EnumeratePattern}" PlaceholderText="e.g. Episode_#" ToolTip.Tip="Filename pattern template. Use # for sequential numbers (e.g. Video_#)" />
 
 			<TextBlock Text="Start Number:" FontSize="11" Foreground="{DynamicResource DimText}" Margin="0,5,0,0"/>
 			<NumericUpDown Value="{Binding StartNumber}" Minimum="0" Maximum="9999" FormatString="0" Cursor="Hand" ToolTip.Tip="Starting index number for sequence"/>
