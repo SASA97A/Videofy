@@ -21,13 +21,13 @@ public partial class MainWindow : Window
         InitializeComponent();
         if (OperatingSystem.IsLinux())
         {
-            SystemDecorations = SystemDecorations.None;
+            WindowDecorations = WindowDecorations.None;
         }
     }
 
     private void OnDragEnter(object? sender, DragEventArgs e)
     {
-        if (e.Data.Contains(DataFormats.Files) || e.Data.GetFiles() != null)
+        if (e.DataTransfer.Formats.Contains(DataFormat.File))
         {
             e.DragEffects = DragDropEffects.Copy;
             DragDropOverlay.IsVisible = true;
@@ -36,6 +36,13 @@ public partial class MainWindow : Window
         {
             e.DragEffects = DragDropEffects.None;
         }
+    }
+
+    private void OnDragOver(object? sender, DragEventArgs e)
+    {
+        e.DragEffects = e.DataTransfer.Formats.Contains(DataFormat.File)
+            ? DragDropEffects.Copy
+            : DragDropEffects.None;
     }
 
     private void OnDragLeave(object? sender, DragEventArgs e)
@@ -47,7 +54,7 @@ public partial class MainWindow : Window
     {
         DragDropOverlay.IsVisible = false;
 
-        var items = e.Data.GetFiles();
+        var items = e.DataTransfer.TryGetFiles();
         if (items == null) return;
 
         var paths = items
