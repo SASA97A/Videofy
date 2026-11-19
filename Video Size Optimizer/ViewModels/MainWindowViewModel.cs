@@ -1505,13 +1505,6 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
 
-    // TEMPORARY: notification test. Comment out once verified on Windows and Linux.
-    [RelayCommand]
-    private Task TestNotification() =>
-        _systemService.SendDesktopNotificationAsync(
-            "Task Completed - Videofy",
-            "Successfully processed 3 video(s).\nTotal space saved: 123.45 MB");
-
     [RelayCommand]
     public void OpenLogFile()
     {
