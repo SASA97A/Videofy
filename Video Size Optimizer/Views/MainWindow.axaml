@@ -14,10 +14,11 @@
         Title="Videofy - Video Size Optimizer"
 		Background="{DynamicResource MainBackground}"
 		ExtendClientAreaToDecorationsHint="True"
-		ExtendClientAreaChromeHints="NoChrome"
+		WindowDecorations="BorderOnly"
 		ExtendClientAreaTitleBarHeightHint="38"
 		DragDrop.AllowDrop="True"
 		DragDrop.DragEnter="OnDragEnter"
+		DragDrop.DragOver="OnDragOver"
 		DragDrop.DragLeave="OnDragLeave"
 		DragDrop.Drop="OnDrop">
 	
