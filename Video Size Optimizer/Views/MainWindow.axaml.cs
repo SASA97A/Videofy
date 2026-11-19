@@ -19,10 +19,6 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        if (OperatingSystem.IsLinux())
-        {
-            WindowDecorations = WindowDecorations.None;
-        }
     }
 
     private void OnDragEnter(object? sender, DragEventArgs e)

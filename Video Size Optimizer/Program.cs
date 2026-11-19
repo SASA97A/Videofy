@@ -25,6 +25,11 @@ sealed class Program
             .WithInterFont()
             .LogToTrace();
 
+        // Linux: Avalonia draws its own border and resize grips around our custom title bar.
+#pragma warning disable AVALONIA_X11_CSD // Experimental in Avalonia 12
+        var x11Options = new X11PlatformOptions { EnableDrawnDecorations = true };
+#pragma warning restore AVALONIA_X11_CSD
+
         if (useSoftwareRendering)
         {
 
@@ -35,12 +40,11 @@ sealed class Program
             });
 
             // Linux Software Rendering
-            builder.With(new X11PlatformOptions
-            {
-                RenderingMode = new[] { X11RenderingMode.Software }
-            });
-          
+            x11Options.RenderingMode = new[] { X11RenderingMode.Software };
+
         }
+
+        builder.With(x11Options);
 
         return builder;
     }
