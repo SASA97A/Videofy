@@ -258,6 +258,19 @@ public class FfmpegService
         {
             LogService.Instance.Log(
                 $"Target-size compression failed. Input={input} | Output={output} | Target={targetMb}MB | Error: {ex.Message}", LogLevel.Error, "FFMPEG");
+
+            // A failed pass 2 can leave a partial output file. Remove it so it is never mistaken for a finished encode.
+            if (File.Exists(output))
+            {
+                try { File.Delete(output); }
+                catch (Exception deleteEx)
+                {
+                    LogService.Instance.Log($"Failed to delete partial output {output} | {deleteEx.Message}", LogLevel.Error, "FFMPEG");
+                }
+            }
+
+            // Let the caller know the encode failed, so it does not count it as done or delete the original.
+            throw;
         }
         finally
         {
