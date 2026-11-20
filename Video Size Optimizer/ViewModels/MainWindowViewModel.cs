@@ -627,6 +627,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
         IsBusy = true;
         StatusMessage = "Processing...";
+        _diskCheckPath = null;
 
         if (GlobalSettings.PreventSleep)
         {
@@ -812,6 +813,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
                 LogService.Instance.Section($"Processing Video: {video.FileName}");
 
+                _diskCheckPath = video.FilePath;
                 if (IsDiskSpaceLow())
                 {
                     LogService.Instance.Log($"Low disk space detected (< {GlobalSettings.LowDiskBufferGb}GB). Pausing batch.", LogLevel.Warning, "Main");
@@ -1178,12 +1180,20 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
+    // File whose drive the low-disk check watches: the video being processed, since its
+    // output is written next to it. Kept so Resume can re-check the same drive.
+    private string? _diskCheckPath;
+
     private bool IsDiskSpaceLow()
     {
+        // Nothing processed yet in this batch: no drive to check.
+        if (string.IsNullOrEmpty(_diskCheckPath)) return false;
+
         try
         {
-            // Get the drive 
-            string driveName = Path.GetPathRoot(SelectedFolderPath) ?? "";
+            // Use the video's own drive. SelectedFolderPath can hold a label such as
+            // "Multiple Files (3 files)" after drag-and-drop, which made this check always fail.
+            string driveName = Path.GetPathRoot(_diskCheckPath) ?? "";
             DriveInfo drive = new DriveInfo(driveName);
 
             long bufferBytes = (long)GlobalSettings.LowDiskBufferGb * 1024 * 1024 * 1024;
