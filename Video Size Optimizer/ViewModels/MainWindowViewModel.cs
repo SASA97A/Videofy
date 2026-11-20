@@ -547,6 +547,8 @@ public partial class MainWindowViewModel : ViewModelBase
 
         int completedCount = 0;
         long totalBytesSaved = 0;
+        // Names of the videos that failed in this batch, so the user can be told at the end.
+        var failedVideos = new List<string>();
 
         IsBusy = true;
         StatusMessage = "Processing...";
@@ -1008,7 +1010,12 @@ public partial class MainWindowViewModel : ViewModelBase
                     $"Video processing failed | File={video.FileName} | Mode={SelectedTabIndex}" +
                     $" | Error={ex}", LogLevel.Error, "Error");
 
-                    if (IsBusy) StatusMessage = $"Error: {video.FileName} failed.";
+                    // A failure after the user pressed Stop is expected, so only count real failures.
+                    if (IsBusy)
+                    {
+                        StatusMessage = $"Error: {video.FileName} failed.";
+                        failedVideos.Add(video.FileName);
+                    }
                 }
                 finally
                 {
@@ -1039,9 +1046,32 @@ public partial class MainWindowViewModel : ViewModelBase
                     _ = _systemService.PlayCompletionSoundAsync();
                 }
 
-                await _messageService.ShowSuccessAsync("Task Completed",
-                       $"Successfully processed {completedCount} videos.\n\nTotal space saved: {sizeDisplay}");
+                // When some videos failed, the error popup below reports the successes too.
+                if (failedVideos.Count == 0)
+                {
+                    await _messageService.ShowSuccessAsync("Task Completed",
+                           $"Successfully processed {completedCount} videos.\n\nTotal space saved: {sizeDisplay}");
+                }
                }
+
+            // Tell the user about failed videos. Without this, the status bar goes straight back to "Ready".
+            if (failedVideos.Count > 0)
+            {
+                int total = completedCount + failedVideos.Count;
+                LogService.Instance.Log($"Videos failed: {failedVideos.Count} | {string.Join(", ", failedVideos)}", LogLevel.Error, "Main");
+
+                const int maxNamesShown = 10;
+                string names = string.Join("\n", failedVideos.Take(maxNamesShown));
+                if (failedVideos.Count > maxNamesShown)
+                    names += $"\n...and {failedVideos.Count - maxNamesShown} more";
+
+                string summary = completedCount > 0
+                    ? $"{completedCount} of {total} video(s) processed successfully. {failedVideos.Count} failed:"
+                    : $"{failedVideos.Count} of {total} video(s) failed:";
+
+                await _messageService.ShowErrorAsync("Some Videos Failed",
+                    $"{summary}\n\n{names}\n\nThe original files were kept. Check the logs for details.");
+            }
         }
         finally
         {
