@@ -73,7 +73,7 @@
 											   Foreground="{DynamicResource SystemAccentColor}" FontWeight="Bold" FontSize="13"/>
 								</StackPanel>
 								<Border Padding="10,0,10,0">
-									<Slider Value="{Binding LowDiskBufferGb}" Minimum="2" Maximum="80"
+									<Slider Value="{Binding LowDiskBufferGb}" Minimum="2" Maximum="500"
 											TickFrequency="1" IsSnapToTickEnabled="True" Cursor="Hand"/>
 								</Border>
 							</StackPanel>
