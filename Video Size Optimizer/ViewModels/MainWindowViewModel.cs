@@ -1005,10 +1005,15 @@ public partial class MainWindowViewModel : ViewModelBase
 
                                 LogService.Instance.Log($"2-pass encoding started");
 
+                                // The bitrate must be computed from the length that is actually encoded.
+                                // Using the full duration for a trimmed clip made the output far smaller than the target.
+                                double encodedSeconds = GetEncodedDurationSeconds(video);
+                                LogService.Instance.Log($"Target size duration: {encodedSeconds:F2}s (full video: {video.DurationSeconds:F2}s)");
+
                                 await _ffmpegService.CompressTargetSizeAsync(video.FilePath,
                                     finalOutputPath, fpsToUse, StripMetadata,
                                     (int)video.CustomTargetSizeMb!, encoderValue,
-                                    resolutionToUse, video.DurationSeconds, trimArgs, p);
+                                    resolutionToUse, encodedSeconds, trimArgs, p);
                             }
                         }
                         else
@@ -1178,6 +1183,21 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             DisplayedVideos.Add(item);
         }
+    }
+
+    /// <summary>
+    /// Length in seconds of the part that will be encoded: the trimmed range when trimming is on,
+    /// otherwise the whole video. EndTime 0 means "to the end". Falls back to the full duration
+    /// if the trim range is invalid, so it never returns 0 or a negative value.
+    /// </summary>
+    private static double GetEncodedDurationSeconds(VideoFile video)
+    {
+        if (!video.IsTrimmed) return video.DurationSeconds;
+
+        double end = video.EndTime > 0 ? Math.Min(video.EndTime, video.DurationSeconds) : video.DurationSeconds;
+        double length = end - video.StartTime;
+
+        return length > 0 ? length : video.DurationSeconds;
     }
 
     // File whose drive the low-disk check watches: the video being processed, since its
