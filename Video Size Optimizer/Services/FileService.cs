@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Enumeration;
 using Video_Size_Optimizer.Utils;
 
 
@@ -10,12 +11,19 @@ namespace Video_Size_Optimizer.Services;
 
 public class FileService
 {
-    public (long totalSize, List<string> videoPaths) GetFolderData(string folder, HashSet<string> allowedExtensions)
+    /// <summary>
+    /// Lists the videos under <paramref name="folder"/> and the total size of all files in it.
+    /// <paramref name="progress"/>, if given, receives the number of files checked so far.
+    /// </summary>
+    public (long totalSize, List<string> videoPaths) GetFolderData(string folder, HashSet<string> allowedExtensions,
+        IProgress<int>? progress = null)
     {
         long totalSize = 0;
+        int filesChecked = 0;
         var videoPaths = new List<string>();
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
-        // Skip subfolders the user cannot open (for example "C:\Documents and Settings")
+        // IgnoreInaccessible: skip folders the user cannot open (for example "C:\Documents and Settings")
         // instead of throwing UnauthorizedAccessException and aborting the whole scan.
         // AttributesToSkip = 0 keeps hidden and system files, as SearchOption.AllDirectories did.
         var options = new EnumerationOptions
@@ -25,37 +33,36 @@ public class FileService
             AttributesToSkip = 0
         };
 
-        int skippedFiles = 0;
-
-        foreach (var file in Directory.EnumerateFiles(folder, "*", options))
+        // FileSystemEnumerable reads each file's size from the directory listing itself.
+        // Creating a FileInfo per file costs one extra disk call each and made a full C:\ scan
+        // about 15 times slower (minutes instead of about 30 seconds).
+        var entries = new FileSystemEnumerable<(string Path, long Length)>(folder,
+            (ref FileSystemEntry entry) => (entry.ToFullPath(), entry.Length), options)
         {
-            try
-            {
-                var info = new FileInfo(file);
-                totalSize += info.Length;
+            ShouldIncludePredicate = (ref FileSystemEntry entry) => !entry.IsDirectory,
+            // Do not follow junctions or symbolic links to folders. They can point back up the tree
+            // (endless loops) or list the same files twice (for example node_modules links).
+            ShouldRecursePredicate = (ref FileSystemEntry entry) => (entry.Attributes & FileAttributes.ReparsePoint) == 0
+        };
 
-                if (allowedExtensions.Contains(info.Extension))
-                {
-                    videoPaths.Add(file);
-                }
-            }
-            catch (IOException)
+        foreach (var (path, length) in entries)
+        {
+            totalSize += length;
+            filesChecked++;
+
+            if (allowedExtensions.Contains(Path.GetExtension(path)))
             {
-                // The file was deleted or locked during the scan. Leave it out.
-                skippedFiles++;
+                videoPaths.Add(path);
             }
-            catch (UnauthorizedAccessException)
+
+            if (progress != null && filesChecked % 5000 == 0)
             {
-                // No permission to read this file's details. Leave it out.
-                skippedFiles++;
+                progress.Report(filesChecked);
             }
         }
 
-        // One log line instead of a popup per file: these are almost always system or temp files.
-        if (skippedFiles > 0)
-        {
-            LogService.Instance.Log($"Skipped {skippedFiles} unreadable file(s) while scanning {folder}", LogLevel.Warning, "Scan");
-        }
+        LogService.Instance.Log(
+            $"Scanned {filesChecked:N0} file(s) in {stopwatch.Elapsed.TotalSeconds:F1}s | Path={folder}", LogLevel.Info, "Scan");
 
         return (totalSize, videoPaths);
     }

@@ -324,7 +324,9 @@ public partial class MainWindowViewModel : ViewModelBase
         try
         {
             StatusMessage = "Scanning folder...";
-            data = await Task.Run(() => _fileService.GetFolderData(folderPath, allowedExtensions));
+            // Show a running count so a large scan (a whole drive) does not look frozen.
+            var scanProgress = new Progress<int>(count => StatusMessage = $"Scanning folder... {count:N0} files checked");
+            data = await Task.Run(() => _fileService.GetFolderData(folderPath, allowedExtensions, scanProgress));
         }
         catch (Exception ex)
         {
