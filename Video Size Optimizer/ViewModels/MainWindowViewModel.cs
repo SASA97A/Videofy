@@ -1070,7 +1070,7 @@ public partial class MainWindowViewModel : ViewModelBase
                     : $"{failedVideos.Count} of {total} video(s) failed:";
 
                 await _messageService.ShowErrorAsync("Some Videos Failed",
-                    $"{summary}\n\n{names}\n\nThe original files were kept. Check the logs for details.");
+                    $"{summary}\n\n{names}\n\nCheck the logs for details.");
             }
         }
         finally
