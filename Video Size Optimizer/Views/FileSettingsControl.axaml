@@ -68,7 +68,7 @@
 						</Border>
 					</Grid>
 					<!-- Target size re-encodes audio so the size can be predicted; normal compress copies it unchanged. -->
-					<TextBlock Text="All audio tracks and subtitles are kept, but audio is re-encoded to AAC 128 kbps per track to hit the size. To keep the original audio untouched, use normal compression instead."
+					<TextBlock Text="All audio tracks and subtitles are kept, but audio is re-encoded to AAC 128 kbps per track to hit the size. To keep the original audio untouched, do not set a custom target size."
 							   Foreground="{DynamicResource DimText}"
 							   FontSize="11"
 							   TextWrapping="Wrap"
