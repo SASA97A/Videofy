@@ -317,7 +317,27 @@ public partial class MainWindowViewModel : ViewModelBase
         LogService.Instance.Log(
               $"Readable extensions: {string.Join(", ", allowedExtensions)}");
 
-        var data = _fileService.GetFolderData(folderPath, allowedExtensions);
+        // Scan off the UI thread so a large folder does not freeze the window.
+        // BrowseFolder is async void, so an exception here would crash the app: catch it.
+        (long totalSize, List<string> videoPaths) data;
+        string previousStatus = StatusMessage;
+        try
+        {
+            StatusMessage = "Scanning folder...";
+            data = await Task.Run(() => _fileService.GetFolderData(folderPath, allowedExtensions));
+        }
+        catch (Exception ex)
+        {
+            LogService.Instance.Log($"Folder scan failed | Path={folderPath} | Error={ex}", LogLevel.Error, "Main");
+            await _messageService.ShowErrorAsync("Folder Scan Failed",
+                $"Could not read the folder:\n{folderPath}\n\n{ex.Message}");
+            return;
+        }
+        finally
+        {
+            StatusMessage = previousStatus;
+        }
+
         TotalFolderSizeDisplay = $"{(data.totalSize / 1024.0 / 1024.0 / 1024.0):F2} GB";
 
         LogService.Instance.Log(

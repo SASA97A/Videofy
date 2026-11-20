@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using Video_Size_Optimizer.Utils;
 
@@ -14,16 +15,35 @@ public class FileService
         long totalSize = 0;
         var videoPaths = new List<string>();
 
-        var allFiles = Directory.EnumerateFiles(folder, "*.*", SearchOption.AllDirectories);
-
-        foreach (var file in allFiles)
+        // Skip subfolders the user cannot open (for example "C:\Documents and Settings")
+        // instead of throwing UnauthorizedAccessException and aborting the whole scan.
+        // AttributesToSkip = 0 keeps hidden and system files, as SearchOption.AllDirectories did.
+        var options = new EnumerationOptions
         {
-            var info = new FileInfo(file);
-            totalSize += info.Length;
+            RecurseSubdirectories = true,
+            IgnoreInaccessible = true,
+            AttributesToSkip = 0
+        };
 
-            if (allowedExtensions.Contains(info.Extension))
+        foreach (var file in Directory.EnumerateFiles(folder, "*", options))
+        {
+            try
             {
-                videoPaths.Add(file);
+                var info = new FileInfo(file);
+                totalSize += info.Length;
+
+                if (allowedExtensions.Contains(info.Extension))
+                {
+                    videoPaths.Add(file);
+                }
+            }
+            catch (IOException)
+            {
+                // The file was deleted or locked during the scan. Leave it out.
+            }
+            catch (UnauthorizedAccessException)
+            {
+                // No permission to read this file's details. Leave it out.
             }
         }
 
