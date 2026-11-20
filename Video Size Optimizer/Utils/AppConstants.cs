@@ -103,6 +103,9 @@ public static class AppConstants
         "please ensure the 'Process Optimized Files' setting is enabled " +
         "in the Options menu.";
 
+    public const string NoVideosFoundHint =
+        "To include other file types, add them under Settings > Misc & Advanced > Additional Input Formats.";
+
     public const string NoFolderAccess =
         "Videofy could not resolve a local path for the selected folder.\n\n" +
         "This can happen if you select a Cloud drive (like OneDrive/iCloud) that isn't synchronized to your computer, " +
