@@ -1010,10 +1010,13 @@ public partial class MainWindowViewModel : ViewModelBase
                                 double encodedSeconds = GetEncodedDurationSeconds(video);
                                 LogService.Instance.Log($"Target size duration: {encodedSeconds:F2}s (full video: {video.DurationSeconds:F2}s)");
 
+                                // Every audio track is kept, so the bitrate budget must reserve room for each one.
+                                int audioTrackCount = await _ffprobeService.GetAudioStreamCountAsync(video.FilePath);
+
                                 await _ffmpegService.CompressTargetSizeAsync(video.FilePath,
                                     finalOutputPath, fpsToUse, StripMetadata,
                                     (int)video.CustomTargetSizeMb!, encoderValue,
-                                    resolutionToUse, encodedSeconds, trimArgs, p);
+                                    resolutionToUse, encodedSeconds, trimArgs, audioTrackCount, p);
                             }
                         }
                         else

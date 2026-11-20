@@ -52,7 +52,7 @@
 								IsSnapToTickEnabled="True"
 								VerticalAlignment="Center"
 								Cursor="Hand"
-								ToolTip.Tip="Override target file size in MB for 2-pass encoding on this video"/>
+								ToolTip.Tip="Override target file size in MB for this video (2-pass on CPU, single pass on GPU)"/>
 
 						<Border Grid.Column="1"
 								Background="{DynamicResource PrimaryColorHover}"
@@ -67,7 +67,13 @@
 							</StackPanel>
 						</Border>
 					</Grid>
-				</StackPanel>		
+					<!-- Target size re-encodes audio so the size can be predicted; normal compress copies it unchanged. -->
+					<TextBlock Text="All audio tracks and subtitles are kept, but audio is re-encoded to AAC 128 kbps per track to hit the size. To keep the original audio untouched, do not set a custom target size."
+							   Foreground="{DynamicResource DimText}"
+							   FontSize="11"
+							   TextWrapping="Wrap"
+							   Margin="0,4,0,0"/>
+				</StackPanel>
 
 		<TextBlock Text="Resolution:" FontSize="12" Foreground="{DynamicResource SecondaryText}"/>
 		<ComboBox ItemsSource="{x:Static app:AppConstants.AvailableResolutionNames}"

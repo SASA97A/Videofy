@@ -206,13 +206,26 @@ public class FfmpegService
     }
 
     // Smart target size  
-    public async Task CompressTargetSizeAsync(string input, string output, string targetFps, bool stripMetadata, int targetMb, string encoder, string selectedResolution, double duration, string trimArgs, IProgress<ConversionProgress>? progress = null)
+    public async Task CompressTargetSizeAsync(string input, string output, string targetFps, bool stripMetadata, int targetMb, string encoder, string selectedResolution, double duration, string trimArgs, int audioTrackCount = 1, IProgress<ConversionProgress>? progress = null)
     {
         // Bitrate = (Size in MB * 8192) / Duration
-        // Subtracting 128kbps as a buffer for the audio stream
+        // Every audio track is kept and encoded at 128 kbps, so reserve 128 kbps per track.
+        const int AudioKbpsPerTrack = 128;
+        int audioTracks = Math.Max(0, audioTrackCount);
         double totalBitrate = (targetMb * 8192.0) / duration;
-        int videoBitrate = (int)(totalBitrate - 128);
+        int videoBitrate = (int)(totalBitrate - AudioKbpsPerTrack * audioTracks);
         if (videoBitrate < 100) videoBitrate = 100; // Safety floor
+
+        // Keep the first video, every audio track and the subtitles, as normal compress mode does.
+        // Without -map, ffmpeg kept only one audio track and dropped all subtitles.
+        // MP4 cannot hold every subtitle format, so text subtitles become mov_text; MKV copies them and its attachments (fonts).
+        string audioArgs = $"-c:a aac -b:a {AudioKbpsPerTrack}k";
+        bool isMkv = Path.GetExtension(output).Equals(".mkv", StringComparison.OrdinalIgnoreCase);
+        string fullStreamArgs = isMkv
+            ? $"-map 0:v:0 -map 0:a? -map 0:s? -map 0:t? {audioArgs} -c:s copy -c:t copy"
+            : $"-map 0:v:0 -map 0:a? -map 0:s? {audioArgs} -c:s mov_text";
+        // Used if the subtitles cannot be written (for example picture-based PGS subtitles into MP4).
+        string fallbackStreamArgs = $"-map 0:v:0 -map 0:a? {audioArgs}";
 
         var filters = new List<string>();
         if (!string.IsNullOrEmpty(selectedResolution) && selectedResolution != "Original")
@@ -246,7 +259,29 @@ public class FfmpegService
         var pass1 = $"-y {trimArgs} -i \"{input}\" {filterArgs} -c:v {encoder} -b:v {videoBitrate}k -pass 1 -passlogfile \"{logName}\" -an -f null {nullDev}";
         // PASS 2
         LogService.Instance.Log("PASS 2 Start", LogLevel.Info, "FFMPEG");
-        var pass2 = $"-y {trimArgs} -i \"{input}\" {filterArgs} -c:v {encoder} -b:v {videoBitrate}k -pass 2 -passlogfile \"{logName}\" -c:a aac -b:a 128k {metadataFlag} \"{output}\"";
+        string Pass2(string streamArgs) =>
+            $"-y {trimArgs} -i \"{input}\" {filterArgs} -c:v {encoder} -b:v {videoBitrate}k -pass 2 -passlogfile \"{logName}\" {streamArgs} {metadataFlag} \"{output}\"";
+
+        // Runs the step that writes the output file. If it fails with subtitles included,
+        // removes the partial file and tries once more with video and audio only.
+        async Task RunOutputStepAsync(Func<string, string> buildArgs, IProgress<ConversionProgress>? stepProgress)
+        {
+            try
+            {
+                await RunFfmpegProcessAsync(buildArgs(fullStreamArgs), stepProgress);
+            }
+            catch (Exception ex)
+            {
+                LogService.Instance.Log(
+                    $"[FALLBACK] Target-size output failed with subtitles for {output}. Retrying without subtitles... | Error: {ex.Message}",
+                    LogLevel.Warning, "FFMPEG");
+                if (File.Exists(output))
+                {
+                    try { File.Delete(output); } catch { }
+                }
+                await RunFfmpegProcessAsync(buildArgs(fallbackStreamArgs), stepProgress);
+            }
+        }
         
         LogService.Instance.Log("PASS Complete", LogLevel.Info, "FFMPEG");
 
@@ -268,16 +303,18 @@ public class FfmpegService
                         ? $"-rc vbr_peak -quality quality {rateArgs}"
                         : $"-preset veryfast {rateArgs}";
 
-                var singlePass = $"-y {trimArgs} -i \"{input}\" {filterArgs} -c:v {encoder} {gpuArgs} -c:a aac -b:a 128k {metadataFlag} \"{output}\"";
+                string SinglePass(string streamArgs) =>
+                    $"-y {trimArgs} -i \"{input}\" {filterArgs} -c:v {encoder} {gpuArgs} {streamArgs} {metadataFlag} \"{output}\"";
 
-                LogService.Instance.Log($"Single pass (GPU) start | Encoder={encoder} | VideoBitrate={videoBitrate}k", LogLevel.Info, "FFMPEG");
-                await RunFfmpegProcessAsync(singlePass, progress);
+                LogService.Instance.Log($"Single pass (GPU) start | Encoder={encoder} | VideoBitrate={videoBitrate}k | AudioTracks={audioTracks}", LogLevel.Info, "FFMPEG");
+                await RunOutputStepAsync(SinglePass, progress);
                 LogService.Instance.Log("Single pass (GPU) complete", LogLevel.Info, "FFMPEG");
             }
             else
             {
+                LogService.Instance.Log($"Two-pass (CPU) | Encoder={encoder} | VideoBitrate={videoBitrate}k | AudioTracks={audioTracks}", LogLevel.Info, "FFMPEG");
                 await RunFfmpegProcessAsync(pass1, p1);
-                await RunFfmpegProcessAsync(pass2, p2);
+                await RunOutputStepAsync(Pass2, p2);
             }
         }
         catch (Exception ex)
