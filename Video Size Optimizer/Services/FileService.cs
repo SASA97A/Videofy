@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Enumeration;
+using System.Linq;
+using System.Threading.Tasks;
 using Video_Size_Optimizer.Utils;
 
 
@@ -45,14 +47,22 @@ public class FileService
             ShouldRecursePredicate = (ref FileSystemEntry entry) => (entry.Attributes & FileAttributes.ReparsePoint) == 0
         };
 
+        // ".ts"/".mts" files that need their first bytes read to tell a video from TypeScript code.
+        // They are read after the listing, in parallel, because opening files one by one is slow.
+        var transportStreamCandidates = new List<string>();
+
         foreach (var (path, length) in entries)
         {
             totalSize += length;
             filesChecked++;
 
-            if (allowedExtensions.Contains(Path.GetExtension(path)))
+            string extension = Path.GetExtension(path);
+            if (allowedExtensions.Contains(extension))
             {
-                videoPaths.Add(path);
+                if (!IsAmbiguousTransportStreamExtension(extension))
+                    videoPaths.Add(path);
+                else if (CouldBeTransportStream(path, length))
+                    transportStreamCandidates.Add(path);
             }
 
             if (progress != null && filesChecked % 5000 == 0)
@@ -61,10 +71,64 @@ public class FileService
             }
         }
 
+        if (transportStreamCandidates.Count > 0)
+        {
+            var confirmed = new System.Collections.Concurrent.ConcurrentBag<string>();
+            Parallel.ForEach(transportStreamCandidates, new ParallelOptions { MaxDegreeOfParallelism = 8 }, path =>
+            {
+                if (HasTransportStreamHeader(path)) confirmed.Add(path);
+            });
+            videoPaths.AddRange(confirmed.OrderBy(p => p, StringComparer.OrdinalIgnoreCase));
+        }
+
         LogService.Instance.Log(
-            $"Scanned {filesChecked:N0} file(s) in {stopwatch.Elapsed.TotalSeconds:F1}s | Path={folder}", LogLevel.Info, "Scan");
+            $"Scanned {filesChecked:N0} file(s) in {stopwatch.Elapsed.TotalSeconds:F1}s | Path={folder}" +
+            $" | .ts/.mts read={transportStreamCandidates.Count:N0}", LogLevel.Info, "Scan");
 
         return (totalSize, videoPaths);
+    }
+
+    // ".ts" and ".mts" are video extensions (MPEG transport stream) but also TypeScript source
+    // extensions. A scan of a drive with code projects listed about 150,000 TypeScript files as videos.
+    private static bool IsAmbiguousTransportStreamExtension(string extension) =>
+        extension.Equals(".ts", StringComparison.OrdinalIgnoreCase) ||
+        extension.Equals(".mts", StringComparison.OrdinalIgnoreCase);
+
+    // Two transport stream packets: 188 bytes (.ts) or 192 bytes (.m2ts/.mts camcorder files).
+    private const int TransportStreamProbeBytes = 2 * 192;
+
+    /// <summary>Cheap checks that reject most TypeScript files without opening them.</summary>
+    private static bool CouldBeTransportStream(string path, long length)
+    {
+        if (length < TransportStreamProbeBytes) return false;
+        if (path.EndsWith(".d.ts", StringComparison.OrdinalIgnoreCase) ||
+            path.EndsWith(".d.mts", StringComparison.OrdinalIgnoreCase)) return false;
+
+        // Package folders of JavaScript projects hold code, not recordings.
+        string sep = Path.DirectorySeparatorChar.ToString();
+        return !path.Contains($"{sep}node_modules{sep}", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>Reads the first two packets and checks for the 0x47 sync byte that starts each one.</summary>
+    private static bool HasTransportStreamHeader(string path)
+    {
+        try
+        {
+            Span<byte> head = stackalloc byte[TransportStreamProbeBytes];
+            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete, 1);
+            if (stream.ReadAtLeast(head, TransportStreamProbeBytes, throwOnEndOfStream: false) < TransportStreamProbeBytes)
+                return false;
+
+            const byte Sync = 0x47;
+            bool plainTs = head[0] == Sync && head[188] == Sync;
+            bool m2ts = head[4] == Sync && head[196] == Sync;
+            return plainTs || m2ts;
+        }
+        catch (Exception)
+        {
+            // Unreadable now: keep it, so a locked real video is not silently hidden.
+            return true;
+        }
     }
 
     public bool IsPathLengthValid(string directory, string fileName, string extension)

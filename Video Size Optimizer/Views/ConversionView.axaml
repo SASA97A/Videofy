@@ -77,7 +77,7 @@
 							</Image>
 						</Panel>
 					</Button>
-					<Button Command="{Binding HandleActionCommand}" Content="{Binding ActionButtonText}"
+					<Button Command="{Binding HandleActionCommand}" IsEnabled="{Binding !IsScanning}" Content="{Binding ActionButtonText}"
 							Padding="24,0" Height="42" VerticalContentAlignment="Center" Cursor="Hand"
 							Background="{Binding ActionButtonColor}" Foreground="{DynamicResource TertiaryBackground}"
 							FontWeight="Black" FontSize="13" CornerRadius="6"
