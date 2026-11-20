@@ -140,6 +140,44 @@ namespace Video_Size_Optimizer.Services
             return 0;
         }
 
+        /// <summary>
+        /// Number of audio streams in the file. Returns 1 if it cannot be read, matching the old
+        /// assumption of one audio track, so the target-size bitrate stays safe.
+        /// </summary>
+        public async Task<int> GetAudioStreamCountAsync(string inputPath)
+        {
+            if (!File.Exists(_ffprobePath)) return 1;
+
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = _ffprobePath,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true
+            };
+            // One line per audio stream ("audio").
+            foreach (var arg in new[] { "-v", "error", "-select_streams", "a", "-show_entries", "stream=codec_type", "-of", "csv=p=0", inputPath })
+                startInfo.ArgumentList.Add(arg);
+
+            try
+            {
+                using var process = Process.Start(startInfo);
+                if (process == null) return 1;
+
+                string output = await process.StandardOutput.ReadToEndAsync();
+                await process.WaitForExitAsync();
+                if (process.ExitCode != 0) return 1;
+
+                return output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Length;
+            }
+            catch (Exception ex)
+            {
+                LogService.Instance.Log(
+                    $"Failed to count audio streams. File={inputPath} | Error: {ex.Message}", LogLevel.Error, "FFPROBE");
+                return 1;
+            }
+        }
+
         public void KillProcess()
         {
             try
