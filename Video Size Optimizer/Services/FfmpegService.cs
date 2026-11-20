@@ -255,10 +255,8 @@ public class FfmpegService
         }));
 
         // PASS 1
-        LogService.Instance.Log("PASS 1 Start", LogLevel.Info, "FFMPEG");
-        var pass1 = $"-y {trimArgs} -i \"{input}\" {filterArgs} -c:v {encoder} -b:v {videoBitrate}k -pass 1 -passlogfile \"{logName}\" -an -f null {nullDev}";
+        var pass1 =$"-y {trimArgs} -i \"{input}\" {filterArgs} -c:v {encoder} -b:v {videoBitrate}k -pass 1 -passlogfile \"{logName}\" -an -f null {nullDev}";
         // PASS 2
-        LogService.Instance.Log("PASS 2 Start", LogLevel.Info, "FFMPEG");
         string Pass2(string streamArgs) =>
             $"-y {trimArgs} -i \"{input}\" {filterArgs} -c:v {encoder} -b:v {videoBitrate}k -pass 2 -passlogfile \"{logName}\" {streamArgs} {metadataFlag} \"{output}\"";
 
@@ -282,8 +280,6 @@ public class FfmpegService
                 await RunFfmpegProcessAsync(buildArgs(fallbackStreamArgs), stepProgress);
             }
         }
-        
-        LogService.Instance.Log("PASS Complete", LogLevel.Info, "FFMPEG");
 
         // GPU encoders (NVENC, AMF, QSV) ignore -pass: tested with hevc_nvenc, the "pass 2" output was
         // byte-identical to a single-pass encode, so pass 1 only doubled the time. They run one pass
@@ -313,8 +309,14 @@ public class FfmpegService
             else
             {
                 LogService.Instance.Log($"Two-pass (CPU) | Encoder={encoder} | VideoBitrate={videoBitrate}k | AudioTracks={audioTracks}", LogLevel.Info, "FFMPEG");
+                // Log each pass when it really runs, so a failure shows which pass it was in.
+                LogService.Instance.Log("Pass 1/2 start (analysis)", LogLevel.Info, "FFMPEG");
                 await RunFfmpegProcessAsync(pass1, p1);
+                LogService.Instance.Log("Pass 1/2 done", LogLevel.Info, "FFMPEG");
+
+                LogService.Instance.Log("Pass 2/2 start (output)", LogLevel.Info, "FFMPEG");
                 await RunOutputStepAsync(Pass2, p2);
+                LogService.Instance.Log("Pass 2/2 done", LogLevel.Info, "FFMPEG");
             }
         }
         catch (Exception ex)
