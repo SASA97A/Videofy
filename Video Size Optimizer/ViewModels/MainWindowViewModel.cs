@@ -1003,7 +1003,7 @@ public partial class MainWindowViewModel : ViewModelBase
                             {
                                 // 2. Run target size compression 
 
-                                LogService.Instance.Log($"2-pass encoding started");
+                                LogService.Instance.Log($"Target size encoding started (2-pass on CPU, single pass on GPU)");
 
                                 // The bitrate must be computed from the length that is actually encoded.
                                 // Using the full duration for a trimmed clip made the output far smaller than the target.
