@@ -221,6 +221,7 @@ public class FfmpegService
             filters.Add($"fps={fpsValue}");
 
         string filterArgs = filters.Count > 0 ? $"-vf \"{string.Join(",", filters)}\"" : "";
+        // Used by the pass that writes the output (pass 2, or the single GPU pass). Pass 1 output is discarded.
         string metadataFlag = stripMetadata ? "-map_metadata -1 -map_chapters -1" : "";
         string logName = Path.Combine(Path.GetTempPath(), $"ffmpeg2pass_{Guid.NewGuid()}");
         string nullDev = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "NUL" : "/dev/null";
@@ -245,7 +246,7 @@ public class FfmpegService
         var pass1 = $"-y {trimArgs} -i \"{input}\" {filterArgs} -c:v {encoder} -b:v {videoBitrate}k -pass 1 -passlogfile \"{logName}\" -an -f null {nullDev}";
         // PASS 2
         LogService.Instance.Log("PASS 2 Start", LogLevel.Info, "FFMPEG");
-        var pass2 = $"-y {trimArgs} -i \"{input}\" {filterArgs} -c:v {encoder} -b:v {videoBitrate}k -pass 2 -passlogfile \"{logName}\" -c:a aac -b:a 128k \"{output}\"";
+        var pass2 = $"-y {trimArgs} -i \"{input}\" {filterArgs} -c:v {encoder} -b:v {videoBitrate}k -pass 2 -passlogfile \"{logName}\" -c:a aac -b:a 128k {metadataFlag} \"{output}\"";
         
         LogService.Instance.Log("PASS Complete", LogLevel.Info, "FFMPEG");
 
@@ -267,7 +268,7 @@ public class FfmpegService
                         ? $"-rc vbr_peak -quality quality {rateArgs}"
                         : $"-preset veryfast {rateArgs}";
 
-                var singlePass = $"-y {trimArgs} -i \"{input}\" {filterArgs} -c:v {encoder} {gpuArgs} -c:a aac -b:a 128k \"{output}\"";
+                var singlePass = $"-y {trimArgs} -i \"{input}\" {filterArgs} -c:v {encoder} {gpuArgs} -c:a aac -b:a 128k {metadataFlag} \"{output}\"";
 
                 LogService.Instance.Log($"Single pass (GPU) start | Encoder={encoder} | VideoBitrate={videoBitrate}k", LogLevel.Info, "FFMPEG");
                 await RunFfmpegProcessAsync(singlePass, progress);
