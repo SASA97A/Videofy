@@ -25,6 +25,8 @@ public class FileService
             AttributesToSkip = 0
         };
 
+        int skippedFiles = 0;
+
         foreach (var file in Directory.EnumerateFiles(folder, "*", options))
         {
             try
@@ -40,11 +42,19 @@ public class FileService
             catch (IOException)
             {
                 // The file was deleted or locked during the scan. Leave it out.
+                skippedFiles++;
             }
             catch (UnauthorizedAccessException)
             {
                 // No permission to read this file's details. Leave it out.
+                skippedFiles++;
             }
+        }
+
+        // One log line instead of a popup per file: these are almost always system or temp files.
+        if (skippedFiles > 0)
+        {
+            LogService.Instance.Log($"Skipped {skippedFiles} unreadable file(s) while scanning {folder}", LogLevel.Warning, "Scan");
         }
 
         return (totalSize, videoPaths);

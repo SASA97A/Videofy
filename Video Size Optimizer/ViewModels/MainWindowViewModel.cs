@@ -352,10 +352,17 @@ public partial class MainWindowViewModel : ViewModelBase
             var video = new VideoFile(path, folderPath);
             video.PropertyChanged += VideoFile_PropertyChanged;
             Videos.Add(video);
-        }       
+        }
 
         ApplyFilter();
         RefreshStats();
+
+        // Without this, a folder with no videos only shows an empty list.
+        if (data.videoPaths.Count == 0)
+        {
+            await _messageService.ShowInfoAsync("No Videos Found",
+                $"No video files were found in:\n{folderPath}\n\n{AppConstants.NoVideosFoundHint}");
+        }
     }
 
     private void UpdateSelectedFolderPathDisplay()
@@ -443,8 +450,13 @@ public partial class MainWindowViewModel : ViewModelBase
 
             LogService.Instance.Log($"Updated total videos count: {Videos.Count}");
         }
-
-        await Task.CompletedTask;
+        else
+        {
+            // Nothing new: the drop held no supported videos, or they were already in the list.
+            LogService.Instance.Log("Drop added no new videos.", LogLevel.Warning, "Main");
+            await _messageService.ShowInfoAsync("No New Videos",
+                $"No new video files were added. They may already be in the list, or the dropped items contain no supported videos.\n\n{AppConstants.NoVideosFoundHint}");
+        }
     }
 
     private void VideoFile_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
