@@ -13,10 +13,10 @@ public class FileService
 {
     /// <summary>
     /// Lists the videos under <paramref name="folder"/> and the total size of all files in it.
-    /// <paramref name="progress"/>, if given, receives the number of files checked so far.
+    /// <paramref name="progress"/>, if given, receives the number of files checked and videos found so far.
     /// </summary>
     public (long totalSize, List<string> videoPaths) GetFolderData(string folder, HashSet<string> allowedExtensions,
-        IProgress<int>? progress = null)
+        IProgress<(int FilesChecked, int VideosFound)>? progress = null)
     {
         long totalSize = 0;
         int filesChecked = 0;
@@ -57,7 +57,7 @@ public class FileService
 
             if (progress != null && filesChecked % 5000 == 0)
             {
-                progress.Report(filesChecked);
+                progress.Report((filesChecked, videoPaths.Count));
             }
         }
 

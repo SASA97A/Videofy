@@ -92,7 +92,19 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty] 
     [NotifyPropertyChangedFor(nameof(ActionButtonText))]
     [NotifyPropertyChangedFor(nameof(ActionButtonColor))]
+    [NotifyPropertyChangedFor(nameof(IsIdle))]
     private bool _isBusy;
+
+    // True while a folder scan runs. Shows the scanning overlay and locks the controls.
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsIdle))]
+    private bool _isScanning;
+
+    [ObservableProperty] private string _scanFolderText = "";
+    [ObservableProperty] private string _scanProgressText = "";
+
+    /// <summary>True when neither an encode nor a folder scan is running.</summary>
+    public bool IsIdle => !IsBusy && !IsScanning;
 
     public string PauseActionIconPath => IsPaused
     ? "avares://Videofy/Assets/play.svg"
@@ -317,16 +329,11 @@ public partial class MainWindowViewModel : ViewModelBase
         LogService.Instance.Log(
               $"Readable extensions: {string.Join(", ", allowedExtensions)}");
 
-        // Scan off the UI thread so a large folder does not freeze the window.
         // BrowseFolder is async void, so an exception here would crash the app: catch it.
         (long totalSize, List<string> videoPaths) data;
-        string previousStatus = StatusMessage;
         try
         {
-            StatusMessage = "Scanning folder...";
-            // Show a running count so a large scan (a whole drive) does not look frozen.
-            var scanProgress = new Progress<int>(count => StatusMessage = $"Scanning folder... {count:N0} files checked");
-            data = await Task.Run(() => _fileService.GetFolderData(folderPath, allowedExtensions, scanProgress));
+            data = await ScanFolderAsync(folderPath, allowedExtensions);
         }
         catch (Exception ex)
         {
@@ -334,10 +341,6 @@ public partial class MainWindowViewModel : ViewModelBase
             await _messageService.ShowErrorAsync("Folder Scan Failed",
                 $"Could not read the folder:\n{folderPath}\n\n{ex.Message}");
             return;
-        }
-        finally
-        {
-            StatusMessage = previousStatus;
         }
 
         TotalFolderSizeDisplay = $"{(data.totalSize / 1024.0 / 1024.0 / 1024.0):F2} GB";
@@ -364,6 +367,27 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             await _messageService.ShowInfoAsync("No Videos Found",
                 $"No video files were found in:\n{folderPath}\n\n{AppConstants.NoVideosFoundHint}");
+        }
+    }
+
+    /// <summary>
+    /// Scans a folder off the UI thread, so the window stays responsive, and shows the
+    /// scanning overlay with live counts while it runs.
+    /// </summary>
+    private async Task<(long totalSize, List<string> videoPaths)> ScanFolderAsync(string folder, HashSet<string> allowedExtensions)
+    {
+        ScanFolderText = folder;
+        ScanProgressText = "Starting...";
+        IsScanning = true;
+        try
+        {
+            var progress = new Progress<(int FilesChecked, int VideosFound)>(p =>
+                ScanProgressText = $"{p.FilesChecked:N0} files checked · {p.VideosFound:N0} videos found");
+            return await Task.Run(() => _fileService.GetFolderData(folder, allowedExtensions, progress));
+        }
+        finally
+        {
+            IsScanning = false;
         }
     }
 
@@ -396,6 +420,9 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         if (paths == null || !paths.Any()) return;
 
+        // Ignore drops while a scan runs, so a half-built list is not scanned twice.
+        if (IsScanning) return;
+
         var allowedExtensions = AppConstants.GetCombinedExtensions(GlobalSettings.CustomExtensions);
         var existingPaths = Videos.Select(v => v.FilePath).ToHashSet(StringComparer.OrdinalIgnoreCase);
         bool addedAny = false;
@@ -408,7 +435,19 @@ public partial class MainWindowViewModel : ViewModelBase
             {
                 LogService.Instance.Log($"Scanning dropped directory: {path}");
                 _trackedFolders.Add(path);
-                var data = _fileService.GetFolderData(path, allowedExtensions);
+                (long totalSize, List<string> videoPaths) data;
+                try
+                {
+                    // Off the UI thread, with the scanning overlay, like Browse.
+                    data = await ScanFolderAsync(path, allowedExtensions);
+                }
+                catch (Exception ex)
+                {
+                    LogService.Instance.Log($"Folder scan failed | Path={path} | Error={ex}", LogLevel.Error, "Main");
+                    await _messageService.ShowErrorAsync("Folder Scan Failed",
+                        $"Could not read the folder:\n{path}\n\n{ex.Message}");
+                    continue;
+                }
 
                 foreach (var videoPath in data.videoPaths)
                 {
@@ -537,7 +576,9 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     private async Task StartCompressionAsync()
-    {      
+    {
+        // The list is still being filled by a folder scan.
+        if (IsScanning) return;
 
         var selectedVideos = Videos.Where(v => {
             // Basic requirements
