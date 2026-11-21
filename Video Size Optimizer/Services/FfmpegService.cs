@@ -26,6 +26,12 @@ public class FfmpegService
     private static bool _initialized = false;
     private static readonly object _lock = new();
     private Process? _currentProcess;
+    // Set by KillProcess (user pressed Stop). A stopped run is not a failure: it returns quietly and
+    // no further ffmpeg step (next pass, subtitle retry, next merge step) is started.
+    private volatile bool _stopRequested;
+
+    /// <summary>Call at the start of a batch so an earlier Stop does not block the new run.</summary>
+    public void ClearStopRequest() => _stopRequested = false;
 
     // Pause for Win
     [DllImport("ntdll.dll")] private static extern int NtSuspendProcess(IntPtr processHandle);
@@ -268,7 +274,8 @@ public class FfmpegService
             {
                 await RunFfmpegProcessAsync(buildArgs(fullStreamArgs), stepProgress);
             }
-            catch (Exception ex)
+            // Never retry after Stop: that would start ffmpeg again after the user stopped it.
+            catch (Exception ex) when (!_stopRequested)
             {
                 LogService.Instance.Log(
                     $"[FALLBACK] Target-size output failed with subtitles for {output}. Retrying without subtitles... | Error: {ex.Message}",
@@ -304,6 +311,7 @@ public class FfmpegService
 
                 LogService.Instance.Log($"Single pass (GPU) start | Encoder={encoder} | VideoBitrate={videoBitrate}k | AudioTracks={audioTracks}", LogLevel.Info, "FFMPEG");
                 await RunOutputStepAsync(SinglePass, progress);
+                if (_stopRequested) return;
                 LogService.Instance.Log("Single pass (GPU) complete", LogLevel.Info, "FFMPEG");
             }
             else
@@ -312,10 +320,13 @@ public class FfmpegService
                 // Log each pass when it really runs, so a failure shows which pass it was in.
                 LogService.Instance.Log("Pass 1/2 start (analysis)", LogLevel.Info, "FFMPEG");
                 await RunFfmpegProcessAsync(pass1, p1);
+                // Stopped in pass 1: its stats file is incomplete, so pass 2 must not start.
+                if (_stopRequested) return;
                 LogService.Instance.Log("Pass 1/2 done", LogLevel.Info, "FFMPEG");
 
                 LogService.Instance.Log("Pass 2/2 start (output)", LogLevel.Info, "FFMPEG");
                 await RunOutputStepAsync(Pass2, p2);
+                if (_stopRequested) return;
                 LogService.Instance.Log("Pass 2/2 done", LogLevel.Info, "FFMPEG");
             }
         }
@@ -339,18 +350,37 @@ public class FfmpegService
         }
         finally
         {
+            // libx265 writes its CU-tree data next to the stats file (can be tens of MB).
+            // x264/x265 write to ".temp" files and rename them when pass 1 ends, so a stopped or failed
+            // pass 1 leaves the ".temp" names behind (seen: 27 MB .cutree.temp).
+            string[] suffixes =
+            {
+                "-0.log", "-0.log.mbtree", "-0.log.cutree",
+                "-0.log.temp", "-0.log.mbtree.temp", "-0.log.cutree.temp", ".log"
+            };
+            foreach (var suffix in suffixes)
+                await DeleteWithRetryAsync($"{logName}{suffix}");
+        }
+    }
+
+    // Right after Stop, Windows can keep the killed ffmpeg's files locked for a moment, so retry briefly.
+    public static async Task DeleteWithRetryAsync(string path)
+    {
+        for (int attempt = 1; File.Exists(path); attempt++)
+        {
             try
             {
-                if (File.Exists($"{logName}-0.log")) File.Delete($"{logName}-0.log");
-                if (File.Exists($"{logName}-0.log.mbtree")) File.Delete($"{logName}-0.log.mbtree");
-                // libx265 writes its CU-tree data next to the stats file (can be tens of MB).
-                if (File.Exists($"{logName}-0.log.cutree")) File.Delete($"{logName}-0.log.cutree");
-                if (File.Exists($"{logName}.log")) File.Delete($"{logName}.log");
+                File.Delete(path);
+                return;
+            }
+            catch (IOException) when (attempt < 10)
+            {
+                await Task.Delay(200);
             }
             catch (Exception ex)
             {
-                LogService.Instance.Log(
-                    $"Failed to clean 2-pass logs | {ex.Message}", LogLevel.Error, "FFMPEG");
+                LogService.Instance.Log($"Failed to delete {path} | {ex.Message}", LogLevel.Error, "FFMPEG");
+                return;
             }
         }
     }
@@ -376,7 +406,14 @@ public class FfmpegService
     {
         if (!File.Exists(_ffmpegPath)) throw new FileNotFoundException("FFmpeg not found", _ffmpegPath);
 
-        try 
+        // Stop was pressed between steps: do not start another ffmpeg run.
+        if (_stopRequested)
+        {
+            LogService.Instance.Log("Step skipped: stopped by user.", LogLevel.Info, "FFMPEG");
+            return;
+        }
+
+        try
         {
             _currentProcess = new Process
             {
@@ -425,7 +462,16 @@ public class FfmpegService
             }
 
             await _currentProcess.WaitForExitAsync();
-            if (_currentProcess.ExitCode != 0 && _currentProcess.ExitCode != -1)
+
+            // A run killed by Stop exits with -1 on Windows and 137 on Linux/macOS. Detect it with the flag,
+            // not the exit code: ffmpeg's own "Operation not permitted" error is also -1.
+            if (_stopRequested)
+            {
+                LogService.Instance.Log($"Stopped by user (exit code {_currentProcess.ExitCode}).", LogLevel.Info, "FFMPEG");
+                return;
+            }
+
+            if (_currentProcess.ExitCode != 0)
                 throw new Exception($"FFmpeg failed with exit code {_currentProcess.ExitCode}");
         }
         catch (Exception ex)
@@ -442,6 +488,8 @@ public class FfmpegService
 
     public void KillProcess()
     {
+        // Set before the kill, so the exit of the killed process is already seen as a stop.
+        _stopRequested = true;
         try
         {
             if (_currentProcess != null && !_currentProcess.HasExited)
