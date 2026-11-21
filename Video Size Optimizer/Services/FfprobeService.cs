@@ -79,6 +79,7 @@ namespace Video_Size_Optimizer.Services
             try
             {
                 using var process = Process.Start(startInfo);
+                ChildProcessGuard.Track(process);
                 if (process == null) return 0;
 
                 string output = await process.StandardOutput.ReadToEndAsync();
@@ -118,6 +119,7 @@ namespace Video_Size_Optimizer.Services
             try
             {
                 _currentProcess.Start();
+                ChildProcessGuard.Track(_currentProcess);
                 string output = await _currentProcess.StandardOutput.ReadToEndAsync();
                 await _currentProcess.WaitForExitAsync();
 
@@ -162,6 +164,7 @@ namespace Video_Size_Optimizer.Services
             try
             {
                 using var process = Process.Start(startInfo);
+                ChildProcessGuard.Track(process);
                 if (process == null) return 1;
 
                 string output = await process.StandardOutput.ReadToEndAsync();
@@ -212,6 +215,7 @@ namespace Video_Size_Optimizer.Services
             try
             {
                 using var process = Process.Start(startInfo);
+                ChildProcessGuard.Track(process);
                 if (process == null) return meta;
 
                 string jsonOutput = await process.StandardOutput.ReadToEndAsync();
