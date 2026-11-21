@@ -19,6 +19,13 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+
+        // app.ico has only 16 and 32 px images, which look blurry on Linux panels. Use the 500 px PNG there.
+        if (!OperatingSystem.IsWindows())
+        {
+            using var stream = Avalonia.Platform.AssetLoader.Open(new Uri("avares://Videofy/Assets/app.png"));
+            Icon = new WindowIcon(stream);
+        }
     }
 
     private void OnDragEnter(object? sender, DragEventArgs e)

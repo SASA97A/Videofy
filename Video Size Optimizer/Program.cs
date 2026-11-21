@@ -32,7 +32,12 @@ sealed class Program
 
         // Linux: Avalonia draws its own border and resize grips around our custom title bar.
 #pragma warning disable AVALONIA_X11_CSD // Experimental in Avalonia 12
-        var x11Options = new X11PlatformOptions { EnableDrawnDecorations = true };
+        // WmClass must match StartupWMClass in the .desktop file, or the panel shows no icon.
+        var x11Options = new X11PlatformOptions
+        {
+            EnableDrawnDecorations = true,
+            WmClass = Video_Size_Optimizer.Services.LinuxDesktopIntegration.WmClass
+        };
 #pragma warning restore AVALONIA_X11_CSD
 
         if (useSoftwareRendering)

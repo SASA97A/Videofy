@@ -30,6 +30,10 @@ public partial class App : Application
             {
                 DataContext = new MainWindowViewModel(),
             };
+
+            // Linux: app menu entry and icon, so the panel and the menu show the Videofy icon.
+            if (OperatingSystem.IsLinux())
+                System.Threading.Tasks.Task.Run(Services.LinuxDesktopIntegration.EnsureRegistered);
         }
 
         base.OnFrameworkInitializationCompleted();
