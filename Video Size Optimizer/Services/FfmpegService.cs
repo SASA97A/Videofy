@@ -207,6 +207,10 @@ public class FfmpegService
         {
             LogService.Instance.Log(
                 $"Compress/Encoding failed. Input={input} | Output={output} | {ex.Message}", LogLevel.Error, "FFMPEG");
+
+            // A failed encode can leave a file that looks finished but is broken (seen with a damaged
+            // recording: 107 video frames in 20 minutes). Delete it, as target size does.
+            await DeleteWithRetryAsync(output);
             throw;
         }      
     }
