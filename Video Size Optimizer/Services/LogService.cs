@@ -4,6 +4,8 @@ using System;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Text;
+using System.Threading;
 
 namespace Video_Size_Optimizer.Services;
 
@@ -57,18 +59,31 @@ public partial class LogService : ObservableObject
 
     public ObservableCollection<LogEntry> LogEntries { get; } = new();
     public ObservableCollection<LogEntry> FilteredLogEntries { get; } = new();
-    public ObservableCollection<string> LogLines { get; } = new();
 
     [ObservableProperty]
     private int selectedFilterIndex = 0;
 
     [ObservableProperty]
-    private string fullLogText = string.Empty;
-
-    [ObservableProperty]
     private string logFileSizeDisplay = "Log size: 0 KB";
 
+    // The log file is never trimmed or renamed by the app. Above this size the user is told
+    // (Log window note and a popup at startup) so they can delete it themselves.
+    public const long LargeLogFileBytes = 10L * 1024 * 1024;
+
+    [ObservableProperty]
+    private bool isLogFileLarge;
+
+    public string LogFilePath => _logFilePath;
+    public string LargeLogFileNote =>
+        $"The log file is over {LargeLogFileBytes / 1024 / 1024} MB. Consider deleting it: {_logFilePath}";
+
     private readonly string _logFilePath;
+
+    // Log() is called from several threads (UI, folder scan, ffmpeg). Without a lock, two
+    // writes at the same moment fail with "file in use" and the line is lost silently.
+    private readonly object _fileLock = new();
+    // Size kept in memory so each log line does not read the file size from disk.
+    private long _logFileBytes;
 
     private LogService()
     {
@@ -79,7 +94,9 @@ public partial class LogService : ObservableObject
         Directory.CreateDirectory(folder);
         _logFilePath = Path.Combine(folder, "app_logs.txt");
 
-        UpdateLogFileSize();
+        // No dispatcher here: the service can be created before the UI thread is running.
+        try { _logFileBytes = File.Exists(_logFilePath) ? new FileInfo(_logFilePath).Length : 0; } catch { }
+        UpdateLogFileSizeDisplay();
     }
 
     partial void OnSelectedFilterIndexChanged(int value)
@@ -126,20 +143,20 @@ public partial class LogService : ObservableObject
                     FilteredLogEntries.RemoveAt(0);
             }
 
-            LogLines.Add(entry.FormattedText);
-            if (LogLines.Count > 1000)
-                LogLines.RemoveAt(0);
-
-            FullLogText = string.Join(Environment.NewLine, LogLines);
         });
 
+        string line = entry.FormattedText + Environment.NewLine;
         try
         {
-            File.AppendAllText(_logFilePath, entry.FormattedText + Environment.NewLine);
+            lock (_fileLock)
+            {
+                File.AppendAllText(_logFilePath, line);
+                _logFileBytes += Encoding.UTF8.GetByteCount(line);
+            }
         }
         catch { }
 
-        Dispatcher.UIThread.Post(UpdateLogFileSize);
+        Dispatcher.UIThread.Post(UpdateLogFileSizeDisplay);
     }
 
     public void Section(string title)
@@ -160,8 +177,6 @@ public partial class LogService : ObservableObject
         {
             LogEntries.Clear();
             FilteredLogEntries.Clear();
-            LogLines.Clear();
-            FullLogText = string.Empty;
         });
     }
 
@@ -170,32 +185,70 @@ public partial class LogService : ObservableObject
         return string.Join(Environment.NewLine, FilteredLogEntries.Select(e => e.FormattedText));
     }
 
-    private void UpdateLogFileSize()
+    /// <summary>
+    /// Deletes the log file on the user's request. The next log line starts a new file.
+    /// Returns null on success, or the error message.
+    /// </summary>
+    public string? DeleteLogFile()
     {
         try
         {
-            if (!File.Exists(_logFilePath))
+            lock (_fileLock)
             {
-                LogFileSizeDisplay = "Log size: 0 KB";
-                return;
+                if (File.Exists(_logFilePath)) File.Delete(_logFilePath);
+                _logFileBytes = 0;
             }
+        }
+        catch (Exception ex)
+        {
+            return ex.Message;
+        }
+        finally
+        {
+            RefreshLogFileSize();
+        }
 
-            long bytes = new FileInfo(_logFilePath).Length;
+        Log("Log file deleted by user.", LogLevel.Info, "Log");
+        return null;
+    }
 
-            string display = bytes switch
+    /// <summary>
+    /// Reads the real file size from disk (when the Log window opens and before the startup note),
+    /// in case the user deleted or edited the file while the app was running.
+    /// </summary>
+    public void RefreshLogFileSize()
+    {
+        try
+        {
+            lock (_fileLock)
             {
-                < 1024 * 1024 =>
-                    $"Log size: {bytes / 1024.0:F1} KB",
-
-                _ =>
-                    $"Log size: {bytes / 1024.0 / 1024.0:F2} MB"
-            };
-
-            LogFileSizeDisplay = display;
+                _logFileBytes = File.Exists(_logFilePath) ? new FileInfo(_logFilePath).Length : 0;
+            }
         }
         catch
         {
-            LogFileSizeDisplay = "Log size: ?";
+            // Keep the last known size.
         }
+
+        if (Dispatcher.UIThread.CheckAccess())
+            UpdateLogFileSizeDisplay();
+        else
+            Dispatcher.UIThread.Post(UpdateLogFileSizeDisplay);
+    }
+
+    private void UpdateLogFileSizeDisplay()
+    {
+        long bytes = Interlocked.Read(ref _logFileBytes);
+
+        LogFileSizeDisplay = bytes switch
+        {
+            < 1024 * 1024 =>
+                $"Log size: {bytes / 1024.0:F1} KB",
+
+            _ =>
+                $"Log size: {bytes / 1024.0 / 1024.0:F2} MB"
+        };
+
+        IsLogFileLarge = bytes >= LargeLogFileBytes;
     }
 }

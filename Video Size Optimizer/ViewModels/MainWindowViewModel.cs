@@ -191,17 +191,30 @@ public partial class MainWindowViewModel : ViewModelBase
             });
         }
 
-        if (GlobalSettings.AutoCheckUpdatesOnStartup)
+        // Startup popups run one after the other, so they never open on top of each other.
+        _ = Task.Run(async () =>
         {
-            _ = Task.Run(async () =>
+            await Task.Delay(1500);
+            await Dispatcher.UIThread.InvokeAsync(async () =>
             {
-                await Task.Delay(1500);
-                await Dispatcher.UIThread.InvokeAsync(async () =>
-                {
+                if (GlobalSettings.AutoCheckUpdatesOnStartup)
                     await CheckForUpdatesInternalAsync(isManualCheck: false);
-                });
+
+                await WarnIfLogFileLargeAsync();
             });
-        }
+        });
+    }
+
+    // The log file is never trimmed or renamed by the app, so tell the user when it gets big.
+    private async Task WarnIfLogFileLargeAsync()
+    {
+        var log = LogService.Instance;
+        log.RefreshLogFileSize();
+        if (!log.IsLogFileLarge) return;
+
+        await _messageService.ShowInfoAsync("Log File Is Large",
+            $"The log file is {new FileInfo(log.LogFilePath).Length / 1024.0 / 1024.0:F1} MB. Consider deleting it to free up space:\n\n" +
+            $"{log.LogFilePath}\n\n");
     }
 
     // Reset completed/processing status of videos
