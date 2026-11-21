@@ -114,7 +114,7 @@ public class FfmpegService
         {
             if (encoder == "copy")
             {
-                var copyArgs = $"-y {trimArgs} -i \"{input}\" -c copy -map 0 \"{output}\"";
+                var copyArgs = $"-y {trimArgs} -i {ProcessArgs.Quote(input)} -c copy -map 0 {ProcessArgs.Quote(output)}";
                 try
                 {
                     await RunFfmpegProcessAsync(copyArgs, progress);
@@ -127,7 +127,7 @@ public class FfmpegService
                     {
                         try { File.Delete(output); } catch { }
                     }
-                    var fallbackCopyArgs = $"-y {trimArgs} -i \"{input}\" -c:v copy -c:a aac -b:a 192k -dn \"{output}\"";
+                    var fallbackCopyArgs = $"-y {trimArgs} -i {ProcessArgs.Quote(input)} -c:v copy -c:a aac -b:a 192k -dn {ProcessArgs.Quote(output)}";
                     await RunFfmpegProcessAsync(fallbackCopyArgs, progress);
                     return;
                 }
@@ -183,7 +183,7 @@ public class FfmpegService
                 ? "-c:a copy -c:s copy -c:t copy"
                 : "-c:a copy -c:s mov_text";
 
-            var args = $"-y {trimArgs} -i \"{input}\" -map 0 {filterArgs} {codecArgs} {streamArgs} -dn {metadataFlag} \"{output}\"";
+            var args = $"-y {trimArgs} -i {ProcessArgs.Quote(input)} -map 0 {filterArgs} {codecArgs} {streamArgs} -dn {metadataFlag} {ProcessArgs.Quote(output)}";
 
             try
             {
@@ -199,7 +199,7 @@ public class FfmpegService
                 }
 
                 // Fallback attempt: Transcode audio to high-quality AAC (192k) and drop incompatible streams
-                var fallbackArgs = $"-y {trimArgs} -i \"{input}\" {filterArgs} {codecArgs} -c:a aac -b:a 192k -dn {metadataFlag} \"{output}\"";
+                var fallbackArgs = $"-y {trimArgs} -i {ProcessArgs.Quote(input)} {filterArgs} {codecArgs} -c:a aac -b:a 192k -dn {metadataFlag} {ProcessArgs.Quote(output)}";
                 await RunFfmpegProcessAsync(fallbackArgs, progress);
             }
         }
@@ -261,10 +261,10 @@ public class FfmpegService
         }));
 
         // PASS 1
-        var pass1 =$"-y {trimArgs} -i \"{input}\" {filterArgs} -c:v {encoder} -b:v {videoBitrate}k -pass 1 -passlogfile \"{logName}\" -an -f null {nullDev}";
+        var pass1 =$"-y {trimArgs} -i {ProcessArgs.Quote(input)} {filterArgs} -c:v {encoder} -b:v {videoBitrate}k -pass 1 -passlogfile {ProcessArgs.Quote(logName)} -an -f null {nullDev}";
         // PASS 2
         string Pass2(string streamArgs) =>
-            $"-y {trimArgs} -i \"{input}\" {filterArgs} -c:v {encoder} -b:v {videoBitrate}k -pass 2 -passlogfile \"{logName}\" {streamArgs} {metadataFlag} \"{output}\"";
+            $"-y {trimArgs} -i {ProcessArgs.Quote(input)} {filterArgs} -c:v {encoder} -b:v {videoBitrate}k -pass 2 -passlogfile {ProcessArgs.Quote(logName)} {streamArgs} {metadataFlag} {ProcessArgs.Quote(output)}";
 
         // Runs the step that writes the output file. If it fails with subtitles included,
         // removes the partial file and tries once more with video and audio only.
@@ -307,7 +307,7 @@ public class FfmpegService
                         : $"-preset veryfast {rateArgs}";
 
                 string SinglePass(string streamArgs) =>
-                    $"-y {trimArgs} -i \"{input}\" {filterArgs} -c:v {encoder} {gpuArgs} {streamArgs} {metadataFlag} \"{output}\"";
+                    $"-y {trimArgs} -i {ProcessArgs.Quote(input)} {filterArgs} -c:v {encoder} {gpuArgs} {streamArgs} {metadataFlag} {ProcessArgs.Quote(output)}";
 
                 LogService.Instance.Log($"Single pass (GPU) start | Encoder={encoder} | VideoBitrate={videoBitrate}k | AudioTracks={audioTracks}", LogLevel.Info, "FFMPEG");
                 await RunOutputStepAsync(SinglePass, progress);
@@ -391,7 +391,7 @@ public class FfmpegService
 
         try
         {
-            var args = $"-y -i \"{input}\" -c copy -map 0 {splitArgs} \"{outputPattern}\"";
+            var args = $"-y -i {ProcessArgs.Quote(input)} -c copy -map 0 {splitArgs} {ProcessArgs.Quote(outputPattern)}";
             await RunFfmpegProcessAsync(args, progress);
         }
         catch (Exception ex)
@@ -592,7 +592,7 @@ public class FfmpegService
             writer.WriteLine("TIMEBASE=1/1000");
             writer.WriteLine($"START={startMs}");
             writer.WriteLine($"END={endMs}");
-            writer.WriteLine($"title=Part {i + 1}: {title}");
+            writer.WriteLine($"title=Part {i + 1}: {ProcessArgs.EscapeMetadata(title)}");
             writer.WriteLine();
 
             currentTime += metadataList[i].Duration;
@@ -624,7 +624,7 @@ public class FfmpegService
                     }
                 }
 
-                var copyArgs = $"-y -f concat -safe 0 -i \"{listFile}\" -i \"{chapterFile}\" -map_metadata 1 -c copy \"{outputPath}\"";
+                var copyArgs = $"-y -f concat -safe 0 -i {ProcessArgs.Quote(listFile)} -i {ProcessArgs.Quote(chapterFile)} -map_metadata 1 -c copy {ProcessArgs.Quote(outputPath)}";
                 try
                 {
                     await RunFfmpegProcessAsync(copyArgs, progress, groupTotalDuration);
@@ -649,7 +649,7 @@ public class FfmpegService
                 for (int i = 0; i < metadataList.Count; i++)
                 {
                     var meta = metadataList[i];
-                    inputArgs.Add($"-i \"{meta.Path}\"");
+                    inputArgs.Add($"-i {ProcessArgs.Quote(meta.Path)}");
 
                     string vFilter = $"[{i}:v]scale=w='if(gt(iw/ih,{maxW}/{maxH}),{maxW},-2)':h='if(gt(iw/ih,{maxW}/{maxH}),-2,{maxH})':force_original_aspect_ratio=decrease," +
                                      $"pad=w={maxW}:h={maxH}:x='({maxW}-iw)/2':y='({maxH}-ih)/2':color=black," +
@@ -666,7 +666,7 @@ public class FfmpegService
                 string concatFilter = $"{concatInputs}concat=n={metadataList.Count}:v=1:a=1[vout][aout]";
                 string fullFiltergraph = string.Join("", filterChains) + concatFilter;
 
-                inputArgs.Add($"-i \"{chapterFile}\"");
+                inputArgs.Add($"-i {ProcessArgs.Quote(chapterFile)}");
 
                 string codecArgs;
                 if (encoder.Contains("nvenc"))
@@ -678,7 +678,7 @@ public class FfmpegService
                 else
                     codecArgs = $"-c:v {encoder} -crf 18";
 
-                var args = $"-y {string.Join(" ", inputArgs)} -filter_complex \"{fullFiltergraph}\" -map \"[vout]\" -map \"[aout]\" -map_metadata {metadataList.Count} {codecArgs} -c:a aac -b:a 192k \"{outputPath}\"";
+                var args = $"-y {string.Join(" ", inputArgs)} -filter_complex \"{fullFiltergraph}\" -map \"[vout]\" -map \"[aout]\" -map_metadata {metadataList.Count} {codecArgs} -c:a aac -b:a 192k {ProcessArgs.Quote(outputPath)}";
                 await RunFfmpegProcessAsync(args, progress, groupTotalDuration);
             }
         }

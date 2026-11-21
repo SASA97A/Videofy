@@ -6,6 +6,8 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
+using Video_Size_Optimizer.Utils;
+
 namespace Video_Size_Optimizer.Services
 {
     public class FfprobeService
@@ -65,7 +67,7 @@ namespace Video_Size_Optimizer.Services
         public async Task<double> GetVideoDurationAsync(string filePath)
         {
             // ffprobe command to get duration in seconds
-            var args = $"-v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 \"{filePath}\"";
+            var args = $"-v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 {ProcessArgs.Quote(filePath)}";
 
             var startInfo = new ProcessStartInfo
             {
@@ -109,7 +111,7 @@ namespace Video_Size_Optimizer.Services
                 {
                     FileName = _ffprobePath,
                     // Arguments to get only the width of the first video stream in a clean format
-                    Arguments = $"-v error -select_streams v:0 -show_entries stream=width -of csv=p=0 \"{inputPath}\"",
+                    Arguments = $"-v error -select_streams v:0 -show_entries stream=width -of csv=p=0 {ProcessArgs.Quote(inputPath)}",
                     UseShellExecute = false,
                     CreateNoWindow = true,
                     RedirectStandardOutput = true
@@ -202,7 +204,7 @@ namespace Video_Size_Optimizer.Services
             var meta = new VideoMetadata { Path = inputPath };
             if (!File.Exists(_ffprobePath)) return meta;
 
-            var args = $"-v quiet -print_format json -show_format -show_streams \"{inputPath}\"";
+            var args = $"-v quiet -print_format json -show_format -show_streams {ProcessArgs.Quote(inputPath)}";
             var startInfo = new ProcessStartInfo
             {
                 FileName = _ffprobePath,
