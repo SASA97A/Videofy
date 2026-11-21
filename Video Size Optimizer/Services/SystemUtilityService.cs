@@ -121,38 +121,96 @@ namespace Video_Size_Optimizer
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
+                // Never leave an older inhibit running, also when prevent is requested twice.
+                StopLinuxInhibit();
+                if (!prevent) return true;
+
+                string? error;
                 try
                 {
-                    if (prevent)
+                    // The inhibit lasts as long as its child command runs. "tail --pid" ends when Videofy
+                    // ends, so the inhibit is released even if the app crashes or is killed (kill -9).
+                    // With the old "sleep infinity" the inhibit stayed until reboot in that case.
+                    var psi = new ProcessStartInfo
                     {
-                        _linuxInhibitProcess = Process.Start(new ProcessStartInfo
-                        {
-                            FileName = "systemd-inhibit",
-                            Arguments = "--what=idle:sleep --who=Videofy --why=\"Encoding Video\" sleep infinity",
-                            UseShellExecute = false,
-                            CreateNoWindow = true
-                        });
+                        FileName = "systemd-inhibit",
+                        UseShellExecute = false,
+                        CreateNoWindow = true,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true
+                    };
+                    psi.ArgumentList.Add("--what=idle:sleep");
+                    psi.ArgumentList.Add("--who=Videofy");
+                    psi.ArgumentList.Add("--why=Encoding Video");
+                    psi.ArgumentList.Add("tail");
+                    psi.ArgumentList.Add($"--pid={Environment.ProcessId}");
+                    psi.ArgumentList.Add("-f");
+                    psi.ArgumentList.Add("/dev/null");
+
+                    var process = Process.Start(psi);
+                    if (process == null)
+                    {
+                        error = "systemd-inhibit could not be started.";
                     }
                     else
                     {
-                        _linuxInhibitProcess?.Kill();
-                        _linuxInhibitProcess = null;
+                        // Process.Start succeeds even when systemd-inhibit is refused (for example no
+                        // logind session: "Failed to inhibit: Access denied"). It then exits at once.
+                        await Task.Delay(300);
+                        if (!process.HasExited)
+                        {
+                            _linuxInhibitProcess = process;
+                            LogService.Instance.Log("System sleep prevention enabled (systemd-inhibit).", LogLevel.Info, "SysUtil");
+                            return true;
+                        }
+
+                        string stderr = (await process.StandardError.ReadToEndAsync()).Trim();
+                        error = $"systemd-inhibit exited with code {process.ExitCode}" +
+                                (stderr.Length > 0 ? $": {stderr}" : ".");
+                        process.Dispose();
                     }
-                    return true;
                 }
-                catch
+                catch (System.ComponentModel.Win32Exception)
                 {
-                    if (prevent && showError != null)
-                    {
-                        await showError("Linux System Limit",
-                            "Could not prevent sleep mode. 'systemd-inhibit' was not found on your system. " +
-                            "Please ensure your system power settings allow long-running tasks.");
-                    }
-                    return false;
+                    error = "'systemd-inhibit' was not found on your system.";
                 }
+                catch (Exception ex)
+                {
+                    error = ex.Message;
+                }
+
+                LogService.Instance.Log($"Sleep prevention failed: {error}", LogLevel.Warning, "SysUtil");
+                if (showError != null)
+                {
+                    await showError("Linux System Limit",
+                        $"Could not prevent sleep mode.\n\n{error}\n\n" +
+                        "Please ensure your system power settings allow long-running tasks.");
+                }
+                return false;
             }
             return true;
-        }      
+        }
+
+        private void StopLinuxInhibit()
+        {
+            var process = _linuxInhibitProcess;
+            _linuxInhibitProcess = null;
+            if (process == null) return;
+
+            try
+            {
+                // Kill(true) also ends the child (tail), not only systemd-inhibit.
+                if (!process.HasExited) process.Kill(true);
+            }
+            catch (Exception ex)
+            {
+                LogService.Instance.Log($"Failed to stop systemd-inhibit: {ex.Message}", LogLevel.Warning, "SysUtil");
+            }
+            finally
+            {
+                process.Dispose();
+            }
+        }
 
         public async Task InstallFfmpegAsync(string destinationFolder, IProgress<string> statusReporter)
         {
