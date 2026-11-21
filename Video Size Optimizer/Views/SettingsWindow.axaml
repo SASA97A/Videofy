@@ -73,7 +73,7 @@
 											   Foreground="{DynamicResource SystemAccentColor}" FontWeight="Bold" FontSize="13"/>
 								</StackPanel>
 								<Border Padding="10,0,10,0">
-									<Slider Value="{Binding LowDiskBufferGb}" Minimum="2" Maximum="80"
+									<Slider Value="{Binding LowDiskBufferGb}" Minimum="2" Maximum="500"
 											TickFrequency="1" IsSnapToTickEnabled="True" Cursor="Hand"/>
 								</Border>
 							</StackPanel>
@@ -219,7 +219,7 @@
 							<StackPanel Spacing="4">
 								<TextBlock Text="Additional Input Formats:" FontSize="13" Foreground="{DynamicResource MainText}"/>
 								<TextBox Text="{Binding CustomExtensions}"
-										 Watermark="e.g. .mxf, .raw (comma separated)"
+										 PlaceholderText="e.g. .mxf, .raw (comma separated)"
 										 FontSize="12"
 										 Background="{DynamicResource InputBackground}"
 										 BorderBrush="{DynamicResource BorderColor}"

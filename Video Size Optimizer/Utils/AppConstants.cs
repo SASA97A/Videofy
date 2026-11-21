@@ -7,7 +7,7 @@ namespace Video_Size_Optimizer.Utils;
 
 public static class AppConstants
 {
-    public const string AppVersion = "v1.4.3";
+    public const string AppVersion = "v1.4.4";
 
     // Encoders
     public static readonly Dictionary<string, string> EncoderMap = new()
@@ -102,6 +102,9 @@ public static class AppConstants
         "To re-process previously optimized files (tagged with -CRF or -Target), " +
         "please ensure the 'Process Optimized Files' setting is enabled " +
         "in the Options menu.";
+
+    public const string NoVideosFoundHint =
+        "To include other file types, add them under Settings > Misc & Advanced > Additional Input Formats.";
 
     public const string NoFolderAccess =
         "Videofy could not resolve a local path for the selected folder.\n\n" +

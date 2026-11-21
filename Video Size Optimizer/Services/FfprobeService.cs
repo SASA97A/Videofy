@@ -6,6 +6,8 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
+using Video_Size_Optimizer.Utils;
+
 namespace Video_Size_Optimizer.Services
 {
     public class FfprobeService
@@ -65,7 +67,7 @@ namespace Video_Size_Optimizer.Services
         public async Task<double> GetVideoDurationAsync(string filePath)
         {
             // ffprobe command to get duration in seconds
-            var args = $"-v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 \"{filePath}\"";
+            var args = $"-v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 {ProcessArgs.Quote(filePath)}";
 
             var startInfo = new ProcessStartInfo
             {
@@ -79,6 +81,7 @@ namespace Video_Size_Optimizer.Services
             try
             {
                 using var process = Process.Start(startInfo);
+                ChildProcessGuard.Track(process);
                 if (process == null) return 0;
 
                 string output = await process.StandardOutput.ReadToEndAsync();
@@ -108,7 +111,7 @@ namespace Video_Size_Optimizer.Services
                 {
                     FileName = _ffprobePath,
                     // Arguments to get only the width of the first video stream in a clean format
-                    Arguments = $"-v error -select_streams v:0 -show_entries stream=width -of csv=p=0 \"{inputPath}\"",
+                    Arguments = $"-v error -select_streams v:0 -show_entries stream=width -of csv=p=0 {ProcessArgs.Quote(inputPath)}",
                     UseShellExecute = false,
                     CreateNoWindow = true,
                     RedirectStandardOutput = true
@@ -118,6 +121,7 @@ namespace Video_Size_Optimizer.Services
             try
             {
                 _currentProcess.Start();
+                ChildProcessGuard.Track(_currentProcess);
                 string output = await _currentProcess.StandardOutput.ReadToEndAsync();
                 await _currentProcess.WaitForExitAsync();
 
@@ -138,6 +142,107 @@ namespace Video_Size_Optimizer.Services
             }
 
             return 0;
+        }
+
+        /// <summary>
+        /// Length, frame count and average frame rate of the first video stream.
+        /// A value that cannot be read is 0 (Frames is 0 when the container does not store it, e.g. MKV).
+        /// </summary>
+        public async Task<(double Duration, long Frames, double AvgFps)> GetVideoStreamInfoAsync(string inputPath)
+        {
+            if (!File.Exists(_ffprobePath)) return (0, 0, 0);
+
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = _ffprobePath,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true
+            };
+            foreach (var arg in new[] { "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=duration,nb_frames,avg_frame_rate", "-of", "default=noprint_wrappers=1", inputPath })
+                startInfo.ArgumentList.Add(arg);
+
+            try
+            {
+                using var process = Process.Start(startInfo);
+                ChildProcessGuard.Track(process);
+                if (process == null) return (0, 0, 0);
+
+                string output = await process.StandardOutput.ReadToEndAsync();
+                await process.WaitForExitAsync();
+
+                double duration = 0, fps = 0;
+                long frames = 0;
+                foreach (var line in output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                {
+                    var parts = line.Split('=', 2);
+                    if (parts.Length != 2) continue;
+                    switch (parts[0])
+                    {
+                        case "duration":
+                            double.TryParse(parts[1], NumberStyles.Any, CultureInfo.InvariantCulture, out duration);
+                            break;
+                        case "nb_frames":
+                            long.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out frames);
+                            break;
+                        case "avg_frame_rate":
+                            // "120/1" or "2068924461/17241332"; "0/0" when unknown.
+                            var rate = parts[1].Split('/');
+                            if (rate.Length == 2
+                                && double.TryParse(rate[0], NumberStyles.Any, CultureInfo.InvariantCulture, out double num)
+                                && double.TryParse(rate[1], NumberStyles.Any, CultureInfo.InvariantCulture, out double den)
+                                && den > 0)
+                                fps = num / den;
+                            break;
+                    }
+                }
+                return (duration, frames, fps);
+            }
+            catch (Exception ex)
+            {
+                LogService.Instance.Log(
+                    $"Failed to read video stream info. File={inputPath} | Error: {ex.Message}", LogLevel.Error, "FFPROBE");
+                return (0, 0, 0);
+            }
+        }
+
+        /// <summary>
+        /// Number of audio streams in the file. Returns 1 if it cannot be read, matching the old
+        /// assumption of one audio track, so the target-size bitrate stays safe.
+        /// </summary>
+        public async Task<int> GetAudioStreamCountAsync(string inputPath)
+        {
+            if (!File.Exists(_ffprobePath)) return 1;
+
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = _ffprobePath,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true
+            };
+            // One line per audio stream ("audio").
+            foreach (var arg in new[] { "-v", "error", "-select_streams", "a", "-show_entries", "stream=codec_type", "-of", "csv=p=0", inputPath })
+                startInfo.ArgumentList.Add(arg);
+
+            try
+            {
+                using var process = Process.Start(startInfo);
+                ChildProcessGuard.Track(process);
+                if (process == null) return 1;
+
+                string output = await process.StandardOutput.ReadToEndAsync();
+                await process.WaitForExitAsync();
+                if (process.ExitCode != 0) return 1;
+
+                return output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Length;
+            }
+            catch (Exception ex)
+            {
+                LogService.Instance.Log(
+                    $"Failed to count audio streams. File={inputPath} | Error: {ex.Message}", LogLevel.Error, "FFPROBE");
+                return 1;
+            }
         }
 
         public void KillProcess()
@@ -161,7 +266,7 @@ namespace Video_Size_Optimizer.Services
             var meta = new VideoMetadata { Path = inputPath };
             if (!File.Exists(_ffprobePath)) return meta;
 
-            var args = $"-v quiet -print_format json -show_format -show_streams \"{inputPath}\"";
+            var args = $"-v quiet -print_format json -show_format -show_streams {ProcessArgs.Quote(inputPath)}";
             var startInfo = new ProcessStartInfo
             {
                 FileName = _ffprobePath,
@@ -174,6 +279,7 @@ namespace Video_Size_Optimizer.Services
             try
             {
                 using var process = Process.Start(startInfo);
+                ChildProcessGuard.Track(process);
                 if (process == null) return meta;
 
                 string jsonOutput = await process.StandardOutput.ReadToEndAsync();

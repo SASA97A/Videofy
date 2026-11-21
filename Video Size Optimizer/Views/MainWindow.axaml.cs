@@ -19,15 +19,18 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        if (OperatingSystem.IsLinux())
+
+        // app.ico has only 16 and 32 px images, which look blurry on Linux panels. Use the 500 px PNG there.
+        if (!OperatingSystem.IsWindows())
         {
-            SystemDecorations = SystemDecorations.None;
+            using var stream = Avalonia.Platform.AssetLoader.Open(new Uri("avares://Videofy/Assets/app.png"));
+            Icon = new WindowIcon(stream);
         }
     }
 
     private void OnDragEnter(object? sender, DragEventArgs e)
     {
-        if (e.Data.Contains(DataFormats.Files) || e.Data.GetFiles() != null)
+        if (e.DataTransfer.Formats.Contains(DataFormat.File))
         {
             e.DragEffects = DragDropEffects.Copy;
             DragDropOverlay.IsVisible = true;
@@ -36,6 +39,13 @@ public partial class MainWindow : Window
         {
             e.DragEffects = DragDropEffects.None;
         }
+    }
+
+    private void OnDragOver(object? sender, DragEventArgs e)
+    {
+        e.DragEffects = e.DataTransfer.Formats.Contains(DataFormat.File)
+            ? DragDropEffects.Copy
+            : DragDropEffects.None;
     }
 
     private void OnDragLeave(object? sender, DragEventArgs e)
@@ -47,7 +57,7 @@ public partial class MainWindow : Window
     {
         DragDropOverlay.IsVisible = false;
 
-        var items = e.Data.GetFiles();
+        var items = e.DataTransfer.TryGetFiles();
         if (items == null) return;
 
         var paths = items

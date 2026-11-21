@@ -92,7 +92,19 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty] 
     [NotifyPropertyChangedFor(nameof(ActionButtonText))]
     [NotifyPropertyChangedFor(nameof(ActionButtonColor))]
+    [NotifyPropertyChangedFor(nameof(IsIdle))]
     private bool _isBusy;
+
+    // True while a folder scan runs. Shows the scanning overlay and locks the controls.
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsIdle))]
+    private bool _isScanning;
+
+    [ObservableProperty] private string _scanFolderText = "";
+    [ObservableProperty] private string _scanProgressText = "";
+
+    /// <summary>True when neither an encode nor a folder scan is running.</summary>
+    public bool IsIdle => !IsBusy && !IsScanning;
 
     public string PauseActionIconPath => IsPaused
     ? "avares://Videofy/Assets/play.svg"
@@ -101,7 +113,6 @@ public partial class MainWindowViewModel : ViewModelBase
     public IRelayCommand<Window> BrowseFolderCommand { get; }
     public IRelayCommand SelectAllCommand { get; }
     public IRelayCommand DeselectAllCommand { get; }
-    public IAsyncRelayCommand StartCommand { get; }
 
     public MainWindowViewModel()
     {
@@ -126,8 +137,6 @@ public partial class MainWindowViewModel : ViewModelBase
             foreach (var v in Videos)
                 v.IsSelected = false;
         });
-
-        StartCommand = new AsyncRelayCommand(StartCompressionAsync);
 
         if (!DependencyChecker.CheckBinaries(out string path))
         {
@@ -179,17 +188,30 @@ public partial class MainWindowViewModel : ViewModelBase
             });
         }
 
-        if (GlobalSettings.AutoCheckUpdatesOnStartup)
+        // Startup popups run one after the other, so they never open on top of each other.
+        _ = Task.Run(async () =>
         {
-            _ = Task.Run(async () =>
+            await Task.Delay(1500);
+            await Dispatcher.UIThread.InvokeAsync(async () =>
             {
-                await Task.Delay(1500);
-                await Dispatcher.UIThread.InvokeAsync(async () =>
-                {
+                if (GlobalSettings.AutoCheckUpdatesOnStartup)
                     await CheckForUpdatesInternalAsync(isManualCheck: false);
-                });
+
+                await WarnIfLogFileLargeAsync();
             });
-        }
+        });
+    }
+
+    // The log file is never trimmed or renamed by the app, so tell the user when it gets big.
+    private async Task WarnIfLogFileLargeAsync()
+    {
+        var log = LogService.Instance;
+        log.RefreshLogFileSize();
+        if (!log.IsLogFileLarge) return;
+
+        await _messageService.ShowInfoAsync("Log File Is Large",
+            $"The log file is {new FileInfo(log.LogFilePath).Length / 1024.0 / 1024.0:F1} MB. Consider deleting it to free up space:\n\n" +
+            $"{log.LogFilePath}\n\n");
     }
 
     // Reset completed/processing status of videos
@@ -254,7 +276,9 @@ public partial class MainWindowViewModel : ViewModelBase
             return;
         }
 
-        if (latestVersion != AppConstants.AppVersion)
+        // Compare as version numbers: only a newer release counts. A plain "!=" also offered
+        // older releases (for example on a dev build ahead of the latest release).
+        if (VersionHelper.IsNewer(latestVersion, AppConstants.AppVersion))
         {
             LogService.Instance.Log($"New app version found {latestVersion}", LogLevel.Success);
             LatestAvailableVersion = latestVersion;
@@ -317,7 +341,20 @@ public partial class MainWindowViewModel : ViewModelBase
         LogService.Instance.Log(
               $"Readable extensions: {string.Join(", ", allowedExtensions)}");
 
-        var data = _fileService.GetFolderData(folderPath, allowedExtensions);
+        // BrowseFolder is async void, so an exception here would crash the app: catch it.
+        (long totalSize, List<string> videoPaths) data;
+        try
+        {
+            data = await ScanFolderAsync(folderPath, allowedExtensions);
+        }
+        catch (Exception ex)
+        {
+            LogService.Instance.Log($"Folder scan failed | Path={folderPath} | Error={ex}", LogLevel.Error, "Main");
+            await _messageService.ShowErrorAsync("Folder Scan Failed",
+                $"Could not read the folder:\n{folderPath}\n\n{ex.Message}");
+            return;
+        }
+
         TotalFolderSizeDisplay = $"{(data.totalSize / 1024.0 / 1024.0 / 1024.0):F2} GB";
 
         LogService.Instance.Log(
@@ -332,10 +369,38 @@ public partial class MainWindowViewModel : ViewModelBase
             var video = new VideoFile(path, folderPath);
             video.PropertyChanged += VideoFile_PropertyChanged;
             Videos.Add(video);
-        }       
+        }
 
         ApplyFilter();
         RefreshStats();
+
+        // Without this, a folder with no videos only shows an empty list.
+        if (data.videoPaths.Count == 0)
+        {
+            await _messageService.ShowInfoAsync("No Videos Found",
+                $"No video files were found in:\n{folderPath}\n\n{AppConstants.NoVideosFoundHint}");
+        }
+    }
+
+    /// <summary>
+    /// Scans a folder off the UI thread, so the window stays responsive, and shows the
+    /// scanning overlay with live counts while it runs.
+    /// </summary>
+    private async Task<(long totalSize, List<string> videoPaths)> ScanFolderAsync(string folder, HashSet<string> allowedExtensions)
+    {
+        ScanFolderText = folder;
+        ScanProgressText = "Starting...";
+        IsScanning = true;
+        try
+        {
+            var progress = new Progress<(int FilesChecked, int VideosFound)>(p =>
+                ScanProgressText = $"{p.FilesChecked:N0} files checked · {p.VideosFound:N0} videos found");
+            return await Task.Run(() => _fileService.GetFolderData(folder, allowedExtensions, progress));
+        }
+        finally
+        {
+            IsScanning = false;
+        }
     }
 
     private void UpdateSelectedFolderPathDisplay()
@@ -367,6 +432,9 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         if (paths == null || !paths.Any()) return;
 
+        // Ignore drops while a scan runs, so a half-built list is not scanned twice.
+        if (IsScanning) return;
+
         var allowedExtensions = AppConstants.GetCombinedExtensions(GlobalSettings.CustomExtensions);
         var existingPaths = Videos.Select(v => v.FilePath).ToHashSet(StringComparer.OrdinalIgnoreCase);
         bool addedAny = false;
@@ -379,7 +447,19 @@ public partial class MainWindowViewModel : ViewModelBase
             {
                 LogService.Instance.Log($"Scanning dropped directory: {path}");
                 _trackedFolders.Add(path);
-                var data = _fileService.GetFolderData(path, allowedExtensions);
+                (long totalSize, List<string> videoPaths) data;
+                try
+                {
+                    // Off the UI thread, with the scanning overlay, like Browse.
+                    data = await ScanFolderAsync(path, allowedExtensions);
+                }
+                catch (Exception ex)
+                {
+                    LogService.Instance.Log($"Folder scan failed | Path={path} | Error={ex}", LogLevel.Error, "Main");
+                    await _messageService.ShowErrorAsync("Folder Scan Failed",
+                        $"Could not read the folder:\n{path}\n\n{ex.Message}");
+                    continue;
+                }
 
                 foreach (var videoPath in data.videoPaths)
                 {
@@ -423,8 +503,13 @@ public partial class MainWindowViewModel : ViewModelBase
 
             LogService.Instance.Log($"Updated total videos count: {Videos.Count}");
         }
-
-        await Task.CompletedTask;
+        else
+        {
+            // Nothing new: the drop held no supported videos, or they were already in the list.
+            LogService.Instance.Log("Drop added no new videos.", LogLevel.Warning, "Main");
+            await _messageService.ShowInfoAsync("No New Videos",
+                $"No new video files were added. They may already be in the list, or the dropped items contain no supported videos.\n\n{AppConstants.NoVideosFoundHint}");
+        }
     }
 
     private void VideoFile_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -503,7 +588,9 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     private async Task StartCompressionAsync()
-    {      
+    {
+        // The list is still being filled by a folder scan.
+        if (IsScanning) return;
 
         var selectedVideos = Videos.Where(v => {
             // Basic requirements
@@ -547,9 +634,15 @@ public partial class MainWindowViewModel : ViewModelBase
 
         int completedCount = 0;
         long totalBytesSaved = 0;
+        // Names of the videos that failed in this batch, so the user can be told at the end.
+        var failedVideos = new List<string>();
+        // Videos whose output came out clearly shorter than the source (damaged recordings).
+        var shortVideos = new List<string>();
 
         IsBusy = true;
         StatusMessage = "Processing...";
+        _diskCheckPath = null;
+        _ffmpegService.ClearStopRequest();
 
         if (GlobalSettings.PreventSleep)
         {
@@ -735,6 +828,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
                 LogService.Instance.Section($"Processing Video: {video.FileName}");
 
+                _diskCheckPath = video.FilePath;
                 if (IsDiskSpaceLow())
                 {
                     LogService.Instance.Log($"Low disk space detected (< {GlobalSettings.LowDiskBufferGb}GB). Pausing batch.", LogLevel.Warning, "Main");
@@ -924,12 +1018,20 @@ public partial class MainWindowViewModel : ViewModelBase
                             {
                                 // 2. Run target size compression 
 
-                                LogService.Instance.Log($"2-pass encoding started");
+                                LogService.Instance.Log($"Target size encoding started (2-pass on CPU, single pass on GPU)");
+
+                                // The bitrate must be computed from the length that is actually encoded.
+                                // Using the full duration for a trimmed clip made the output far smaller than the target.
+                                double encodedSeconds = GetEncodedDurationSeconds(video);
+                                LogService.Instance.Log($"Target size duration: {encodedSeconds:F2}s (full video: {video.DurationSeconds:F2}s)");
+
+                                // Every audio track is kept, so the bitrate budget must reserve room for each one.
+                                int audioTrackCount = await _ffprobeService.GetAudioStreamCountAsync(video.FilePath);
 
                                 await _ffmpegService.CompressTargetSizeAsync(video.FilePath,
                                     finalOutputPath, fpsToUse, StripMetadata,
                                     (int)video.CustomTargetSizeMb!, encoderValue,
-                                    resolutionToUse, video.DurationSeconds, trimArgs, p);
+                                    resolutionToUse, encodedSeconds, trimArgs, audioTrackCount, p);
                             }
                         }
                         else
@@ -946,9 +1048,10 @@ public partial class MainWindowViewModel : ViewModelBase
                     }
                  
                     // Important to avoid deleteing files if user Stops compression!
-                    if (!IsBusy && !video.IsSplitEnabled)
+                    if (!IsBusy)
                     {                      
-                        if (File.Exists(finalOutputPath)) File.Delete(finalOutputPath);
+                        // The killed ffmpeg can hold the file for a moment, so retry the delete briefly.
+                        await FfmpegService.DeleteWithRetryAsync(finalOutputPath);
                         break;
                     }
 
@@ -957,15 +1060,17 @@ public partial class MainWindowViewModel : ViewModelBase
                         var newInfo = new FileInfo(finalOutputPath);
                         long totalOutputSize = newInfo.Length;
 
-                        if (video.IsSplitEnabled)
-                        {
-                            totalOutputSize = video.HasCustomSize
-                                ? (long)video.CustomTargetSizeMb! * 1024 * 1024
-                                : originalSizeBytes;
-                        }
-
                         if (totalOutputSize != 0)
                         {
+                            // A damaged source can give a much shorter output without any ffmpeg error,
+                            // because frames that cannot be decoded are dropped. The user is told at the
+                            // end, and the original is never deleted in that case.
+                            // The fps setting only applies to Encode; Stream Copy keeps the source rate.
+                            string? shortNote = await CheckOutputLengthAsync(video, finalOutputPath,
+                                SelectedTabIndex == 0 ? fpsToUse : "Original");
+                            if (shortNote != null)
+                                shortVideos.Add($"{video.FileName} ({shortNote})");
+
                             _trackedSingleFiles.Add(finalOutputPath);
                             totalBytesSaved += (originalSizeBytes - totalOutputSize);
                             completedCount++;
@@ -987,7 +1092,12 @@ public partial class MainWindowViewModel : ViewModelBase
                                 DisplayedVideos[index] = video;
                             }
 
-                            if (SelectedTabIndex == 0 && GlobalSettings.DeleteOriginalAfterCompression && File.Exists(finalOutputPath) && !video.IsSplitEnabled)
+                            if (SelectedTabIndex == 0 && GlobalSettings.DeleteOriginalAfterCompression && shortNote != null)
+                            {
+                                LogService.Instance.Log(
+                                    $"Original kept (output is shorter than the source): {video.FileName}", LogLevel.Warning, "Main");
+                            }
+                            else if (SelectedTabIndex == 0 && GlobalSettings.DeleteOriginalAfterCompression && File.Exists(finalOutputPath))
                             {
                                 try
                                 {
@@ -1008,7 +1118,12 @@ public partial class MainWindowViewModel : ViewModelBase
                     $"Video processing failed | File={video.FileName} | Mode={SelectedTabIndex}" +
                     $" | Error={ex}", LogLevel.Error, "Error");
 
-                    if (IsBusy) StatusMessage = $"Error: {video.FileName} failed.";
+                    // A failure after the user pressed Stop is expected, so only count real failures.
+                    if (IsBusy)
+                    {
+                        StatusMessage = $"Error: {video.FileName} failed.";
+                        failedVideos.Add(video.FileName);
+                    }
                 }
                 finally
                 {
@@ -1039,9 +1154,48 @@ public partial class MainWindowViewModel : ViewModelBase
                     _ = _systemService.PlayCompletionSoundAsync();
                 }
 
-                await _messageService.ShowSuccessAsync("Task Completed",
-                       $"Successfully processed {completedCount} videos.\n\nTotal space saved: {sizeDisplay}");
+                // When some videos failed, the error popup below reports the successes too.
+                if (failedVideos.Count == 0)
+                {
+                    await _messageService.ShowSuccessAsync("Task Completed",
+                           $"Successfully processed {completedCount} videos.\n\nTotal space saved: {sizeDisplay}");
+                }
                }
+
+            // Tell the user about failed videos. Without this, the status bar goes straight back to "Ready".
+            if (failedVideos.Count > 0)
+            {
+                int total = completedCount + failedVideos.Count;
+                LogService.Instance.Log($"Videos failed: {failedVideos.Count} | {string.Join(", ", failedVideos)}", LogLevel.Error, "Main");
+
+                const int maxNamesShown = 10;
+                string names = string.Join("\n", failedVideos.Take(maxNamesShown));
+                if (failedVideos.Count > maxNamesShown)
+                    names += $"\n...and {failedVideos.Count - maxNamesShown} more";
+
+                string summary = completedCount > 0
+                    ? $"{completedCount} of {total} video(s) processed successfully. {failedVideos.Count} failed:"
+                    : $"{failedVideos.Count} of {total} video(s) failed:";
+
+                await _messageService.ShowErrorAsync("Some Videos Failed",
+                    $"{summary}\n\n{names}\n\nCheck the logs for details.");
+            }
+
+            // Outputs that finished but are clearly shorter than the source.
+            if (shortVideos.Count > 0)
+            {
+                LogService.Instance.Log($"Outputs shorter than the source: {shortVideos.Count} | {string.Join(", ", shortVideos)}", LogLevel.Warning, "Main");
+
+                const int maxNamesShown = 10;
+                string names = string.Join("\n", shortVideos.Take(maxNamesShown));
+                if (shortVideos.Count > maxNamesShown)
+                    names += $"\n...and {shortVideos.Count - maxNamesShown} more";
+
+                await _messageService.ShowWarningAsync("Output Shorter Than Source",
+                    $"{shortVideos.Count} video(s) came out shorter than the source:\n\n{names}\n\n" +
+                    "The source is probably damaged: parts that could not be read were left out. " +
+                    "These originals were not deleted.");
+            }
         }
         finally
         {
@@ -1073,12 +1227,89 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
+    /// <summary>
+    /// Checks that the output's video track is complete. Returns a note such as "8:12 of 20:00"
+    /// or "107 of 144,016 frames" when it is clearly short, otherwise null.
+    /// Two checks, because a damaged source can lose most of its frames while the file length
+    /// still looks right (the audio track is complete, and the few video frames spread over it):
+    /// - length of the video track against the expected length (the trimmed range or the whole video);
+    /// - number of video frames against frame rate x expected length.
+    /// Small gaps are normal (stream copy cuts at keyframes, variable frame rate), so a gap must be
+    /// over 5% and over 2 s for the length, and over 10% and over 2 s of frames for the frame count.
+    /// </summary>
+    /// <param name="fpsUsed">Frame rate set for the encode ("Original" or e.g. "60").</param>
+    private async Task<string?> CheckOutputLengthAsync(VideoFile video, string outputPath, string fpsUsed)
+    {
+        double expected = GetEncodedDurationSeconds(video);
+        if (expected <= 0) return null;
+
+        var output = await _ffprobeService.GetVideoStreamInfoAsync(outputPath);
+        string? note = null;
+
+        // 1) Length of the video track (the file length, if the track has none).
+        double actual = output.Duration > 0 ? output.Duration : await _ffprobeService.GetVideoDurationAsync(outputPath);
+        if (actual > 0 && actual < expected * 0.95 && expected - actual > 2.0)
+            note = $"{FormatLength(actual)} of {FormatLength(expected)}";
+
+        // 2) Frame count. The fps filter gives exactly the set rate; otherwise the source rate is kept.
+        if (note == null && output.Frames > 0)
+        {
+            double fps = int.TryParse(fpsUsed, out int setFps) && setFps > 0
+                ? setFps
+                : (await _ffprobeService.GetVideoStreamInfoAsync(video.FilePath)).AvgFps;
+
+            if (fps > 0)
+            {
+                double expectedFrames = fps * expected;
+                if (output.Frames < expectedFrames * 0.90 && expectedFrames - output.Frames > fps * 2.0)
+                    note = $"{output.Frames:N0} of {expectedFrames:N0} frames";
+            }
+        }
+
+        if (note != null)
+        {
+            LogService.Instance.Log(
+                $"Output is shorter than the source: {note} | File={video.FileName}. The source is probably damaged.",
+                LogLevel.Warning, "Main");
+        }
+        return note;
+    }
+
+    private static string FormatLength(double seconds)
+    {
+        var time = TimeSpan.FromSeconds(seconds);
+        return time.TotalHours >= 1 ? time.ToString(@"h\:mm\:ss") : time.ToString(@"m\:ss");
+    }
+
+    /// <summary>
+    /// Length in seconds of the part that will be encoded: the trimmed range when trimming is on,
+    /// otherwise the whole video. EndTime 0 means "to the end". Falls back to the full duration
+    /// if the trim range is invalid, so it never returns 0 or a negative value.
+    /// </summary>
+    private static double GetEncodedDurationSeconds(VideoFile video)
+    {
+        if (!video.IsTrimmed) return video.DurationSeconds;
+
+        double end = video.EndTime > 0 ? Math.Min(video.EndTime, video.DurationSeconds) : video.DurationSeconds;
+        double length = end - video.StartTime;
+
+        return length > 0 ? length : video.DurationSeconds;
+    }
+
+    // File whose drive the low-disk check watches: the video being processed, since its
+    // output is written next to it. Kept so Resume can re-check the same drive.
+    private string? _diskCheckPath;
+
     private bool IsDiskSpaceLow()
     {
+        // Nothing processed yet in this batch: no drive to check.
+        if (string.IsNullOrEmpty(_diskCheckPath)) return false;
+
         try
         {
-            // Get the drive 
-            string driveName = Path.GetPathRoot(SelectedFolderPath) ?? "";
+            // Use the video's own drive. SelectedFolderPath can hold a label such as
+            // "Multiple Files (3 files)" after drag-and-drop, which made this check always fail.
+            string driveName = Path.GetPathRoot(_diskCheckPath) ?? "";
             DriveInfo drive = new DriveInfo(driveName);
 
             long bufferBytes = (long)GlobalSettings.LowDiskBufferGb * 1024 * 1024 * 1024;
@@ -1167,33 +1398,6 @@ public partial class MainWindowViewModel : ViewModelBase
     public async Task ShowAbout()
     {
         await _messageService.ShowInfoAsync("About Videofy", AppConstants.AboutMessage);
-    }
-
-    [RelayCommand]
-    public void ClearVideos()
-    {
-        foreach (var v in Videos)
-            v.PropertyChanged -= VideoFile_PropertyChanged;
-
-        Videos.Clear();
-        _trackedFolders.Clear();
-        _trackedSingleFiles.Clear();
-        UpdateSelectedFolderPathDisplay();
-        OnPropertyChanged(nameof(HasVideos));
-    }
-
-    [RelayCommand]
-    public void ClearList()
-    {
-        foreach (var v in Videos)
-            v.PropertyChanged -= VideoFile_PropertyChanged;
-
-        Videos.Clear();
-        _trackedFolders.Clear();
-        _trackedSingleFiles.Clear();
-        UpdateSelectedFolderPathDisplay();
-        ApplyFilter();
-        RefreshStats();
     }
 
     [RelayCommand]

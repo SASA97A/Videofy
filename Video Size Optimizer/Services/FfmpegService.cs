@@ -26,6 +26,12 @@ public class FfmpegService
     private static bool _initialized = false;
     private static readonly object _lock = new();
     private Process? _currentProcess;
+    // Set by KillProcess (user pressed Stop). A stopped run is not a failure: it returns quietly and
+    // no further ffmpeg step (next pass, subtitle retry, next merge step) is started.
+    private volatile bool _stopRequested;
+
+    /// <summary>Call at the start of a batch so an earlier Stop does not block the new run.</summary>
+    public void ClearStopRequest() => _stopRequested = false;
 
     // Pause for Win
     [DllImport("ntdll.dll")] private static extern int NtSuspendProcess(IntPtr processHandle);
@@ -108,7 +114,7 @@ public class FfmpegService
         {
             if (encoder == "copy")
             {
-                var copyArgs = $"-y {trimArgs} -i \"{input}\" -c copy -map 0 \"{output}\"";
+                var copyArgs = $"-y {trimArgs} -i {ProcessArgs.Quote(input)} -c copy -map 0 {ProcessArgs.Quote(output)}";
                 try
                 {
                     await RunFfmpegProcessAsync(copyArgs, progress);
@@ -121,7 +127,7 @@ public class FfmpegService
                     {
                         try { File.Delete(output); } catch { }
                     }
-                    var fallbackCopyArgs = $"-y {trimArgs} -i \"{input}\" -c:v copy -c:a aac -b:a 192k -dn \"{output}\"";
+                    var fallbackCopyArgs = $"-y {trimArgs} -i {ProcessArgs.Quote(input)} -c:v copy -c:a aac -b:a 192k -dn {ProcessArgs.Quote(output)}";
                     await RunFfmpegProcessAsync(fallbackCopyArgs, progress);
                     return;
                 }
@@ -177,7 +183,7 @@ public class FfmpegService
                 ? "-c:a copy -c:s copy -c:t copy"
                 : "-c:a copy -c:s mov_text";
 
-            var args = $"-y {trimArgs} -i \"{input}\" -map 0 {filterArgs} {codecArgs} {streamArgs} -dn {metadataFlag} \"{output}\"";
+            var args = $"-y {trimArgs} -i {ProcessArgs.Quote(input)} -map 0 {filterArgs} {codecArgs} {streamArgs} -dn {metadataFlag} {ProcessArgs.Quote(output)}";
 
             try
             {
@@ -193,7 +199,7 @@ public class FfmpegService
                 }
 
                 // Fallback attempt: Transcode audio to high-quality AAC (192k) and drop incompatible streams
-                var fallbackArgs = $"-y {trimArgs} -i \"{input}\" {filterArgs} {codecArgs} -c:a aac -b:a 192k -dn {metadataFlag} \"{output}\"";
+                var fallbackArgs = $"-y {trimArgs} -i {ProcessArgs.Quote(input)} {filterArgs} {codecArgs} -c:a aac -b:a 192k -dn {metadataFlag} {ProcessArgs.Quote(output)}";
                 await RunFfmpegProcessAsync(fallbackArgs, progress);
             }
         }
@@ -201,18 +207,35 @@ public class FfmpegService
         {
             LogService.Instance.Log(
                 $"Compress/Encoding failed. Input={input} | Output={output} | {ex.Message}", LogLevel.Error, "FFMPEG");
+
+            // A failed encode can leave a file that looks finished but is broken (seen with a damaged
+            // recording: 107 video frames in 20 minutes). Delete it, as target size does.
+            await DeleteWithRetryAsync(output);
             throw;
         }      
     }
 
     // Smart target size  
-    public async Task CompressTargetSizeAsync(string input, string output, string targetFps, bool stripMetadata, int targetMb, string encoder, string selectedResolution, double duration, string trimArgs, IProgress<ConversionProgress>? progress = null)
+    public async Task CompressTargetSizeAsync(string input, string output, string targetFps, bool stripMetadata, int targetMb, string encoder, string selectedResolution, double duration, string trimArgs, int audioTrackCount = 1, IProgress<ConversionProgress>? progress = null)
     {
         // Bitrate = (Size in MB * 8192) / Duration
-        // Subtracting 128kbps as a buffer for the audio stream
+        // Every audio track is kept and encoded at 128 kbps, so reserve 128 kbps per track.
+        const int AudioKbpsPerTrack = 128;
+        int audioTracks = Math.Max(0, audioTrackCount);
         double totalBitrate = (targetMb * 8192.0) / duration;
-        int videoBitrate = (int)(totalBitrate - 128);
+        int videoBitrate = (int)(totalBitrate - AudioKbpsPerTrack * audioTracks);
         if (videoBitrate < 100) videoBitrate = 100; // Safety floor
+
+        // Keep the first video, every audio track and the subtitles, as normal compress mode does.
+        // Without -map, ffmpeg kept only one audio track and dropped all subtitles.
+        // MP4 cannot hold every subtitle format, so text subtitles become mov_text; MKV copies them and its attachments (fonts).
+        string audioArgs = $"-c:a aac -b:a {AudioKbpsPerTrack}k";
+        bool isMkv = Path.GetExtension(output).Equals(".mkv", StringComparison.OrdinalIgnoreCase);
+        string fullStreamArgs = isMkv
+            ? $"-map 0:v:0 -map 0:a? -map 0:s? -map 0:t? {audioArgs} -c:s copy -c:t copy"
+            : $"-map 0:v:0 -map 0:a? -map 0:s? {audioArgs} -c:s mov_text";
+        // Used if the subtitles cannot be written (for example picture-based PGS subtitles into MP4).
+        string fallbackStreamArgs = $"-map 0:v:0 -map 0:a? {audioArgs}";
 
         var filters = new List<string>();
         if (!string.IsNullOrEmpty(selectedResolution) && selectedResolution != "Original")
@@ -221,6 +244,7 @@ public class FfmpegService
             filters.Add($"fps={fpsValue}");
 
         string filterArgs = filters.Count > 0 ? $"-vf \"{string.Join(",", filters)}\"" : "";
+        // Used by the pass that writes the output (pass 2, or the single GPU pass). Pass 1 output is discarded.
         string metadataFlag = stripMetadata ? "-map_metadata -1 -map_chapters -1" : "";
         string logName = Path.Combine(Path.GetTempPath(), $"ffmpeg2pass_{Guid.NewGuid()}");
         string nullDev = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "NUL" : "/dev/null";
@@ -241,36 +265,126 @@ public class FfmpegService
         }));
 
         // PASS 1
-        LogService.Instance.Log("PASS 1 Start", LogLevel.Info, "FFMPEG");
-        var pass1 = $"-y {trimArgs} -i \"{input}\" {filterArgs} -c:v {encoder} -b:v {videoBitrate}k -pass 1 -passlogfile \"{logName}\" -an -f null {nullDev}";
+        var pass1 =$"-y {trimArgs} -i {ProcessArgs.Quote(input)} {filterArgs} -c:v {encoder} -b:v {videoBitrate}k -pass 1 -passlogfile {ProcessArgs.Quote(logName)} -an -f null {nullDev}";
         // PASS 2
-        LogService.Instance.Log("PASS 2 Start", LogLevel.Info, "FFMPEG");
-        var pass2 = $"-y {trimArgs} -i \"{input}\" {filterArgs} -c:v {encoder} -b:v {videoBitrate}k -pass 2 -passlogfile \"{logName}\" -c:a aac -b:a 128k \"{output}\"";
-        
-        LogService.Instance.Log("PASS Complete", LogLevel.Info, "FFMPEG");
+        string Pass2(string streamArgs) =>
+            $"-y {trimArgs} -i {ProcessArgs.Quote(input)} {filterArgs} -c:v {encoder} -b:v {videoBitrate}k -pass 2 -passlogfile {ProcessArgs.Quote(logName)} {streamArgs} {metadataFlag} {ProcessArgs.Quote(output)}";
+
+        // Runs the step that writes the output file. If it fails with subtitles included,
+        // removes the partial file and tries once more with video and audio only.
+        async Task RunOutputStepAsync(Func<string, string> buildArgs, IProgress<ConversionProgress>? stepProgress)
+        {
+            try
+            {
+                await RunFfmpegProcessAsync(buildArgs(fullStreamArgs), stepProgress);
+            }
+            // Never retry after Stop: that would start ffmpeg again after the user stopped it.
+            catch (Exception ex) when (!_stopRequested)
+            {
+                LogService.Instance.Log(
+                    $"[FALLBACK] Target-size output failed with subtitles for {output}. Retrying without subtitles... | Error: {ex.Message}",
+                    LogLevel.Warning, "FFMPEG");
+                if (File.Exists(output))
+                {
+                    try { File.Delete(output); } catch { }
+                }
+                await RunFfmpegProcessAsync(buildArgs(fallbackStreamArgs), stepProgress);
+            }
+        }
+
+        // GPU encoders (NVENC, AMF, QSV) ignore -pass: tested with hevc_nvenc, the "pass 2" output was
+        // byte-identical to a single-pass encode, so pass 1 only doubled the time. They run one pass
+        // with their own built-in analysis instead, capped by -maxrate so the file stays under the target.
+        // Measured on a 60 s 1440p clip with a 25 MB target: old 2-pass 16.6 s and 103% of target;
+        // NVENC multipass 13.8 s and 99% of target, at nearly the same quality.
+        bool isGpuEncoder = encoder.Contains("nvenc") || encoder.Contains("amf") || encoder.Contains("qsv");
 
         try
         {
-            await RunFfmpegProcessAsync(pass1, p1);
-            await RunFfmpegProcessAsync(pass2, p2);
+            if (isGpuEncoder)
+            {
+                string rateArgs = $"-b:v {videoBitrate}k -maxrate {videoBitrate}k -bufsize {videoBitrate * 2}k";
+                string gpuArgs = encoder.Contains("nvenc")
+                    ? $"-preset p5 -rc vbr -multipass fullres -rc-lookahead 32 {rateArgs}"
+                    : encoder.Contains("amf")
+                        ? $"-rc vbr_peak -quality quality {rateArgs}"
+                        : $"-preset veryfast {rateArgs}";
+
+                string SinglePass(string streamArgs) =>
+                    $"-y {trimArgs} -i {ProcessArgs.Quote(input)} {filterArgs} -c:v {encoder} {gpuArgs} {streamArgs} {metadataFlag} {ProcessArgs.Quote(output)}";
+
+                LogService.Instance.Log($"Single pass (GPU) start | Encoder={encoder} | VideoBitrate={videoBitrate}k | AudioTracks={audioTracks}", LogLevel.Info, "FFMPEG");
+                await RunOutputStepAsync(SinglePass, progress);
+                if (_stopRequested) return;
+                LogService.Instance.Log("Single pass (GPU) complete", LogLevel.Info, "FFMPEG");
+            }
+            else
+            {
+                LogService.Instance.Log($"Two-pass (CPU) | Encoder={encoder} | VideoBitrate={videoBitrate}k | AudioTracks={audioTracks}", LogLevel.Info, "FFMPEG");
+                // Log each pass when it really runs, so a failure shows which pass it was in.
+                LogService.Instance.Log("Pass 1/2 start (analysis)", LogLevel.Info, "FFMPEG");
+                await RunFfmpegProcessAsync(pass1, p1);
+                // Stopped in pass 1: its stats file is incomplete, so pass 2 must not start.
+                if (_stopRequested) return;
+                LogService.Instance.Log("Pass 1/2 done", LogLevel.Info, "FFMPEG");
+
+                LogService.Instance.Log("Pass 2/2 start (output)", LogLevel.Info, "FFMPEG");
+                await RunOutputStepAsync(Pass2, p2);
+                if (_stopRequested) return;
+                LogService.Instance.Log("Pass 2/2 done", LogLevel.Info, "FFMPEG");
+            }
         }
         catch (Exception ex)
         {
             LogService.Instance.Log(
                 $"Target-size compression failed. Input={input} | Output={output} | Target={targetMb}MB | Error: {ex.Message}", LogLevel.Error, "FFMPEG");
+
+            // A failed pass 2 can leave a partial output file. Remove it so it is never mistaken for a finished encode.
+            if (File.Exists(output))
+            {
+                try { File.Delete(output); }
+                catch (Exception deleteEx)
+                {
+                    LogService.Instance.Log($"Failed to delete partial output {output} | {deleteEx.Message}", LogLevel.Error, "FFMPEG");
+                }
+            }
+
+            // Let the caller know the encode failed, so it does not count it as done or delete the original.
+            throw;
         }
         finally
         {
+            // libx265 writes its CU-tree data next to the stats file (can be tens of MB).
+            // x264/x265 write to ".temp" files and rename them when pass 1 ends, so a stopped or failed
+            // pass 1 leaves the ".temp" names behind (seen: 27 MB .cutree.temp).
+            string[] suffixes =
+            {
+                "-0.log", "-0.log.mbtree", "-0.log.cutree",
+                "-0.log.temp", "-0.log.mbtree.temp", "-0.log.cutree.temp", ".log"
+            };
+            foreach (var suffix in suffixes)
+                await DeleteWithRetryAsync($"{logName}{suffix}");
+        }
+    }
+
+    // Right after Stop, Windows can keep the killed ffmpeg's files locked for a moment, so retry briefly.
+    public static async Task DeleteWithRetryAsync(string path)
+    {
+        for (int attempt = 1; File.Exists(path); attempt++)
+        {
             try
             {
-                if (File.Exists($"{logName}-0.log")) File.Delete($"{logName}-0.log");
-                if (File.Exists($"{logName}-0.log.mbtree")) File.Delete($"{logName}-0.log.mbtree");
-                if (File.Exists($"{logName}.log")) File.Delete($"{logName}.log");
+                File.Delete(path);
+                return;
+            }
+            catch (IOException) when (attempt < 10)
+            {
+                await Task.Delay(200);
             }
             catch (Exception ex)
             {
-                LogService.Instance.Log(
-                    $"Failed to clean 2-pass logs | {ex.Message}", LogLevel.Error, "FFMPEG");
+                LogService.Instance.Log($"Failed to delete {path} | {ex.Message}", LogLevel.Error, "FFMPEG");
+                return;
             }
         }
     }
@@ -281,7 +395,7 @@ public class FfmpegService
 
         try
         {
-            var args = $"-y -i \"{input}\" -c copy -map 0 {splitArgs} \"{outputPattern}\"";
+            var args = $"-y -i {ProcessArgs.Quote(input)} -c copy -map 0 {splitArgs} {ProcessArgs.Quote(outputPattern)}";
             await RunFfmpegProcessAsync(args, progress);
         }
         catch (Exception ex)
@@ -296,7 +410,14 @@ public class FfmpegService
     {
         if (!File.Exists(_ffmpegPath)) throw new FileNotFoundException("FFmpeg not found", _ffmpegPath);
 
-        try 
+        // Stop was pressed between steps: do not start another ffmpeg run.
+        if (_stopRequested)
+        {
+            LogService.Instance.Log("Step skipped: stopped by user.", LogLevel.Info, "FFMPEG");
+            return;
+        }
+
+        try
         {
             _currentProcess = new Process
             {
@@ -312,6 +433,7 @@ public class FfmpegService
 
             double totalDuration = knownTotalDuration ?? 0;
             _currentProcess.Start();
+            ChildProcessGuard.Track(_currentProcess);
 
             using (var reader = _currentProcess.StandardError)
             {
@@ -345,7 +467,16 @@ public class FfmpegService
             }
 
             await _currentProcess.WaitForExitAsync();
-            if (_currentProcess.ExitCode != 0 && _currentProcess.ExitCode != -1)
+
+            // A run killed by Stop exits with -1 on Windows and 137 on Linux/macOS. Detect it with the flag,
+            // not the exit code: ffmpeg's own "Operation not permitted" error is also -1.
+            if (_stopRequested)
+            {
+                LogService.Instance.Log($"Stopped by user (exit code {_currentProcess.ExitCode}).", LogLevel.Info, "FFMPEG");
+                return;
+            }
+
+            if (_currentProcess.ExitCode != 0)
                 throw new Exception($"FFmpeg failed with exit code {_currentProcess.ExitCode}");
         }
         catch (Exception ex)
@@ -362,6 +493,8 @@ public class FfmpegService
 
     public void KillProcess()
     {
+        // Set before the kill, so the exit of the killed process is already seen as a stop.
+        _stopRequested = true;
         try
         {
             if (_currentProcess != null && !_currentProcess.HasExited)
@@ -399,6 +532,8 @@ public class FfmpegService
             };
 
             process.Start();
+
+            ChildProcessGuard.Track(process);
             await process.WaitForExitAsync();
             return process.ExitCode == 0;
         }
@@ -461,7 +596,7 @@ public class FfmpegService
             writer.WriteLine("TIMEBASE=1/1000");
             writer.WriteLine($"START={startMs}");
             writer.WriteLine($"END={endMs}");
-            writer.WriteLine($"title=Part {i + 1}: {title}");
+            writer.WriteLine($"title=Part {i + 1}: {ProcessArgs.EscapeMetadata(title)}");
             writer.WriteLine();
 
             currentTime += metadataList[i].Duration;
@@ -493,7 +628,7 @@ public class FfmpegService
                     }
                 }
 
-                var copyArgs = $"-y -f concat -safe 0 -i \"{listFile}\" -i \"{chapterFile}\" -map_metadata 1 -c copy \"{outputPath}\"";
+                var copyArgs = $"-y -f concat -safe 0 -i {ProcessArgs.Quote(listFile)} -i {ProcessArgs.Quote(chapterFile)} -map_metadata 1 -c copy {ProcessArgs.Quote(outputPath)}";
                 try
                 {
                     await RunFfmpegProcessAsync(copyArgs, progress, groupTotalDuration);
@@ -518,7 +653,7 @@ public class FfmpegService
                 for (int i = 0; i < metadataList.Count; i++)
                 {
                     var meta = metadataList[i];
-                    inputArgs.Add($"-i \"{meta.Path}\"");
+                    inputArgs.Add($"-i {ProcessArgs.Quote(meta.Path)}");
 
                     string vFilter = $"[{i}:v]scale=w='if(gt(iw/ih,{maxW}/{maxH}),{maxW},-2)':h='if(gt(iw/ih,{maxW}/{maxH}),-2,{maxH})':force_original_aspect_ratio=decrease," +
                                      $"pad=w={maxW}:h={maxH}:x='({maxW}-iw)/2':y='({maxH}-ih)/2':color=black," +
@@ -535,7 +670,7 @@ public class FfmpegService
                 string concatFilter = $"{concatInputs}concat=n={metadataList.Count}:v=1:a=1[vout][aout]";
                 string fullFiltergraph = string.Join("", filterChains) + concatFilter;
 
-                inputArgs.Add($"-i \"{chapterFile}\"");
+                inputArgs.Add($"-i {ProcessArgs.Quote(chapterFile)}");
 
                 string codecArgs;
                 if (encoder.Contains("nvenc"))
@@ -547,7 +682,7 @@ public class FfmpegService
                 else
                     codecArgs = $"-c:v {encoder} -crf 18";
 
-                var args = $"-y {string.Join(" ", inputArgs)} -filter_complex \"{fullFiltergraph}\" -map \"[vout]\" -map \"[aout]\" -map_metadata {metadataList.Count} {codecArgs} -c:a aac -b:a 192k \"{outputPath}\"";
+                var args = $"-y {string.Join(" ", inputArgs)} -filter_complex \"{fullFiltergraph}\" -map \"[vout]\" -map \"[aout]\" -map_metadata {metadataList.Count} {codecArgs} -c:a aac -b:a 192k {ProcessArgs.Quote(outputPath)}";
                 await RunFfmpegProcessAsync(args, progress, groupTotalDuration);
             }
         }

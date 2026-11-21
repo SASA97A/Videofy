@@ -12,8 +12,13 @@ sealed class Program
     // SynchronizationContext-reliant code before AppMain is called: things aren't initialized
     // yet and stuff might break.
     [STAThread]
-    public static void Main(string[] args) => BuildAvaloniaApp()
-        .StartWithClassicDesktopLifetime(args);
+    public static void Main(string[] args)
+    {
+        // ffmpeg and ffprobe end together with Videofy, also after a crash or kill.
+        Video_Size_Optimizer.Services.ChildProcessGuard.Initialize();
+        BuildAvaloniaApp()
+            .StartWithClassicDesktopLifetime(args);
+    }
 
     // Avalonia configuration, don't remove; also used by visual designer.
     public static AppBuilder BuildAvaloniaApp()
@@ -25,6 +30,16 @@ sealed class Program
             .WithInterFont()
             .LogToTrace();
 
+        // Linux: Avalonia draws its own border and resize grips around our custom title bar.
+#pragma warning disable AVALONIA_X11_CSD // Experimental in Avalonia 12
+        // WmClass must match StartupWMClass in the .desktop file, or the panel shows no icon.
+        var x11Options = new X11PlatformOptions
+        {
+            EnableDrawnDecorations = true,
+            WmClass = Video_Size_Optimizer.Services.LinuxDesktopIntegration.WmClass
+        };
+#pragma warning restore AVALONIA_X11_CSD
+
         if (useSoftwareRendering)
         {
 
@@ -35,12 +50,11 @@ sealed class Program
             });
 
             // Linux Software Rendering
-            builder.With(new X11PlatformOptions
-            {
-                RenderingMode = new[] { X11RenderingMode.Software }
-            });
-          
+            x11Options.RenderingMode = new[] { X11RenderingMode.Software };
+
         }
+
+        builder.With(x11Options);
 
         return builder;
     }

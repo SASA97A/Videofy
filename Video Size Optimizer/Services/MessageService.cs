@@ -67,6 +67,22 @@ namespace Video_Size_Optimizer
             }
         }
 
+        public async Task ShowWarningAsync(string title, string message)
+        {
+            var settings = _settingsService.LoadSettings();
+            var parameters = CreateParams(title, message, ButtonEnum.Ok, Icon.Warning);
+            var box = MessageBoxManager.GetMessageBoxStandard(parameters);
+            var mainWindow = GetMainWindow();
+            if (settings.ModalErrorMessages && mainWindow != null)
+            {
+                await box.ShowWindowDialogAsync(mainWindow);
+            }
+            else
+            {
+                await box.ShowAsync();
+            }
+        }
+
         public async Task ShowSuccessAsync(string title, string message)
         {
             var settings = _settingsService.LoadSettings();

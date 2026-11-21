@@ -81,13 +81,6 @@ public partial class VideoFile : ObservableObject
     }
     public bool HasCustomSize => CustomTargetSizeMb.HasValue;
 
-    [ObservableProperty]
-   // [NotifyPropertyChangedFor(nameof(HasCustomSettings))]
-   // [NotifyPropertyChangedFor(nameof(CustomSettingsBadge))]
-    private int _splitSizeMb = 0;
-
-    public bool IsSplitEnabled => SplitSizeMb >= 5;
-
     public bool HasCustomSettings => HasCustomSize || !string.IsNullOrEmpty(CustomResolution)
                                      || !string.IsNullOrEmpty(CustomFps) || IsTrimmed ;
 
