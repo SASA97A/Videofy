@@ -636,6 +636,8 @@ public partial class MainWindowViewModel : ViewModelBase
         long totalBytesSaved = 0;
         // Names of the videos that failed in this batch, so the user can be told at the end.
         var failedVideos = new List<string>();
+        // Videos whose output came out clearly shorter than the source (damaged recordings).
+        var shortVideos = new List<string>();
 
         IsBusy = true;
         StatusMessage = "Processing...";
@@ -1060,6 +1062,15 @@ public partial class MainWindowViewModel : ViewModelBase
 
                         if (totalOutputSize != 0)
                         {
+                            // A damaged source can give a much shorter output without any ffmpeg error,
+                            // because frames that cannot be decoded are dropped. The user is told at the
+                            // end, and the original is never deleted in that case.
+                            // The fps setting only applies to Encode; Stream Copy keeps the source rate.
+                            string? shortNote = await CheckOutputLengthAsync(video, finalOutputPath,
+                                SelectedTabIndex == 0 ? fpsToUse : "Original");
+                            if (shortNote != null)
+                                shortVideos.Add($"{video.FileName} ({shortNote})");
+
                             _trackedSingleFiles.Add(finalOutputPath);
                             totalBytesSaved += (originalSizeBytes - totalOutputSize);
                             completedCount++;
@@ -1081,7 +1092,12 @@ public partial class MainWindowViewModel : ViewModelBase
                                 DisplayedVideos[index] = video;
                             }
 
-                            if (SelectedTabIndex == 0 && GlobalSettings.DeleteOriginalAfterCompression && File.Exists(finalOutputPath))
+                            if (SelectedTabIndex == 0 && GlobalSettings.DeleteOriginalAfterCompression && shortNote != null)
+                            {
+                                LogService.Instance.Log(
+                                    $"Original kept (output is shorter than the source): {video.FileName}", LogLevel.Warning, "Main");
+                            }
+                            else if (SelectedTabIndex == 0 && GlobalSettings.DeleteOriginalAfterCompression && File.Exists(finalOutputPath))
                             {
                                 try
                                 {
@@ -1164,6 +1180,22 @@ public partial class MainWindowViewModel : ViewModelBase
                 await _messageService.ShowErrorAsync("Some Videos Failed",
                     $"{summary}\n\n{names}\n\nCheck the logs for details.");
             }
+
+            // Outputs that finished but are clearly shorter than the source.
+            if (shortVideos.Count > 0)
+            {
+                LogService.Instance.Log($"Outputs shorter than the source: {shortVideos.Count} | {string.Join(", ", shortVideos)}", LogLevel.Warning, "Main");
+
+                const int maxNamesShown = 10;
+                string names = string.Join("\n", shortVideos.Take(maxNamesShown));
+                if (shortVideos.Count > maxNamesShown)
+                    names += $"\n...and {shortVideos.Count - maxNamesShown} more";
+
+                await _messageService.ShowWarningAsync("Output Shorter Than Source",
+                    $"{shortVideos.Count} video(s) came out shorter than the source:\n\n{names}\n\n" +
+                    "The source is probably damaged: parts that could not be read were left out. " +
+                    "These originals were not deleted.");
+            }
         }
         finally
         {
@@ -1193,6 +1225,60 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             DisplayedVideos.Add(item);
         }
+    }
+
+    /// <summary>
+    /// Checks that the output's video track is complete. Returns a note such as "8:12 of 20:00"
+    /// or "107 of 144,016 frames" when it is clearly short, otherwise null.
+    /// Two checks, because a damaged source can lose most of its frames while the file length
+    /// still looks right (the audio track is complete, and the few video frames spread over it):
+    /// - length of the video track against the expected length (the trimmed range or the whole video);
+    /// - number of video frames against frame rate x expected length.
+    /// Small gaps are normal (stream copy cuts at keyframes, variable frame rate), so a gap must be
+    /// over 5% and over 2 s for the length, and over 10% and over 2 s of frames for the frame count.
+    /// </summary>
+    /// <param name="fpsUsed">Frame rate set for the encode ("Original" or e.g. "60").</param>
+    private async Task<string?> CheckOutputLengthAsync(VideoFile video, string outputPath, string fpsUsed)
+    {
+        double expected = GetEncodedDurationSeconds(video);
+        if (expected <= 0) return null;
+
+        var output = await _ffprobeService.GetVideoStreamInfoAsync(outputPath);
+        string? note = null;
+
+        // 1) Length of the video track (the file length, if the track has none).
+        double actual = output.Duration > 0 ? output.Duration : await _ffprobeService.GetVideoDurationAsync(outputPath);
+        if (actual > 0 && actual < expected * 0.95 && expected - actual > 2.0)
+            note = $"{FormatLength(actual)} of {FormatLength(expected)}";
+
+        // 2) Frame count. The fps filter gives exactly the set rate; otherwise the source rate is kept.
+        if (note == null && output.Frames > 0)
+        {
+            double fps = int.TryParse(fpsUsed, out int setFps) && setFps > 0
+                ? setFps
+                : (await _ffprobeService.GetVideoStreamInfoAsync(video.FilePath)).AvgFps;
+
+            if (fps > 0)
+            {
+                double expectedFrames = fps * expected;
+                if (output.Frames < expectedFrames * 0.90 && expectedFrames - output.Frames > fps * 2.0)
+                    note = $"{output.Frames:N0} of {expectedFrames:N0} frames";
+            }
+        }
+
+        if (note != null)
+        {
+            LogService.Instance.Log(
+                $"Output is shorter than the source: {note} | File={video.FileName}. The source is probably damaged.",
+                LogLevel.Warning, "Main");
+        }
+        return note;
+    }
+
+    private static string FormatLength(double seconds)
+    {
+        var time = TimeSpan.FromSeconds(seconds);
+        return time.TotalHours >= 1 ? time.ToString(@"h\:mm\:ss") : time.ToString(@"m\:ss");
     }
 
     /// <summary>

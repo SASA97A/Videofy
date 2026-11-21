@@ -145,6 +145,68 @@ namespace Video_Size_Optimizer.Services
         }
 
         /// <summary>
+        /// Length, frame count and average frame rate of the first video stream.
+        /// A value that cannot be read is 0 (Frames is 0 when the container does not store it, e.g. MKV).
+        /// </summary>
+        public async Task<(double Duration, long Frames, double AvgFps)> GetVideoStreamInfoAsync(string inputPath)
+        {
+            if (!File.Exists(_ffprobePath)) return (0, 0, 0);
+
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = _ffprobePath,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true
+            };
+            foreach (var arg in new[] { "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=duration,nb_frames,avg_frame_rate", "-of", "default=noprint_wrappers=1", inputPath })
+                startInfo.ArgumentList.Add(arg);
+
+            try
+            {
+                using var process = Process.Start(startInfo);
+                ChildProcessGuard.Track(process);
+                if (process == null) return (0, 0, 0);
+
+                string output = await process.StandardOutput.ReadToEndAsync();
+                await process.WaitForExitAsync();
+
+                double duration = 0, fps = 0;
+                long frames = 0;
+                foreach (var line in output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                {
+                    var parts = line.Split('=', 2);
+                    if (parts.Length != 2) continue;
+                    switch (parts[0])
+                    {
+                        case "duration":
+                            double.TryParse(parts[1], NumberStyles.Any, CultureInfo.InvariantCulture, out duration);
+                            break;
+                        case "nb_frames":
+                            long.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out frames);
+                            break;
+                        case "avg_frame_rate":
+                            // "120/1" or "2068924461/17241332"; "0/0" when unknown.
+                            var rate = parts[1].Split('/');
+                            if (rate.Length == 2
+                                && double.TryParse(rate[0], NumberStyles.Any, CultureInfo.InvariantCulture, out double num)
+                                && double.TryParse(rate[1], NumberStyles.Any, CultureInfo.InvariantCulture, out double den)
+                                && den > 0)
+                                fps = num / den;
+                            break;
+                    }
+                }
+                return (duration, frames, fps);
+            }
+            catch (Exception ex)
+            {
+                LogService.Instance.Log(
+                    $"Failed to read video stream info. File={inputPath} | Error: {ex.Message}", LogLevel.Error, "FFPROBE");
+                return (0, 0, 0);
+            }
+        }
+
+        /// <summary>
         /// Number of audio streams in the file. Returns 1 if it cannot be read, matching the old
         /// assumption of one audio track, so the target-size bitrate stays safe.
         /// </summary>
