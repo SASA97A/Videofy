@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:services="using:Video_Size_Optimizer.Services"
+        xmlns:ic="using:FluentIcons.Avalonia"
         x:Class="Video_Size_Optimizer.Views.LogWindow"
         x:DataType="services:LogService"
         Title="System Logs" Width="750" Height="480"
@@ -176,13 +177,52 @@
 				BorderThickness="0,1,0,0"
 				Padding="10">
 			<Grid ColumnDefinitions="*, Auto">
-				<!-- Log size -->
-				<TextBlock Grid.Column="0"
-						   Text="{Binding LogFileSizeDisplay}"
-						   VerticalAlignment="Center"
-						   Foreground="{DynamicResource MainText}"
-						   FontSize="12"
-						   Opacity="0.8"/>
+				<StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="2">
+					<StackPanel Orientation="Horizontal" Spacing="10">
+						<!-- Log size -->
+						<TextBlock Text="{Binding LogFileSizeDisplay}"
+								   VerticalAlignment="Center"
+								   Foreground="{DynamicResource MainText}"
+								   FontSize="12"
+								   Opacity="0.8"/>
+
+						<!-- Deletes app_logs.txt after a confirmation; a new file starts with the next log line.
+							 Styled as muted link text so it does not compete with the main buttons. -->
+						<Button Click="DeleteLogFileClick"
+								Background="Transparent"
+								BorderThickness="0"
+								Padding="0"
+								FontSize="12"
+								VerticalAlignment="Center"
+								Foreground="{DynamicResource DimText}"
+								Cursor="Hand"
+								ToolTip.Tip="Delete log file. A new one is started automatically.">
+							<Button.Styles>
+								<Style Selector="Button:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+									<Setter Property="Background" Value="Transparent"/>
+									<Setter Property="Foreground" Value="{DynamicResource MainText}"/>
+								</Style>
+								<Style Selector="Button:pressed /template/ ContentPresenter#PART_ContentPresenter">
+									<Setter Property="Background" Value="Transparent"/>
+								</Style>
+								<Style Selector="Button ic|SymbolIcon">
+									<Setter Property="Foreground" Value="{DynamicResource DimText}"/>
+								</Style>
+								<Style Selector="Button:pointerover ic|SymbolIcon">
+									<Setter Property="Foreground" Value="{DynamicResource MainText}"/>
+								</Style>
+							</Button.Styles>
+							<ic:SymbolIcon Symbol="Delete" FontSize="16"/>
+						</Button>
+					</StackPanel>
+					<!-- Shown when the log file passes the size limit; the app never deletes it on its own. -->
+					<TextBlock Text="{Binding LargeLogFileNote}"
+							   IsVisible="{Binding IsLogFileLarge}"
+							   Foreground="#FFA726"
+							   FontSize="12"
+							   TextWrapping="Wrap"
+							   Margin="0,0,10,0"/>
+				</StackPanel>
 
 				<!-- Close button -->
 				<Button Grid.Column="1"
