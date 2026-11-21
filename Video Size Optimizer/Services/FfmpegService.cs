@@ -343,6 +343,8 @@ public class FfmpegService
             {
                 if (File.Exists($"{logName}-0.log")) File.Delete($"{logName}-0.log");
                 if (File.Exists($"{logName}-0.log.mbtree")) File.Delete($"{logName}-0.log.mbtree");
+                // libx265 writes its CU-tree data next to the stats file (can be tens of MB).
+                if (File.Exists($"{logName}-0.log.cutree")) File.Delete($"{logName}-0.log.cutree");
                 if (File.Exists($"{logName}.log")) File.Delete($"{logName}.log");
             }
             catch (Exception ex)
