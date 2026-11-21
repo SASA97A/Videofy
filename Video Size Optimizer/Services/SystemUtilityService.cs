@@ -350,23 +350,35 @@ namespace Video_Size_Optimizer
         private static readonly Regex LinuxReleaseBuild =
             new(@"^ffmpeg-n(\d+(?:\.\d+)*)-latest-linux64-gpl-\d+(?:\.\d+)*\.tar\.xz$", RegexOptions.IgnoreCase);
 
+        // FFmpeg 9.0 hangs on some damaged recordings (no frames, 0% CPU) where 8.x encodes them in
+        // seconds. Stay on 8.x until the app has been tested with a newer major version.
+        public const int PreferredFfmpegMajor = 8;
+
         /// <summary>
-        /// Picks the newest numbered GPL release build (e.g. n9.0 over n8.1). Falls back to the
-        /// "master" GPL build if the release has no numbered build.
+        /// Picks the newest numbered GPL release build of <see cref="PreferredFfmpegMajor"/> (e.g. n8.1).
+        /// If the release has none, the newest numbered build of any version, then the "master" GPL build.
         /// </summary>
         public static GitHubAsset? PickFfmpegAsset(IEnumerable<GitHubAsset> assets, bool isWindows)
         {
             var pattern = isWindows ? WindowsReleaseBuild : LinuxReleaseBuild;
 
-            var newest = assets
+            var numbered = assets
                 .Select(a => (Asset: a, Match: pattern.Match(a.Name)))
                 .Where(x => x.Match.Success)
                 .Select(x => (x.Asset, Version: ParseBuildVersion(x.Match.Groups[1].Value)))
                 .Where(x => x.Version != null)
                 .OrderByDescending(x => x.Version)
-                .Select(x => x.Asset)
-                .FirstOrDefault();
-            if (newest != null) return newest;
+                .ToList();
+
+            var preferred = numbered.FirstOrDefault(x => x.Version!.Major == PreferredFfmpegMajor).Asset;
+            if (preferred != null) return preferred;
+
+            var newest = numbered.Select(x => x.Asset).FirstOrDefault();
+            if (newest != null)
+            {
+                LogService.Instance.Log($"No FFmpeg {PreferredFfmpegMajor}.x build in the release; using {newest.Name}.", LogLevel.Warning, "SysUtil");
+                return newest;
+            }
 
             string master = isWindows ? "ffmpeg-master-latest-win64-gpl.zip" : "ffmpeg-master-latest-linux64-gpl.tar.xz";
             return assets.FirstOrDefault(a => string.Equals(a.Name, master, StringComparison.OrdinalIgnoreCase));
