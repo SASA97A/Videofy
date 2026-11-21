@@ -429,6 +429,7 @@ public class FfmpegService
 
             double totalDuration = knownTotalDuration ?? 0;
             _currentProcess.Start();
+            ChildProcessGuard.Track(_currentProcess);
 
             using (var reader = _currentProcess.StandardError)
             {
@@ -527,6 +528,8 @@ public class FfmpegService
             };
 
             process.Start();
+
+            ChildProcessGuard.Track(process);
             await process.WaitForExitAsync();
             return process.ExitCode == 0;
         }
