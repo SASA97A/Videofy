@@ -266,7 +266,9 @@ public partial class MainWindowViewModel : ViewModelBase
             return;
         }
 
-        if (latestVersion != AppConstants.AppVersion)
+        // Compare as version numbers: only a newer release counts. A plain "!=" also offered
+        // older releases (for example on a dev build ahead of the latest release).
+        if (VersionHelper.IsNewer(latestVersion, AppConstants.AppVersion))
         {
             LogService.Instance.Log($"New app version found {latestVersion}", LogLevel.Success);
             LatestAvailableVersion = latestVersion;
