@@ -6,6 +6,9 @@
     <Nullable>enable</Nullable>
 	<RootNamespace>Videofy</RootNamespace>
 	<ApplicationIcon>Assets\app.ico</ApplicationIcon>
+	<!-- Keep in sync with AppConstants.AppVersion (release.ps1 checks this). -->
+	<Version>1.4.4</Version>
+	<Product>Videofy</Product>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
   </PropertyGroup>

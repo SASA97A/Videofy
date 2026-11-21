@@ -35,6 +35,12 @@ if (-not $match) { throw "AppVersion not found in $consts" }
 $version = $match.Matches[0].Groups[1].Value
 Write-Host "Version: $version" -ForegroundColor Cyan
 
+# The csproj <Version> goes into the .exe file properties; it must match AppVersion.
+$projVersion = ([xml](Get-Content $project -Raw)).Project.PropertyGroup.Version | Where-Object { $_ } | Select-Object -First 1
+if ("v$projVersion" -ne $version) {
+    throw "Version mismatch: AppConstants.AppVersion is $version, but the csproj <Version> is '$projVersion'."
+}
+
 # Uncommitted changes would end up in the build but not in git.
 $dirty = git -C $root status --porcelain
 if ($dirty -and -not $AllowDirty) {
