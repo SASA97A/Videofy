@@ -628,6 +628,7 @@ public partial class MainWindowViewModel : ViewModelBase
         IsBusy = true;
         StatusMessage = "Processing...";
         _diskCheckPath = null;
+        _ffmpegService.ClearStopRequest();
 
         if (GlobalSettings.PreventSleep)
         {
@@ -1035,7 +1036,8 @@ public partial class MainWindowViewModel : ViewModelBase
                     // Important to avoid deleteing files if user Stops compression!
                     if (!IsBusy && !video.IsSplitEnabled)
                     {                      
-                        if (File.Exists(finalOutputPath)) File.Delete(finalOutputPath);
+                        // The killed ffmpeg can hold the file for a moment, so retry the delete briefly.
+                        await FfmpegService.DeleteWithRetryAsync(finalOutputPath);
                         break;
                     }
 
