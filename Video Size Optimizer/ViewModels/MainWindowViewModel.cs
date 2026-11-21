@@ -113,7 +113,6 @@ public partial class MainWindowViewModel : ViewModelBase
     public IRelayCommand<Window> BrowseFolderCommand { get; }
     public IRelayCommand SelectAllCommand { get; }
     public IRelayCommand DeselectAllCommand { get; }
-    public IAsyncRelayCommand StartCommand { get; }
 
     public MainWindowViewModel()
     {
@@ -138,8 +137,6 @@ public partial class MainWindowViewModel : ViewModelBase
             foreach (var v in Videos)
                 v.IsSelected = false;
         });
-
-        StartCommand = new AsyncRelayCommand(StartCompressionAsync);
 
         if (!DependencyChecker.CheckBinaries(out string path))
         {
@@ -1049,7 +1046,7 @@ public partial class MainWindowViewModel : ViewModelBase
                     }
                  
                     // Important to avoid deleteing files if user Stops compression!
-                    if (!IsBusy && !video.IsSplitEnabled)
+                    if (!IsBusy)
                     {                      
                         // The killed ffmpeg can hold the file for a moment, so retry the delete briefly.
                         await FfmpegService.DeleteWithRetryAsync(finalOutputPath);
@@ -1060,13 +1057,6 @@ public partial class MainWindowViewModel : ViewModelBase
                     {
                         var newInfo = new FileInfo(finalOutputPath);
                         long totalOutputSize = newInfo.Length;
-
-                        if (video.IsSplitEnabled)
-                        {
-                            totalOutputSize = video.HasCustomSize
-                                ? (long)video.CustomTargetSizeMb! * 1024 * 1024
-                                : originalSizeBytes;
-                        }
 
                         if (totalOutputSize != 0)
                         {
@@ -1091,7 +1081,7 @@ public partial class MainWindowViewModel : ViewModelBase
                                 DisplayedVideos[index] = video;
                             }
 
-                            if (SelectedTabIndex == 0 && GlobalSettings.DeleteOriginalAfterCompression && File.Exists(finalOutputPath) && !video.IsSplitEnabled)
+                            if (SelectedTabIndex == 0 && GlobalSettings.DeleteOriginalAfterCompression && File.Exists(finalOutputPath))
                             {
                                 try
                                 {
@@ -1322,33 +1312,6 @@ public partial class MainWindowViewModel : ViewModelBase
     public async Task ShowAbout()
     {
         await _messageService.ShowInfoAsync("About Videofy", AppConstants.AboutMessage);
-    }
-
-    [RelayCommand]
-    public void ClearVideos()
-    {
-        foreach (var v in Videos)
-            v.PropertyChanged -= VideoFile_PropertyChanged;
-
-        Videos.Clear();
-        _trackedFolders.Clear();
-        _trackedSingleFiles.Clear();
-        UpdateSelectedFolderPathDisplay();
-        OnPropertyChanged(nameof(HasVideos));
-    }
-
-    [RelayCommand]
-    public void ClearList()
-    {
-        foreach (var v in Videos)
-            v.PropertyChanged -= VideoFile_PropertyChanged;
-
-        Videos.Clear();
-        _trackedFolders.Clear();
-        _trackedSingleFiles.Clear();
-        UpdateSelectedFolderPathDisplay();
-        ApplyFilter();
-        RefreshStats();
     }
 
     [RelayCommand]
